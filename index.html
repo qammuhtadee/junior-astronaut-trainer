@@ -12,10 +12,18 @@
         height: 100%;
         background: #000;
         overflow: hidden;
+        cursor: url('./assets/cursor.png'), default !important;
       }
-      #game {
+      #game,
+      canvas {
         width: 100%;
         height: 100%;
+        cursor: url('./assets/cursor.png'), default !important;
+      }
+      button,
+      [role='button'],
+      .interactive {
+        cursor: url('./assets/cursor-hover.png'), pointer !important;
       }
     </style>
   </head>

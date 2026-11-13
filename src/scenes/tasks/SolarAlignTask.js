@@ -134,6 +134,15 @@ export class SolarAlignTask extends Phaser.Scene {
 
     this.completed = false;
     this.speed = 150; // px/sec
+
+    // Slide up from bottom
+    this.cameras.main.scrollY = 450;
+    this.tweens.add({
+      targets: this.cameras.main,
+      scrollY: 0,
+      duration: 450,
+      ease: 'Back.easeOut',
+    });
   }
 
   drawTargetRing(color, pulse = false) {
@@ -229,9 +238,16 @@ export class SolarAlignTask extends Phaser.Scene {
   }
 
   closeTask() {
-    this.scene.stop();
-    // Resume parent room scene
-    const activeRoom = gameState.room === 'surface' ? 'Surface' : 'Outpost';
-    this.scene.resume(activeRoom);
+    this.tweens.add({
+      targets: this.cameras.main,
+      scrollY: 500,
+      duration: 300,
+      ease: 'Back.easeIn',
+      onComplete: () => {
+        this.scene.stop();
+        const activeRoom = gameState.room === 'surface' ? 'Surface' : 'Outpost';
+        this.scene.resume(activeRoom);
+      },
+    });
   }
 }

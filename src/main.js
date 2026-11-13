@@ -5,6 +5,7 @@ import { OutpostScene } from './scenes/OutpostScene.js';
 import { SurfaceScene } from './scenes/SurfaceScene.js';
 import { HudScene } from './scenes/HudScene.js';
 import { SolarAlignTask } from './scenes/tasks/SolarAlignTask.js';
+import { PowerPanelTask } from './scenes/tasks/PowerPanelTask.js';
 
 const game = new Phaser.Game({
   type: Phaser.AUTO,
@@ -17,7 +18,7 @@ const game = new Phaser.Game({
     width: GAME_WIDTH,
     height: GAME_HEIGHT,
   },
-  scene: [PreloadScene, OutpostScene, SurfaceScene, HudScene, SolarAlignTask],
+  scene: [PreloadScene, OutpostScene, SurfaceScene, HudScene, SolarAlignTask, PowerPanelTask],
 });
 
 // Handy for debugging in the browser console only.
