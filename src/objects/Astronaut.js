@@ -14,14 +14,14 @@ export class Astronaut extends Phaser.GameObjects.Container {
       scene.anims.create({
         key: 'walk',
         frames: scene.anims.generateFrameNumbers('astronaut-walk', { start: 0, end: 7 }),
-        frameRate: 10,
+        frameRate: 14, // faster animation loop to match brisk walk
         repeat: -1,
       });
     }
 
-    this.shadow = scene.add.ellipse(0, 0, 42, 12, 0x000000, 0.35);
+    this.shadow = scene.add.ellipse(0, 0, 52, 14, 0x000000, 0.35);
     this.body_ = scene.add.sprite(0, 0, 'astronaut-walk', 0).setOrigin(0.5, 1);
-    this.body_.setScale(0.266); // 70% of previous size (~91px height), more proportional to the landscape
+    this.body_.setScale(0.323); // 85% of original size (~110px height)
     this.body_.setTint(color);
 
     this.tag = scene.add

@@ -16,7 +16,7 @@ export const LANE = {
 };
 
 export const PLAYER = {
-  speedX: 220, // px per second
+  speedX: 320, // faster movement speed
   speedYRatio: 0.65, // vertical speed = 65% of horizontal, fakes perspective
 };
 
