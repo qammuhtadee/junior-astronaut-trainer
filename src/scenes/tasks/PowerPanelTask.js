@@ -72,18 +72,17 @@ export class PowerPanelTask extends Phaser.Scene {
     closeBtn.on('pointerdown', () => this.closeTask());
     this.modal.add(closeBtn);
 
-    // Default switch states
+    // Default switch states (Battery switch removed per request)
     this.switches = [
       { id: 'light', label: 'HAB LIGHTING', desc: 'Main habitat illumination', on: true, load: 15 },
-      { id: 'oxygen', label: 'O2 GENERATOR', desc: 'Life support water splitting', on: true, load: 35 },
+      { id: 'oxygen', label: 'O2 GENERATOR', desc: 'Life support water splitting', on: true, load: 40 },
       { id: 'water', label: 'WATER PURIFIER', desc: 'Filtration and melting pumps', on: false, load: 20 },
-      { id: 'battery', label: 'BATTERY STORAGE', desc: 'Outpost emergency reserve buffer', on: true, load: 15 },
-      { id: 'safemode', label: 'SAFE MODE', desc: 'Cut non-essential auxiliary draw', on: false, load: -15 },
+      { id: 'safemode', label: 'SAFE MODE', desc: 'Cut non-essential auxiliary draw', on: false, load: -20 },
     ];
 
-    // Render 5 switch rows
-    const startY = -panelH / 2 + 115;
-    const rowGap = 56;
+    // Render 4 switch rows with spacious tactile layout
+    const startY = -panelH / 2 + 120;
+    const rowGap = 66;
 
     this.switchViews = [];
 
@@ -93,14 +92,14 @@ export class PowerPanelTask extends Phaser.Scene {
 
       // Row background plate
       const rowBg = this.add.graphics();
-      rowBg.fillStyle(0x13151a, 0.9);
-      rowBg.fillRoundedRect(-panelW / 2 + 20, -22, panelW - 40, 48, 8);
+      rowBg.fillStyle(0x13151a, 0.95);
+      rowBg.fillRoundedRect(-panelW / 2 + 20, -25, panelW - 40, 52, 10);
       rowBg.lineStyle(1.5, 0x2e3442, 1);
-      rowBg.strokeRoundedRect(-panelW / 2 + 20, -22, panelW - 40, 48, 8);
+      rowBg.strokeRoundedRect(-panelW / 2 + 20, -25, panelW - 40, 52, 10);
       rowContainer.add(rowBg);
 
       // Label & Description
-      const labelText = this.add.text(-panelW / 2 + 36, -14, sw.label, {
+      const labelText = this.add.text(-panelW / 2 + 36, -16, sw.label, {
         fontFamily: 'monospace',
         fontSize: '15px',
         fontStyle: 'bold',
@@ -113,16 +112,16 @@ export class PowerPanelTask extends Phaser.Scene {
       });
       rowContainer.add([labelText, descText]);
 
-      // Toggle Switch (Track & Knob)
-      const trackX = panelW / 2 - 80;
+      // Aerospace Tactile Switch (Recessed Track + Beveled Rocker Slider)
+      const trackX = panelW / 2 - 85;
       const track = this.add.graphics();
       const knob = this.add.graphics();
       const statusPill = this.add
-        .text(trackX + 38, 0, sw.on ? 'ON' : 'OFF', {
+        .text(trackX + 42, 0, sw.on ? '[ONLINE]' : '[OFFLINE]', {
           fontFamily: 'monospace',
-          fontSize: '12px',
+          fontSize: '11px',
           fontStyle: 'bold',
-          color: sw.on ? '#50fa7b' : '#6e7681',
+          color: sw.on ? '#06b6d4' : '#64748b',
         })
         .setOrigin(0, 0.5);
 
@@ -130,25 +129,52 @@ export class PowerPanelTask extends Phaser.Scene {
 
       const updateSwitchVisual = (isOn) => {
         track.clear();
-        track.fillStyle(isOn ? 0x1d4ed8 : 0x262b36, 1);
-        track.fillRoundedRect(trackX - 22, -12, 44, 24, 12);
-        track.lineStyle(1.5, isOn ? 0x60a5fa : 0x3d4452, 1);
-        track.strokeRoundedRect(trackX - 22, -12, 44, 24, 12);
+        // Recessed outer groove
+        track.fillStyle(0x0a0c10, 1);
+        track.fillRoundedRect(trackX - 26, -14, 52, 28, 14);
+        track.lineStyle(2, isOn ? 0x0284c7 : 0x1e293b, 1);
+        track.strokeRoundedRect(trackX - 26, -14, 52, 28, 14);
+
+        // Illuminated active channel when ON
+        if (isOn) {
+          track.fillStyle(0x0369a1, 0.85);
+          track.fillRoundedRect(trackX - 22, -10, 30, 20, 10);
+          // Neon power strip indicator
+          track.lineStyle(2, 0x38bdf8, 0.9);
+          track.lineBetween(trackX - 16, 0, trackX - 4, 0);
+        }
 
         knob.clear();
-        const knobX = isOn ? trackX + 8 : trackX - 8;
-        knob.fillStyle(0xffffff, 1);
-        knob.fillCircle(knobX, 0, 9);
+        const knobX = isOn ? trackX + 11 : trackX - 11;
 
-        statusPill.setText(isOn ? 'ON' : 'OFF');
-        statusPill.setColor(isOn ? '#50fa7b' : '#6e7681');
+        // Knob shadow
+        knob.fillStyle(0x000000, 0.45);
+        knob.fillRoundedRect(knobX - 11, -10, 22, 24, 7);
+
+        // Tactile metallic slider knob body
+        knob.fillStyle(isOn ? 0xf1f5f9 : 0x94a3b8, 1);
+        knob.fillRoundedRect(knobX - 11, -12, 22, 24, 6);
+        knob.lineStyle(1.5, isOn ? 0x38bdf8 : 0x475569, 1);
+        knob.strokeRoundedRect(knobX - 11, -12, 22, 24, 6);
+
+        // Tactile grip grooves
+        knob.lineStyle(1, 0x475569, 0.8);
+        knob.lineBetween(knobX - 3, -6, knobX - 3, 6);
+        knob.lineBetween(knobX + 3, -6, knobX + 3, 6);
+
+        // Micro LED status pip on the knob
+        knob.fillStyle(isOn ? 0x10b981 : 0xef4444, 1);
+        knob.fillCircle(knobX, 0, 3);
+
+        statusPill.setText(isOn ? '[ONLINE]' : '[OFFLINE]');
+        statusPill.setColor(isOn ? '#06b6d4' : '#64748b');
       };
 
       updateSwitchVisual(sw.on);
 
       // Interactive hit area on the toggle
       const hitArea = this.add
-        .rectangle(trackX, 0, 90, 40, 0x000000, 0)
+        .rectangle(trackX, 0, 110, 48, 0x000000, 0)
         .setInteractive({ useHandCursor: true });
       hitArea.on('pointerdown', () => {
         sw.on = !sw.on;

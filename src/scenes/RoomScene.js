@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { SCENES, LANE, FADE_MS, COLORS } from '../config/constants.js';
+import { SCENES, LANE, FADE_MS, COLORS, GAME_WIDTH, GAME_HEIGHT } from '../config/constants.js';
 import { STATIONS } from '../data/stations.js';
 import { Astronaut } from '../objects/Astronaut.js';
 import { Station } from '../objects/Station.js';
@@ -22,7 +22,10 @@ export class RoomScene extends Phaser.Scene {
     gameState.room = this.roomId;
     this.drawBackground();
 
-    this.stations = STATIONS[this.roomId].map((def) => new Station(this, def));
+    // Only show stations that have been introduced by the story up to the current day
+    this.stations = STATIONS[this.roomId]
+      .filter((def) => !def.day || def.day <= gameState.day)
+      .map((def) => new Station(this, def));
 
     const who = gameState.activeAstronaut;
     const spawnX = data.spawnX ?? this.defaultSpawnX();
@@ -68,6 +71,36 @@ export class RoomScene extends Phaser.Scene {
     if (def.leadsTo) return this.goThroughAirlock(def.leadsTo);
 
     if (def.id === 'solar_panel') {
+      if (gameState.stepId === 'd1_start') {
+        // Step 1: Establish & deploy the solar array first
+        this.transitioning = true;
+        this.game.events.emit('prompt', null);
+        this.cameras.main.flash(300, 255, 209, 102);
+
+        const banner = this.add
+          .text(GAME_WIDTH / 2, 140, 'ESTABLISHING SOLAR ARRAY...\nUnfolding photovoltaic solar wings...', {
+            fontFamily: 'monospace',
+            fontSize: '16px',
+            align: 'center',
+            backgroundColor: '#000c',
+            padding: { x: 14, y: 8 },
+            color: '#ffd166',
+          })
+          .setOrigin(0.5);
+
+        this.time.delayedCall(1500, () => {
+          banner.setText('SOLAR ARRAY ESTABLISHED!\nNow calibrating telescope to align with the Sun...');
+          banner.setColor('#38bdf8');
+          this.time.delayedCall(1200, () => {
+            banner.destroy();
+            this.transitioning = false;
+            this.scene.pause();
+            this.scene.launch('SolarAlignTask');
+          });
+        });
+        return;
+      }
+
       this.scene.pause();
       this.scene.launch('SolarAlignTask');
       return;

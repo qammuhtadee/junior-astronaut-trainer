@@ -226,13 +226,13 @@ export class SolarAlignTask extends Phaser.Scene {
     });
 
     this.statusText.setText('ALIGNMENT LOCKED! (100% POWER)').setColor('#00ff88');
-    this.hintText.setText('Solar panels charging outpost batteries...').setColor('#88ffbb');
+    this.hintText.setText('Solar array locked! Return inside to the bunks to rest.').setColor('#88ffbb');
 
     // Update game state
     gameState.goTo('d1_panel_built');
 
-    // Close after short celebration
-    this.time.delayedCall(1600, () => {
+    // Close after celebration
+    this.time.delayedCall(2000, () => {
       this.closeTask();
     });
   }
