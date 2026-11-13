@@ -79,12 +79,13 @@ export class PillMeter extends Phaser.GameObjects.Container {
       // Small subscript 2
       this.iconGraphics.fillCircle(cx + 5, cy + 4, 2.5);
     } else if (type === 'water') {
-      // Water droplet shape
+      // Clean teardrop water droplet using lineTo and arc
       this.iconGraphics.fillStyle(color, 1);
       this.iconGraphics.beginPath();
-      this.iconGraphics.moveTo(cx, cy - 8);
-      this.iconGraphics.bezierCurveTo(cx + 6, cy - 1, cx + 6, cy + 5, cx, cy + 7);
-      this.iconGraphics.bezierCurveTo(cx - 6, cy + 5, cx - 6, cy - 1, cx, cy - 8);
+      this.iconGraphics.moveTo(cx, cy - 7);
+      this.iconGraphics.lineTo(cx + 5, cy + 1);
+      this.iconGraphics.arc(cx, cy + 2, 5, 0, Math.PI, false);
+      this.iconGraphics.lineTo(cx - 5, cy + 1);
       this.iconGraphics.closePath();
       this.iconGraphics.fillPath();
     } else if (type === 'radiation') {

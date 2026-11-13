@@ -21,6 +21,16 @@
   </head>
   <body>
     <div id="game"></div>
+    <div id="error-banner" style="display:none;position:fixed;top:10px;left:10px;right:10px;background:#c92a2a;color:#fff;padding:14px;font-family:monospace;font-size:14px;z-index:99999;border-radius:6px;border:1px solid #ff8787;"></div>
+    <script>
+      window.addEventListener('error', function (e) {
+        var b = document.getElementById('error-banner');
+        if (b) {
+          b.style.display = 'block';
+          b.innerText = 'Launch error: ' + (e.message || e);
+        }
+      });
+    </script>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
