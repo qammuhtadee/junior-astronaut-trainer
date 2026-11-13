@@ -1,10 +1,25 @@
 import { RoomScene } from './RoomScene.js';
-import { SCENES, GAME_WIDTH, GAME_HEIGHT, HORIZON_Y, DEPTH } from '../config/constants.js';
+import { SCENES, GAME_WIDTH, GAME_HEIGHT, HORIZON_Y, DEPTH, COLORS } from '../config/constants.js';
+import { Astronaut } from '../objects/Astronaut.js';
+import { gameState } from '../state/GameState.js';
 
-/** Inside the outpost. Placeholder wall/floor until the interior background is drawn. */
+/** Inside the outpost. */
 export class OutpostScene extends RoomScene {
   constructor() {
     super(SCENES.OUTPOST, 'outpost');
+  }
+
+  create(data = {}) {
+    super.create(data);
+
+    // When Muntasir is active, show Maisha (pink) standing by the bunks
+    if (gameState.activeAstronaut === 'muntasir') {
+      this.companion = new Astronaut(this, GAME_WIDTH - 220, 440, {
+        name: 'Maisha',
+        color: COLORS.maisha,
+      });
+      this.companion.body_.setFlipX(true); // Facing left toward the hab center
+    }
   }
 
   drawBackground() {

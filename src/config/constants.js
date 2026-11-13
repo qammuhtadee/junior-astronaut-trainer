@@ -44,6 +44,6 @@ export const DEPTH = Object.freeze({
 
 export const COLORS = Object.freeze({
   muntasir: 0xf28c28, // engineer - orange
-  maisha: 0x3fa7d6, // scientist-medic - blue
+  maisha: 0xff69b4, // scientist-medic - pink
   promptText: '#ffffff',
 });
