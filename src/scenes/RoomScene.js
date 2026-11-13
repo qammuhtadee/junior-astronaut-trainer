@@ -17,7 +17,7 @@ export class RoomScene extends Phaser.Scene {
     this.roomId = roomId;
   }
 
-  /** data.spawnX lets the airlock place the astronaut next to the matching door. */
+  /** data.spawnX & data.spawnY place the astronaut right in front of the doorway. */
   create(data = {}) {
     gameState.room = this.roomId;
     this.drawBackground();
@@ -26,10 +26,15 @@ export class RoomScene extends Phaser.Scene {
 
     const who = gameState.activeAstronaut;
     const spawnX = data.spawnX ?? this.defaultSpawnX();
-    this.player = new Astronaut(this, spawnX, (LANE.top + LANE.bottom) / 2, {
+    const spawnY = data.spawnY ?? (LANE.top + 35);
+    this.player = new Astronaut(this, spawnX, spawnY, {
       name: who === 'muntasir' ? 'Muntasir' : 'Maisha',
       color: COLORS[who],
     });
+
+    if (data.facingLeft !== undefined) {
+      this.player.body_.setFlipX(data.facingLeft);
+    }
 
     this.cursors = this.input.keyboard.createCursorKeys();
     this.input.keyboard.on('keydown-SPACE', () => this.tryInteract());
@@ -78,8 +83,12 @@ export class RoomScene extends Phaser.Scene {
     this.cameras.main.fadeOut(FADE_MS, 0, 0, 0);
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
       const door = STATIONS[targetRoom].find((s) => s.leadsTo === this.roomId);
-      const offset = door.x < 640 ? 90 : -90; // step out beside the door, not inside it
-      this.scene.start(ROOM_TO_SCENE[targetRoom], { spawnX: door.x + offset });
+      // Place astronaut naturally at the threshold of the connecting airlock
+      const isLeftDoor = door.x < 640;
+      const spawnX = isLeftDoor ? door.x + 35 : door.x - 35;
+      const spawnY = door.y + 35;
+      const facingLeft = !isLeftDoor; // Face toward room center
+      this.scene.start(ROOM_TO_SCENE[targetRoom], { spawnX, spawnY, facingLeft });
     });
   }
 
