@@ -19,9 +19,9 @@ export class Astronaut extends Phaser.GameObjects.Container {
       });
     }
 
-    this.shadow = scene.add.ellipse(0, 0, 60, 16, 0x000000, 0.35);
+    this.shadow = scene.add.ellipse(0, 0, 42, 12, 0x000000, 0.35);
     this.body_ = scene.add.sprite(0, 0, 'astronaut-walk', 0).setOrigin(0.5, 1);
-    this.body_.setScale(0.38); // 341px height -> ~130px height, fits the 50% floor lane
+    this.body_.setScale(0.266); // 70% of previous size (~91px height), more proportional to the landscape
     this.body_.setTint(color);
 
     this.tag = scene.add
