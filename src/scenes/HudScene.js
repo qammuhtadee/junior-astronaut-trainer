@@ -90,10 +90,11 @@ export class HudScene extends Phaser.Scene {
 
   refresh() {
     this.dayText.setText(`Day ${gameState.day}`);
-    this.powerMeter.setValue(gameState.meters.power);
-    this.oxygenMeter.setValue(gameState.meters.oxygen);
-    this.waterMeter.setValue(gameState.meters.water);
-    this.radiationMeter.setValue(gameState.meters.radiation);
+    // Temporarily display all 4 meters for slide screenshot
+    this.powerMeter.setValue(gameState.meters.power ?? 100);
+    this.oxygenMeter.setValue(gameState.meters.oxygen ?? 85);
+    this.waterMeter.setValue(gameState.meters.water ?? 70);
+    this.radiationMeter.setValue(gameState.meters.radiation ?? 95);
   }
 
   showPrompt(label) {
