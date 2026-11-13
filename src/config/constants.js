@@ -4,13 +4,13 @@
 export const GAME_WIDTH = 1280;
 export const GAME_HEIGHT = 720;
 
-/** Top 60% is wall/sky, bottom 40% is floor. */
-export const HORIZON_Y = Math.round(GAME_HEIGHT * 0.6); // 432
+/** Top 50% is wall/sky, bottom 50% is floor. */
+export const HORIZON_Y = Math.round(GAME_HEIGHT * 0.5); // 360
 
 /** The vertical band the astronaut's FEET may occupy. Same in both rooms so the airlock fade never jumps. */
 export const LANE = {
-  top: 460,
-  bottom: 650,
+  top: 380,
+  bottom: 660,
   left: 60,
   right: GAME_WIDTH - 60,
 };

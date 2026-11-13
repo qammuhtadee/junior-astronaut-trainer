@@ -47,7 +47,7 @@ export class RoomScene extends Phaser.Scene {
       x: (this.cursors.right.isDown ? 1 : 0) - (this.cursors.left.isDown ? 1 : 0),
       y: (this.cursors.down.isDown ? 1 : 0) - (this.cursors.up.isDown ? 1 : 0),
     };
-    if (dir.x || dir.y) this.player.move(dir, delta);
+    this.player.move(dir, delta);
 
     const near = this.stations.find((s) => s.isInRange(this.player.x, this.player.y)) ?? null;
     if (near !== this.nearby) {

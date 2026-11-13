@@ -12,7 +12,11 @@ export class PreloadScene extends Phaser.Scene {
     const bar = this.add.rectangle(width / 2 - 200, height / 2, 0, 16, 0xffffff).setOrigin(0, 0.5);
     this.load.on('progress', (p) => (bar.width = 400 * p));
 
-    this.load.image('bg-surface', 'assets/backgrounds/mars-surface.jpg');
+    this.load.image('bg-surface', 'assets/backgrounds/mars-surface-1280.jpg');
+    this.load.spritesheet('astronaut-walk', 'assets/sprites/astronaut-walk.png', {
+      frameWidth: 200,
+      frameHeight: 341,
+    });
   }
 
   create() {

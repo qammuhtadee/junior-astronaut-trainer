@@ -10,10 +10,22 @@ export class Astronaut extends Phaser.GameObjects.Container {
     super(scene, x, y);
     this.name = name;
 
-    this.shadow = scene.add.ellipse(0, 0, 50, 14, 0x000000, 0.35);
-    this.body_ = scene.add.image(0, 0, 'astronaut-placeholder').setOrigin(0.5, 1).setTint(color);
+    if (!scene.anims.exists('walk')) {
+      scene.anims.create({
+        key: 'walk',
+        frames: scene.anims.generateFrameNumbers('astronaut-walk', { start: 0, end: 7 }),
+        frameRate: 10,
+        repeat: -1,
+      });
+    }
+
+    this.shadow = scene.add.ellipse(0, 0, 60, 16, 0x000000, 0.35);
+    this.body_ = scene.add.sprite(0, 0, 'astronaut-walk', 0).setOrigin(0.5, 1);
+    this.body_.setScale(0.38); // 341px height -> ~130px height, fits the 50% floor lane
+    this.body_.setTint(color);
+
     this.tag = scene.add
-      .text(0, -this.body_.height - 8, name, { fontFamily: 'monospace', fontSize: '14px', color: '#fff' })
+      .text(0, -this.body_.displayHeight - 8, name, { fontFamily: 'monospace', fontSize: '14px', color: '#fff' })
       .setOrigin(0.5, 1);
 
     this.add([this.shadow, this.body_, this.tag]);
@@ -23,13 +35,27 @@ export class Astronaut extends Phaser.GameObjects.Container {
 
   /** dir: { x: -1..1, y: -1..1 } */
   move(dir, deltaMs) {
-    const dt = deltaMs / 1000;
-    const len = Math.hypot(dir.x, dir.y) || 1;
-    this.x += (dir.x / len) * PLAYER.speedX * dt;
-    this.y += (dir.y / len) * PLAYER.speedX * PLAYER.speedYRatio * dt;
-    this.x = Phaser.Math.Clamp(this.x, LANE.left, LANE.right);
-    this.y = Phaser.Math.Clamp(this.y, LANE.top, LANE.bottom);
-    if (dir.x !== 0) this.body_.setFlipX(dir.x < 0);
+    const isMoving = dir.x !== 0 || dir.y !== 0;
+
+    if (isMoving) {
+      if (!this.body_.anims.isPlaying || this.body_.anims.currentAnim?.key !== 'walk') {
+        this.body_.play('walk');
+      }
+      const dt = deltaMs / 1000;
+      const len = Math.hypot(dir.x, dir.y) || 1;
+      this.x += (dir.x / len) * PLAYER.speedX * dt;
+      this.y += (dir.y / len) * PLAYER.speedX * PLAYER.speedYRatio * dt;
+      this.x = Phaser.Math.Clamp(this.x, LANE.left, LANE.right);
+      this.y = Phaser.Math.Clamp(this.y, LANE.top, LANE.bottom);
+
+      if (dir.x !== 0) this.body_.setFlipX(dir.x < 0);
+    } else {
+      if (this.body_.anims.isPlaying) {
+        this.body_.stop();
+        this.body_.setFrame(0);
+      }
+    }
+
     this.syncDepth();
   }
 

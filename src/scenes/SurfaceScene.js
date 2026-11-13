@@ -8,8 +8,6 @@ export class SurfaceScene extends RoomScene {
   }
 
   drawBackground() {
-    // Source art is 1024x1024; scale to full width and anchor to the top (bottom is cropped).
-    const bg = this.add.image(0, 0, 'bg-surface').setOrigin(0).setDepth(DEPTH.BACKGROUND);
-    bg.setScale(GAME_WIDTH / bg.width);
+    this.add.image(0, 0, 'bg-surface').setOrigin(0).setDepth(DEPTH.BACKGROUND);
   }
 }
