@@ -62,7 +62,13 @@ export class RoomScene extends Phaser.Scene {
 
     if (def.leadsTo) return this.goThroughAirlock(def.leadsTo);
 
-    // Mini-game pop-ups plug in here (TaskModalScene). For now, just announce it.
+    if (def.id === 'solar_panel') {
+      this.scene.pause();
+      this.scene.launch('SolarAlignTask');
+      return;
+    }
+
+    // Other mini-game pop-ups plug in here. For now, announce it.
     this.game.events.emit('station:interact', { room: this.roomId, station: def.id });
   }
 
