@@ -258,7 +258,11 @@ export class PowerPanelTask extends Phaser.Scene {
     });
 
     // Keyboard ESC to close
-    this.input.keyboard.on('keydown-ESC', () => this.closeTask());
+    const onEsc = () => this.closeTask();
+    this.input.keyboard.on('keydown-ESC', onEsc);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      if (this.input?.keyboard) this.input.keyboard.off('keydown-ESC', onEsc);
+    });
     this.updateLoad();
   }
 

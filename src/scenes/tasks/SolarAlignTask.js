@@ -123,7 +123,11 @@ export class SolarAlignTask extends Phaser.Scene {
     // Input handlers
     this.cursors = this.input.keyboard.createCursorKeys();
     this.wasd = this.input.keyboard.addKeys('W,A,S,D');
-    this.input.keyboard.on('keydown-ESC', () => this.closeTask());
+    const onEsc = () => this.closeTask();
+    this.input.keyboard.on('keydown-ESC', onEsc);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      if (this.input?.keyboard) this.input.keyboard.off('keydown-ESC', onEsc);
+    });
 
     // Touch / Mouse Drag support (inverting drag like moving a telescope)
     this.input.on('pointermove', (pointer) => {

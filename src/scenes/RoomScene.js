@@ -20,6 +20,8 @@ export class RoomScene extends Phaser.Scene {
   /** data.spawnX & data.spawnY place the astronaut right in front of the doorway. */
   create(data = {}) {
     gameState.room = this.roomId;
+    this.companion = null;
+    this.dialogueBox = null;
     this.drawBackground();
 
     // Only show stations that have been introduced by the story up to the current day
@@ -40,8 +42,23 @@ export class RoomScene extends Phaser.Scene {
     }
 
     this.cursors = this.input.keyboard.createCursorKeys();
-    this.input.keyboard.on('keydown-SPACE', () => this.tryInteract());
-    this.input.on('pointerdown', () => this.tryInteract());
+    this.onKeySpace = () => this.tryInteract();
+    this.onPointerInteract = () => this.tryInteract();
+    this.input.keyboard.on('keydown-SPACE', this.onKeySpace);
+    this.input.on('pointerdown', this.onPointerInteract);
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      if (this.input?.keyboard && this.onKeySpace) {
+        this.input.keyboard.off('keydown-SPACE', this.onKeySpace);
+      }
+      if (this.input && this.onPointerInteract) {
+        this.input.off('pointerdown', this.onPointerInteract);
+      }
+      if (this.dialogueBox) {
+        this.dialogueBox.destroy();
+        this.dialogueBox = null;
+      }
+    });
 
     this.nearby = null;
     this.transitioning = false;
@@ -74,7 +91,24 @@ export class RoomScene extends Phaser.Scene {
     if (!this.nearby || this.transitioning || this.dialogueBox?.isActive || this.dialogueBox?.justClosed) return;
     const def = this.nearby.def;
 
-    if (def.leadsTo) return this.goThroughAirlock(def.leadsTo);
+    if (def.leadsTo) {
+      // Restrict unnecessary back-and-forth room transitions on Day 1
+      if (gameState.day === 1) {
+        if (this.roomId === 'surface' && gameState.visitedDarkOutpost && !gameState.solarAligned) {
+          this.game.events.emit('toast', 'Build and align the solar panel first!');
+          return;
+        }
+        if (this.roomId === 'outpost' && gameState.solarDeployed) {
+          if (!gameState.habLightsOn) {
+            this.game.events.emit('toast', 'Turn on the lights at the Power Panel first!');
+          } else {
+            this.game.events.emit('toast', 'Rest on the bunks to finish Sol 1!');
+          }
+          return;
+        }
+      }
+      return this.goThroughAirlock(def.leadsTo);
+    }
 
     if (def.id === 'solar_panel') {
       if (!gameState.solarUnfurled) {
@@ -194,6 +228,14 @@ export class RoomScene extends Phaser.Scene {
   goThroughAirlock(targetRoom) {
     this.transitioning = true;
     this.game.events.emit('prompt', null);
+
+    // When Muntasir enters the Outpost after aligning the solar panel on Day 1,
+    // hand player control to Maisha inside the Outpost so she can turn on the lights.
+    if (gameState.day === 1 && this.roomId === 'surface' && targetRoom === 'outpost' && gameState.solarAligned && !gameState.habLightsOn) {
+      gameState.solarDeployed = true;
+      gameState.activeAstronaut = 'maisha';
+    }
+
     this.cameras.main.fadeOut(FADE_MS, 0, 0, 0);
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
       const door = STATIONS[targetRoom].find((s) => s.leadsTo === this.roomId);

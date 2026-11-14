@@ -17,6 +17,11 @@ export class SurfaceScene extends RoomScene {
   create(data = {}) {
     super.create(data);
 
+    this.maishaActor = null;
+    this.spacecraft = null;
+    this.dottedBox = null;
+    this.buildGuide = null;
+    this.onSolarUnfurlStart = null;
     this.dialogueBox = new DialogueBox(this);
 
     // Hide solar panel station until it is actually unfurled by the player
@@ -417,52 +422,12 @@ export class SurfaceScene extends RoomScene {
 
   runPowerChargeUp() {
     if (gameState.solarDeployed) return;
-    this.transitioning = true;
-    this.game.events.emit('prompt', null);
     gameState.solarDeployed = true;
 
-    // Note: The power pill meter charges from 0% to 100% over 6s independently in HudScene
-    // via the 'power:gradual-charge' event emitted by SolarAlignTask, so Muntasir is not stuck waiting!
-    if (!this.companion) {
-      this.companion = new Astronaut(this, GAME_WIDTH - 165, LANE.top + 48, {
-        name: 'Maisha',
-        color: COLORS.maisha,
-      });
-      this.companion.body_.setFlipX(true);
-    }
-
-    this.time.delayedCall(250, () => {
-      this.dialogueBox.showSequence(
-        [
-          {
-            speaker: 'Maisha',
-            text: 'Seems like power is restored, we can go inside.',
-            target: this.companion,
-          },
-        ],
-        () => {
-          this.bothEnterOutpostAfterPower();
-        }
-      );
-    });
-  }
-
-  bothEnterOutpostAfterPower() {
-    const doorX = GAME_WIDTH - 90;
-    const doorY = LANE.top + 35;
-
-    let arrivedCount = 0;
-    const onBothArrived = () => {
-      arrivedCount++;
-      if (arrivedCount < 2) return;
-
-      // Switch active astronaut control to Maisha for turning on the lights inside
-      gameState.activeAstronaut = 'maisha';
-      this.goThroughAirlock('outpost');
-    };
-
-    this.walkActorTo(this.player, doorX - 35, doorY, 340, onBothArrived);
-    this.walkActorTo(this.companion, doorX - 65, doorY + 15, 340, onBothArrived);
+    // Bug 2 & 3 fix: Muntasir walks independently under player control immediately after aligning
+    // the solar panel while the power meter charges from 0% to 100% in HudScene.
+    this.transitioning = false;
+    this.game.events.emit('toast', 'Power restored! Walk to the Airlock to go inside.');
   }
 
   // ==========================================

@@ -80,9 +80,10 @@ export class DialogueBox extends Phaser.GameObjects.Container {
     });
 
     // Tap & Keyboard input to advance dialogue
-    this.spaceKey = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
-    this.spaceKey.on('down', () => this.handleAdvance());
-    scene.input.on('pointerdown', () => this.handleAdvance());
+    this.onSpaceDown = () => this.handleAdvance();
+    this.onPointerDown = () => this.handleAdvance();
+    scene.input.keyboard.on('keydown-SPACE', this.onSpaceDown);
+    scene.input.on('pointerdown', this.onPointerDown);
 
     scene.add.existing(this);
   }
@@ -349,7 +350,15 @@ export class DialogueBox extends Phaser.GameObjects.Container {
   }
 
   destroy() {
-    if (this.spaceKey) this.spaceKey.destroy();
+    if (this.typeEvent) this.typeEvent.remove();
+    if (this.scene && this.scene.input) {
+      if (this.scene.input.keyboard && this.onSpaceDown) {
+        this.scene.input.keyboard.off('keydown-SPACE', this.onSpaceDown);
+      }
+      if (this.onPointerDown) {
+        this.scene.input.off('pointerdown', this.onPointerDown);
+      }
+    }
     super.destroy();
   }
 }
