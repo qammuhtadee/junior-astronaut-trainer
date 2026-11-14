@@ -136,7 +136,7 @@ export class DialogueBox extends Phaser.GameObjects.Container {
 
   popExclamation(targetX, targetY, onComplete) {
     const mark = this.scene.add
-      .text(targetX, targetY - 70, '!', {
+      .text(targetX, targetY - 140, '!', {
         fontFamily: 'monospace',
         fontSize: '32px',
         fontStyle: 'bold',
@@ -151,7 +151,7 @@ export class DialogueBox extends Phaser.GameObjects.Container {
     this.scene.tweens.add({
       targets: mark,
       scale: 1.3,
-      y: targetY - 85,
+      y: targetY - 155,
       duration: 250,
       ease: 'Back.easeOut',
       onComplete: () => {
@@ -196,7 +196,8 @@ export class DialogueBox extends Phaser.GameObjects.Container {
 
       if (line.target) {
         bx = Phaser.Math.Clamp(line.target.x - this.boxWidth / 2, 40, GAME_WIDTH - this.boxWidth - 40);
-        by = Math.max(100, line.target.y - this.boxHeight - 40);
+        // Position speech bubble cleanly ABOVE the astronaut's helmet (helmet is at target.y - 110)
+        by = Math.max(20, line.target.y - this.boxHeight - 135);
       }
     }
 

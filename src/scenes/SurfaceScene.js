@@ -43,10 +43,11 @@ export class SurfaceScene extends RoomScene {
     // Hide stations until crash and reveal sequence completes
     this.stations.forEach((s) => s.setVisible(false));
 
-    // Spacecraft starting diagonally off-screen top-left
+    // Spacecraft scaling: huge compared to astronauts (scale 3.2)
+    const scScale = 3.2;
     this.spacecraft = this.add
-      .sprite(-140, 160, 'spacecraft-damaged', 0)
-      .setScale(1.25)
+      .sprite(-240, 110, 'spacecraft-damaged', 0)
+      .setScale(scScale)
       .setRotation(Phaser.Math.DegToRad(18))
       .setDepth(150);
 
@@ -54,28 +55,28 @@ export class SurfaceScene extends RoomScene {
     this.tweens.add({
       targets: this.spacecraft,
       x: 180,
-      y: 530,
+      y: 490,
       rotation: 0,
       duration: 850,
       ease: 'Quad.easeIn',
       onComplete: () => {
         // Impact vibration
-        this.cameras.main.shake(650, 0.016);
+        this.cameras.main.shake(650, 0.018);
 
         // Multi-frame explosion sprite
-        const explosion = this.add.sprite(150, 520, 'explosion', 0).setScale(1.4).setDepth(160);
+        const explosion = this.add.sprite(160, 480, 'explosion', 0).setScale(2.5).setDepth(160);
         explosion.play('anim-explosion');
         explosion.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => explosion.destroy());
 
-        // Horizontal skid and deceleration
+        // Horizontal skid and deceleration (settles at x: 245 without clipping offscreen)
         this.tweens.add({
           targets: this.spacecraft,
-          x: 230,
+          x: 245,
           duration: 650,
           ease: 'Cubic.easeOut',
           onComplete: () => {
             this.spacecraft.play('anim-spacecraft-smoke');
-            this.time.delayedCall(700, () => this.popOutAstronauts());
+            this.time.delayedCall(650, () => this.popOutAstronauts());
           },
         });
       },
@@ -83,25 +84,21 @@ export class SurfaceScene extends RoomScene {
   }
 
   popOutAstronauts() {
-    // Both astronauts pop out from behind the spacecraft
-    this.muntasirActor = new Astronaut(this, 220, 505, {
-      name: 'Muntasir',
-      color: COLORS.muntasir,
-    });
-    this.muntasirActor.setScale(0).setDepth(140);
+    // Muntasir is this.player; Maisha is companion
+    this.player.setPosition(240, 440).setScale(0).setVisible(true).setDepth(140);
 
-    this.maishaActor = new Astronaut(this, 185, 505, {
+    this.maishaActor = new Astronaut(this, 190, 440, {
       name: 'Maisha',
       color: COLORS.maisha,
     });
     this.maishaActor.setScale(0).setDepth(139);
 
-    // Pop up animation
+    // Pop up animation from behind the cockpit hatch
     this.tweens.add({
-      targets: this.muntasirActor,
+      targets: this.player,
       scale: 1,
-      x: 240,
-      y: 540,
+      x: 270,
+      y: 535,
       duration: 380,
       ease: 'Back.easeOut',
     });
@@ -109,26 +106,26 @@ export class SurfaceScene extends RoomScene {
     this.tweens.add({
       targets: this.maishaActor,
       scale: 1,
-      x: 200,
-      y: 560,
+      x: 210,
+      y: 555,
       duration: 380,
       delay: 120,
       ease: 'Back.easeOut',
       onComplete: () => {
-        this.time.delayedCall(600, () => this.stepForwardActors());
+        this.time.delayedCall(500, () => this.stepForwardActors());
       },
     });
   }
 
   stepForwardActors() {
-    // Both move forward into open space
-    this.walkActorTo(this.muntasirActor, 320, 540, 160, () => {
-      this.muntasirActor.body_.setFlipX(false); // Face right
+    // Both move forward into open space at brisk speed (300 px/s)
+    this.walkActorTo(this.player, 380, 535, 300, () => {
+      this.player.body_.setFlipX(false); // Face right
     });
 
-    this.walkActorTo(this.maishaActor, 440, 540, 160, () => {
+    this.walkActorTo(this.maishaActor, 520, 535, 300, () => {
       this.maishaActor.body_.setFlipX(true); // Face Muntasir
-      this.time.delayedCall(400, () => this.startIntroDialogue());
+      this.time.delayedCall(350, () => this.startIntroDialogue());
     });
   }
 
@@ -137,7 +134,7 @@ export class SurfaceScene extends RoomScene {
       {
         speaker: 'Muntasir',
         text: 'Ah, here we go, the spacecraft went out of orbit and crashed on Mars.',
-        target: this.muntasirActor,
+        target: this.player,
         exclamation: true,
       },
       {
@@ -153,7 +150,7 @@ export class SurfaceScene extends RoomScene {
       {
         speaker: 'Muntasir',
         text: "Seems like our base on Earth doesn't know about the crash. We have some facts to check.",
-        target: this.muntasirActor,
+        target: this.player,
         onStart: () => {
           this.game.events.emit(
             'fact:show',
@@ -169,17 +166,17 @@ export class SurfaceScene extends RoomScene {
       {
         speaker: 'Muntasir',
         text: 'Where do we take shelter?',
-        target: this.muntasirActor,
+        target: this.player,
         onStart: () => {
           // Camera pan right to reveal the 3D-printed Outpost
           this.stations.forEach((s) => s.setVisible(true));
           this.tweens.add({
             targets: this.cameras.main,
             scrollX: 180,
-            duration: 1200,
+            duration: 1000,
             ease: 'Cubic.easeInOut',
             yoyo: true,
-            hold: 1400,
+            hold: 1200,
           });
         },
       },
@@ -197,7 +194,7 @@ export class SurfaceScene extends RoomScene {
       {
         speaker: 'Muntasir',
         text: "Let's go in...",
-        target: this.muntasirActor,
+        target: this.player,
       },
     ];
 
@@ -210,28 +207,26 @@ export class SurfaceScene extends RoomScene {
     const doorX = GAME_WIDTH - 120;
     const doorY = LANE.top + 35;
 
-    // Both walk autonomously to the airlock
-    this.walkActorTo(this.muntasirActor, doorX - 40, doorY, 180, () => {
-      this.muntasirActor.body_.setFlipX(false);
-    });
+    let arrivedCount = 0;
+    const onBothArrived = () => {
+      arrivedCount++;
+      if (arrivedCount < 2) return;
 
-    this.walkActorTo(this.maishaActor, doorX + 15, doorY + 15, 170, () => {
-      this.maishaActor.body_.setFlipX(true);
-
-      // Finish cutscene setup
       gameState.hasSeenCrash = true;
       this.transitioning = false;
-
-      // Sync player astronaut position to Muntasir
-      this.player.setPosition(this.muntasirActor.x, this.muntasirActor.y);
-      this.player.setVisible(true);
-      this.muntasirActor.destroy();
-      this.muntasirActor = null;
-
-      // Keep companion actor Maisha waiting by airlock
       this.companion = this.maishaActor;
-
       this.game.events.emit('prompt', 'Airlock');
+    };
+
+    // Both walk autonomously to the airlock at brisk speed (320 px/s)
+    this.walkActorTo(this.player, doorX - 55, doorY, 320, () => {
+      this.player.body_.setFlipX(false);
+      onBothArrived();
+    });
+
+    this.walkActorTo(this.maishaActor, doorX - 15, doorY + 15, 300, () => {
+      this.maishaActor.body_.setFlipX(true);
+      onBothArrived();
     });
   }
 
@@ -283,14 +278,16 @@ export class SurfaceScene extends RoomScene {
     this.buildGuide = this.add.container(sp.def.x, sp.def.y - 70).setDepth(200);
 
     // Bouncing downward arrow
-    const arrow = this.add.text(0, 0, '▼ BUILD SOLAR PANEL', {
-      fontFamily: 'monospace',
-      fontSize: '13px',
-      fontStyle: 'bold',
-      backgroundColor: '#f59e0b',
-      color: '#0f172a',
-      padding: { x: 8, y: 4 },
-    }).setOrigin(0.5);
+    const arrow = this.add
+      .text(0, 0, '▼ BUILD SOLAR PANEL', {
+        fontFamily: 'monospace',
+        fontSize: '13px',
+        fontStyle: 'bold',
+        backgroundColor: '#f59e0b',
+        color: '#0f172a',
+        padding: { x: 8, y: 4 },
+      })
+      .setOrigin(0.5);
     this.buildGuide.add(arrow);
 
     this.tweens.add({
@@ -380,20 +377,26 @@ export class SurfaceScene extends RoomScene {
     const doorX = GAME_WIDTH - 90;
     const doorY = LANE.top + 35;
 
-    // Both walk autonomously to the airlock door
-    this.walkActorTo(this.player, doorX - 35, doorY, 200);
-    this.walkActorTo(this.companion, doorX - 10, doorY + 15, 190, () => {
+    let arrivedCount = 0;
+    const onBothArrived = () => {
+      arrivedCount++;
+      if (arrivedCount < 2) return;
+
       // Switch active astronaut control to Maisha for Day 1 inside
       gameState.activeAstronaut = 'maisha';
       this.goThroughAirlock('outpost');
-    });
+    };
+
+    // Both walk briskly to airlock door (speed: 320 px/s)
+    this.walkActorTo(this.player, doorX - 45, doorY, 320, onBothArrived);
+    this.walkActorTo(this.companion, doorX - 15, doorY + 15, 300, onBothArrived);
   }
 
   // ==========================================
   // HELPER: Autonomous Actor Movement
   // ==========================================
-  walkActorTo(actor, targetX, targetY, speed = 160, onComplete) {
-    if (!actor || !actor.active) return;
+  walkActorTo(actor, targetX, targetY, speed = 320, onComplete) {
+    if (!actor || !actor.active || !actor.body_) return;
 
     const dx = targetX - actor.x;
     const dy = targetY - actor.y;
@@ -410,8 +413,10 @@ export class SurfaceScene extends RoomScene {
       duration,
       ease: 'Linear',
       onComplete: () => {
-        actor.body_.stop();
-        actor.body_.setFrame(0);
+        if (actor && actor.active && actor.body_) {
+          actor.body_.stop();
+          actor.body_.setFrame(0);
+        }
         if (onComplete) onComplete();
       },
     });

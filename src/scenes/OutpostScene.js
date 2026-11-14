@@ -252,8 +252,8 @@ export class OutpostScene extends RoomScene {
     const bunkX = GAME_WIDTH - 140;
     const bunkY = LANE.top + 20;
 
-    // Muntasir walks autonomously over to the bunks and rests
-    this.walkActorTo(this.companion, bunkX - 20, bunkY, 170, () => {
+    // Muntasir walks autonomously over to the bunks and rests (speed: 300)
+    this.walkActorTo(this.companion, bunkX - 20, bunkY, 300, () => {
       // Disappear behind bunks
       this.tweens.add({
         targets: this.companion,
@@ -317,8 +317,8 @@ export class OutpostScene extends RoomScene {
   // ==========================================
   // HELPER: Autonomous Movement
   // ==========================================
-  walkActorTo(actor, targetX, targetY, speed = 160, onComplete) {
-    if (!actor || !actor.active) return;
+  walkActorTo(actor, targetX, targetY, speed = 300, onComplete) {
+    if (!actor || !actor.active || !actor.body_) return;
 
     const dx = targetX - actor.x;
     const dy = targetY - actor.y;
@@ -335,8 +335,10 @@ export class OutpostScene extends RoomScene {
       duration,
       ease: 'Linear',
       onComplete: () => {
-        actor.body_.stop();
-        actor.body_.setFrame(0);
+        if (actor && actor.active && actor.body_) {
+          actor.body_.stop();
+          actor.body_.setFrame(0);
+        }
         if (onComplete) onComplete();
       },
     });
