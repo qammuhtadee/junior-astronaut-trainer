@@ -1,0 +1,49 @@
+{
+ "source": "NASA OSDR RadLab, instrument CRaTER on LRO, Lunar orbit",
+ "type": "archived, not live",
+ "note": "Measured in orbit around the Moon, not on the surface",
+ "measure": "absorbed dose rate in microgray per hour (uGy/h)",
+ "typicalMedianMicroGyPerHour": 13.15,
+ "typicalMedianMilliGyPerDay": 0.316,
+ "zeroReadings": 55,
+ "yearlyMedianMicroGyPerHour": {
+  "2009": 12.86,
+  "2010": 11.24,
+  "2011": 9.53,
+  "2012": 8.29,
+  "2013": 7.26,
+  "2014": 6.87,
+  "2015": 7.31,
+  "2016": 9.54,
+  "2017": 11.29,
+  "2018": 12.34,
+  "2019": 13.03,
+  "2020": 13.48,
+  "2021": 12.96,
+  "2022": 16.31,
+  "2023": 7.23,
+  "2024": 6.26
+ },
+ "stormiestDays": [
+  {
+   "date": "2012-01-24",
+   "averageMicroGyPerHour": 33936.4
+  },
+  {
+   "date": "2012-03-08",
+   "averageMicroGyPerHour": 28924
+  },
+  {
+   "date": "2012-01-23",
+   "averageMicroGyPerHour": 26331.5
+  },
+  {
+   "date": "2017-09-11",
+   "averageMicroGyPerHour": 19481.6
+  },
+  {
+   "date": "2014-01-08",
+   "averageMicroGyPerHour": 14718.2
+  }
+ ]
+}

@@ -1,0 +1,197 @@
+{
+ "source": "NASA OSDR RadLab, DosTel1 and DosTel2 detectors on the ISS",
+ "type": "archived, not live",
+ "note": "Measured inside the International Space Station in low Earth orbit. Not deep space, not the Moon, not Mars. Do not compare directly with Moon or Mars values.",
+ "measure": "absorbed dose rate in micrograys per hour (not sieverts)",
+ "month": "May 2024",
+ "readings": 58651,
+ "medianMicroGyPerHour": 4.6,
+ "daily": [
+  {
+   "date": "2024-05-01",
+   "readings": 1802,
+   "medianMicroGyPerHour": 4.45,
+   "maxMicroGyPerHour": 415.56
+  },
+  {
+   "date": "2024-05-02",
+   "readings": 1739,
+   "medianMicroGyPerHour": 4.26,
+   "maxMicroGyPerHour": 479.74
+  },
+  {
+   "date": "2024-05-03",
+   "readings": 1790,
+   "medianMicroGyPerHour": 4.56,
+   "maxMicroGyPerHour": 479.12
+  },
+  {
+   "date": "2024-05-04",
+   "readings": 1765,
+   "medianMicroGyPerHour": 4.39,
+   "maxMicroGyPerHour": 390.43
+  },
+  {
+   "date": "2024-05-05",
+   "readings": 1768,
+   "medianMicroGyPerHour": 4.36,
+   "maxMicroGyPerHour": 436.83
+  },
+  {
+   "date": "2024-05-06",
+   "readings": 1766,
+   "medianMicroGyPerHour": 4.29,
+   "maxMicroGyPerHour": 511.46
+  },
+  {
+   "date": "2024-05-07",
+   "readings": 1771,
+   "medianMicroGyPerHour": 4.27,
+   "maxMicroGyPerHour": 483.86
+  },
+  {
+   "date": "2024-05-08",
+   "readings": 1771,
+   "medianMicroGyPerHour": 4.38,
+   "maxMicroGyPerHour": 377.99
+  },
+  {
+   "date": "2024-05-09",
+   "readings": 1773,
+   "medianMicroGyPerHour": 4.42,
+   "maxMicroGyPerHour": 481.98
+  },
+  {
+   "date": "2024-05-10",
+   "readings": 1757,
+   "medianMicroGyPerHour": 4.35,
+   "maxMicroGyPerHour": 527.29
+  },
+  {
+   "date": "2024-05-11",
+   "readings": 1903,
+   "medianMicroGyPerHour": 4.54,
+   "maxMicroGyPerHour": 186.18
+  },
+  {
+   "date": "2024-05-12",
+   "readings": 1930,
+   "medianMicroGyPerHour": 4.49,
+   "maxMicroGyPerHour": 302.8
+  },
+  {
+   "date": "2024-05-13",
+   "readings": 1982,
+   "medianMicroGyPerHour": 4.63,
+   "maxMicroGyPerHour": 440.58
+  },
+  {
+   "date": "2024-05-14",
+   "readings": 2030,
+   "medianMicroGyPerHour": 4.86,
+   "maxMicroGyPerHour": 457.29
+  },
+  {
+   "date": "2024-05-15",
+   "readings": 2108,
+   "medianMicroGyPerHour": 5.08,
+   "maxMicroGyPerHour": 396.16
+  },
+  {
+   "date": "2024-05-16",
+   "readings": 2161,
+   "medianMicroGyPerHour": 5.33,
+   "maxMicroGyPerHour": 371.91
+  },
+  {
+   "date": "2024-05-17",
+   "readings": 2026,
+   "medianMicroGyPerHour": 4.92,
+   "maxMicroGyPerHour": 483.08
+  },
+  {
+   "date": "2024-05-18",
+   "readings": 2127,
+   "medianMicroGyPerHour": 5.35,
+   "maxMicroGyPerHour": 420.21
+  },
+  {
+   "date": "2024-05-19",
+   "readings": 1960,
+   "medianMicroGyPerHour": 4.69,
+   "maxMicroGyPerHour": 346.83
+  },
+  {
+   "date": "2024-05-20",
+   "readings": 1919,
+   "medianMicroGyPerHour": 4.54,
+   "maxMicroGyPerHour": 418.87
+  },
+  {
+   "date": "2024-05-21",
+   "readings": 1915,
+   "medianMicroGyPerHour": 4.58,
+   "maxMicroGyPerHour": 509.17
+  },
+  {
+   "date": "2024-05-22",
+   "readings": 1922,
+   "medianMicroGyPerHour": 4.57,
+   "maxMicroGyPerHour": 463.79
+  },
+  {
+   "date": "2024-05-23",
+   "readings": 1884,
+   "medianMicroGyPerHour": 4.47,
+   "maxMicroGyPerHour": 355.74
+  },
+  {
+   "date": "2024-05-24",
+   "readings": 1837,
+   "medianMicroGyPerHour": 4.59,
+   "maxMicroGyPerHour": 588.94
+  },
+  {
+   "date": "2024-05-25",
+   "readings": 1824,
+   "medianMicroGyPerHour": 4.35,
+   "maxMicroGyPerHour": 318.97
+  },
+  {
+   "date": "2024-05-26",
+   "readings": 1916,
+   "medianMicroGyPerHour": 4.66,
+   "maxMicroGyPerHour": 418.14
+  },
+  {
+   "date": "2024-05-27",
+   "readings": 1887,
+   "medianMicroGyPerHour": 4.62,
+   "maxMicroGyPerHour": 402.31
+  },
+  {
+   "date": "2024-05-28",
+   "readings": 1920,
+   "medianMicroGyPerHour": 4.64,
+   "maxMicroGyPerHour": 517.58
+  },
+  {
+   "date": "2024-05-29",
+   "readings": 1909,
+   "medianMicroGyPerHour": 4.57,
+   "maxMicroGyPerHour": 541.16
+  },
+  {
+   "date": "2024-05-30",
+   "readings": 1892,
+   "medianMicroGyPerHour": 4.61,
+   "maxMicroGyPerHour": 413.76
+  },
+  {
+   "date": "2024-05-31",
+   "readings": 1897,
+   "medianMicroGyPerHour": 4.74,
+   "maxMicroGyPerHour": 428.89
+  }
+ ]
+}

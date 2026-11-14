@@ -1,0 +1,24 @@
+{
+ "source": "NASA OSDR RadLab, instrument MSL-RAD (Curiosity), Mars surface",
+ "type": "archived, not live",
+ "measure": "absorbed dose rate (energy absorbed, not adjusted for biological harm)",
+ "readings": 274998,
+ "firstReading": "2015-01-01T00:11:01",
+ "lastReading": "2024-06-03T10:06:06",
+ "averageMicroGyPerHour": 7.83,
+ "averageMilliGyPerDay": 0.188,
+ "minMicroGyPerHour": 0.98224556,
+ "maxMicroGyPerHour": 303.98798,
+ "yearlyAverageMicroGyPerHour": {
+  "2015": 6.15,
+  "2016": 7.64,
+  "2017": 8.37,
+  "2018": 8.87,
+  "2019": 9.09,
+  "2020": 9.28,
+  "2021": 8.76,
+  "2022": 7.62,
+  "2023": 5.6,
+  "2024": 5.65
+ }
+}

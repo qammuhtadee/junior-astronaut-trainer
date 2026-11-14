@@ -1,0 +1,63 @@
+{
+  "source": "NASA Open Science Data Repository (OSDR)",
+  "type": "archived study records, not live",
+  "note": "Mouse and plant studies, not human results.",
+  "cards": [
+    {
+      "theme": "Bones and gravity",
+      "headline": "Bones need gravity",
+      "fact": "Mice that spent 37 days on the space station lost bone in the thigh bone, which holds up the body's weight on Earth. Scientists think bones that carry weight are the ones that weaken when there is no gravity pushing on them.",
+      "gameLink": "Why astronauts exercise every day",
+      "studiedIn": "mice",
+      "osd": "OSD-804"
+    },
+    {
+      "theme": "Body in space",
+      "headline": "Heads grow, legs shrink",
+      "fact": "In a 15-day shuttle flight, the skull bone of mice grew a little, even though leg bones normally get weaker in microgravity.",
+      "gameLink": "Fluid shift / puffy face mini-game",
+      "studiedIn": "mice",
+      "osd": "OSD-486"
+    },
+    {
+      "theme": "Space radiation",
+      "headline": "Tiny doses of radiation",
+      "fact": "Scientists gave mice small doses of three kinds of radiation, then checked their spleens 1, 2 and 4 months later.",
+      "gameLink": "Goes with the storm and dose cards",
+      "studiedIn": "mice",
+      "osd": "OSD-360"
+    },
+    {
+      "theme": "Growing food in space",
+      "headline": "Plants in zero gravity",
+      "fact": "On Earth, gravity tells roots and shoots which way to grow. Scientists flew Arabidopsis seeds to the ISS to see how they grow for 3 days with no gravity.",
+      "gameLink": "Space garden level",
+      "studiedIn": "plants",
+      "osd": "OSD-38"
+    },
+    {
+      "theme": "Growing food in space",
+      "headline": "Roots in orbit",
+      "fact": "Arabidopsis seedlings grew for 12 days on the ISS, and their leaves and roots changed their proteins in different ways.",
+      "gameLink": "Inside the plant bonus card",
+      "studiedIn": "plants",
+      "osd": "OSD-16"
+    },
+    {
+      "theme": "Growing food in space",
+      "headline": "Plants that adapt",
+      "fact": "A plant with one gene changed had a much smaller gene response to spaceflight, so changing a plant's genes may help it adapt to space.",
+      "gameLink": "Design a space-ready plant level",
+      "studiedIn": "plants",
+      "osd": "OSD-120"
+    },
+    {
+      "theme": "Body in space",
+      "headline": "Strong muscles in space",
+      "fact": "In a spaceflight study, mice that got a treatment blocking two proteins called myostatin and activin A (which help limit muscle size) were protected against muscle and bone loss.",
+      "gameLink": "Exercise / strength mission",
+      "studiedIn": "mice",
+      "osd": "OSD-342"
+    }
+  ]
+}

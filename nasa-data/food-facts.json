@@ -1,0 +1,44 @@
+{
+  "source": "Canadian Space Agency (CSA), 'Growing healthy food in space and in remote areas'",
+  "sourceUrl": "https://www.asc-csa.gc.ca/eng/sciences/food-production/growing-healthy-food-in-space-and-remote-areas.asp",
+  "type": "facts written from a CSA web page, not live data",
+  "note": "These are facts for game cards, not measurements. Game values for food (how much a crop grows, how fast food runs out) are made up by our team and must be labelled as game values.",
+  "facts": [
+    {
+      "headline": "Fresh food deliveries",
+      "fact": "Astronauts on the International Space Station get shipments of fresh food every few months.",
+      "gameLink": "Resupply: the Moon base can't count on deliveries",
+      "ageNote": "ISS, low Earth orbit"
+    },
+    {
+      "headline": "Too far for deliveries",
+      "fact": "On missions to the Moon or Mars, resupply trips will be less frequent or even impossible, so astronauts will need to grow their own food.",
+      "gameLink": "Why the outpost needs a garden",
+      "ageNote": "Future missions"
+    },
+    {
+      "headline": "Space food rules",
+      "fact": "Space food has to be compact and lightweight, and it also has to be nutritious and tasty.",
+      "gameLink": "Food has a cost: weight and space",
+      "ageNote": "General"
+    },
+    {
+      "headline": "Made to last",
+      "fact": "Food is chosen and packaged to last for the whole length of a mission.",
+      "gameLink": "Food stock that lasts the mission",
+      "ageNote": "General"
+    },
+    {
+      "headline": "How many calories?",
+      "fact": "Astronaut menus have between 1,900 and 3,200 calories a day, depending on what each crew member needs.",
+      "gameLink": "Different crew members, different needs",
+      "ageNote": "General"
+    },
+    {
+      "headline": "Space food helps Earth",
+      "fact": "Learning to grow food in harsh places like space can also help remote communities on Earth, such as northern Canada, get fresh food.",
+      "gameLink": "Real-world payoff card",
+      "ageNote": "Earth benefit"
+    }
+  ]
+}

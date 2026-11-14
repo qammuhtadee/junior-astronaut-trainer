@@ -1,0 +1,28 @@
+﻿YEARLY TYPICAL LEVEL (median)
+Year,Readings,Typical uGy/h,Typical mGy/day
+2009,4480,12.86,0.309
+2010,8470,11.24,0.27
+2011,8585,9.53,0.229
+2012,8671,8.29,0.199
+2013,8567,7.26,0.174
+2014,8693,6.87,0.165
+2015,8733,7.31,0.175
+2016,8768,9.54,0.229
+2017,8716,11.29,0.271
+2018,8698,12.34,0.296
+2019,8598,13.03,0.313
+2020,8773,13.48,0.323
+2021,8510,12.96,0.311
+2022,96479,16.31,0.391
+2023,8662,7.23,0.174
+2024,4075,6.26,0.15
+
+STORMIEST DAYS (daily average)
+Date,Average uGy/h,Times the typical level,What happened
+2012-01-24,33936,2580,Large solar particle event, Jan 23 2012
+2012-03-08,28924,2199,After the big flares of Mar 7 2012
+2012-01-23,26332,2002,Large solar particle event, Jan 23 2012
+2017-09-11,19482,1481,After the X8.2 flare of Sep 10 2017
+2014-01-08,14718,1119,After the X1.2 flare of Jan 7 2014
+
+Source: NASA OSDR RadLab - LRO CRaTER - measured in lunar orbit - absorbed dose - archived, not live

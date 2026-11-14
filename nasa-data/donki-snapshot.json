@@ -1,0 +1,322 @@
+{
+ "source": "NASA CCMC DONKI (M2M_CATALOG)",
+ "credit": "Community Coordinated Modeling Center, NASA Goddard: ccmc.gsfc.nasa.gov/tools/DONKI/",
+ "type": "archived, not live",
+ "range": [
+  "2024-05-01",
+  "2024-05-31"
+ ],
+ "fetched": "2026-11-13T06:04:02.508Z",
+ "days": [
+  {
+   "date": "2024-05-01",
+   "flares": 4,
+   "maxFlareClass": "M1.9",
+   "cmes": 6,
+   "maxCmeSpeedKmS": 794,
+   "maxKp": null,
+   "particleEvent": false,
+   "suggestedStormLevel": 1
+  },
+  {
+   "date": "2024-05-02",
+   "flares": 2,
+   "maxFlareClass": "M2.7",
+   "cmes": 3,
+   "maxCmeSpeedKmS": 716,
+   "maxKp": 6.67,
+   "particleEvent": false,
+   "suggestedStormLevel": 1
+  },
+  {
+   "date": "2024-05-03",
+   "flares": 6,
+   "maxFlareClass": "X1.6",
+   "cmes": 4,
+   "maxCmeSpeedKmS": 841,
+   "maxKp": null,
+   "particleEvent": false,
+   "suggestedStormLevel": 2
+  },
+  {
+   "date": "2024-05-04",
+   "flares": 6,
+   "maxFlareClass": "M9.1",
+   "cmes": 4,
+   "maxCmeSpeedKmS": 804,
+   "maxKp": null,
+   "particleEvent": false,
+   "suggestedStormLevel": 1
+  },
+  {
+   "date": "2024-05-05",
+   "flares": 12,
+   "maxFlareClass": "X1.3",
+   "cmes": 8,
+   "maxCmeSpeedKmS": 756,
+   "maxKp": null,
+   "particleEvent": false,
+   "suggestedStormLevel": 2
+  },
+  {
+   "date": "2024-05-06",
+   "flares": 6,
+   "maxFlareClass": "X4.5",
+   "cmes": 1,
+   "maxCmeSpeedKmS": 510,
+   "maxKp": null,
+   "particleEvent": false,
+   "suggestedStormLevel": 2
+  },
+  {
+   "date": "2024-05-07",
+   "flares": 14,
+   "maxFlareClass": "M8.2",
+   "cmes": 6,
+   "maxCmeSpeedKmS": 628,
+   "maxKp": null,
+   "particleEvent": false,
+   "suggestedStormLevel": 1
+  },
+  {
+   "date": "2024-05-08",
+   "flares": 18,
+   "maxFlareClass": "X1.0",
+   "cmes": 4,
+   "maxCmeSpeedKmS": 1257,
+   "maxKp": null,
+   "particleEvent": false,
+   "suggestedStormLevel": 2
+  },
+  {
+   "date": "2024-05-09",
+   "flares": 20,
+   "maxFlareClass": "X2.2",
+   "cmes": 2,
+   "maxCmeSpeedKmS": 1330,
+   "maxKp": null,
+   "particleEvent": true,
+   "suggestedStormLevel": 2
+  },
+  {
+   "date": "2024-05-10",
+   "flares": 15,
+   "maxFlareClass": "X3.9",
+   "cmes": 6,
+   "maxCmeSpeedKmS": 1018,
+   "maxKp": 8.67,
+   "particleEvent": true,
+   "suggestedStormLevel": 2
+  },
+  {
+   "date": "2024-05-11",
+   "flares": 13,
+   "maxFlareClass": "X5.8",
+   "cmes": 5,
+   "maxCmeSpeedKmS": 1263,
+   "maxKp": 9,
+   "particleEvent": true,
+   "suggestedStormLevel": 2
+  },
+  {
+   "date": "2024-05-12",
+   "flares": 10,
+   "maxFlareClass": "X1.0",
+   "cmes": 3,
+   "maxCmeSpeedKmS": 624,
+   "maxKp": 7.33,
+   "particleEvent": false,
+   "suggestedStormLevel": 2
+  },
+  {
+   "date": "2024-05-13",
+   "flares": 11,
+   "maxFlareClass": "M6.6",
+   "cmes": 1,
+   "maxCmeSpeedKmS": 1456,
+   "maxKp": 6.33,
+   "particleEvent": true,
+   "suggestedStormLevel": 2
+  },
+  {
+   "date": "2024-05-14",
+   "flares": 6,
+   "maxFlareClass": "X8.7",
+   "cmes": 8,
+   "maxCmeSpeedKmS": 2119,
+   "maxKp": null,
+   "particleEvent": false,
+   "suggestedStormLevel": 2
+  },
+  {
+   "date": "2024-05-15",
+   "flares": 5,
+   "maxFlareClass": "X3.4",
+   "cmes": 8,
+   "maxCmeSpeedKmS": 1766,
+   "maxKp": null,
+   "particleEvent": false,
+   "suggestedStormLevel": 2
+  },
+  {
+   "date": "2024-05-16",
+   "flares": 1,
+   "maxFlareClass": "M1.0",
+   "cmes": 8,
+   "maxCmeSpeedKmS": 1452,
+   "maxKp": 6,
+   "particleEvent": false,
+   "suggestedStormLevel": 1
+  },
+  {
+   "date": "2024-05-17",
+   "flares": 1,
+   "maxFlareClass": "M7.2",
+   "cmes": 8,
+   "maxCmeSpeedKmS": 1134,
+   "maxKp": 6,
+   "particleEvent": false,
+   "suggestedStormLevel": 1
+  },
+  {
+   "date": "2024-05-18",
+   "flares": 0,
+   "maxFlareClass": null,
+   "cmes": 3,
+   "maxCmeSpeedKmS": 1585,
+   "maxKp": null,
+   "particleEvent": false,
+   "suggestedStormLevel": 0
+  },
+  {
+   "date": "2024-05-19",
+   "flares": 3,
+   "maxFlareClass": "M2.5",
+   "cmes": 7,
+   "maxCmeSpeedKmS": 584,
+   "maxKp": null,
+   "particleEvent": false,
+   "suggestedStormLevel": 1
+  },
+  {
+   "date": "2024-05-20",
+   "flares": 0,
+   "maxFlareClass": null,
+   "cmes": 3,
+   "maxCmeSpeedKmS": 2678,
+   "maxKp": null,
+   "particleEvent": false,
+   "suggestedStormLevel": 0
+  },
+  {
+   "date": "2024-05-21",
+   "flares": 3,
+   "maxFlareClass": "M1.9",
+   "cmes": 5,
+   "maxCmeSpeedKmS": 660,
+   "maxKp": null,
+   "particleEvent": false,
+   "suggestedStormLevel": 1
+  },
+  {
+   "date": "2024-05-22",
+   "flares": 3,
+   "maxFlareClass": "M2.3",
+   "cmes": 4,
+   "maxCmeSpeedKmS": 492,
+   "maxKp": null,
+   "particleEvent": false,
+   "suggestedStormLevel": 1
+  },
+  {
+   "date": "2024-05-23",
+   "flares": 5,
+   "maxFlareClass": "M4.2",
+   "cmes": 9,
+   "maxCmeSpeedKmS": 943,
+   "maxKp": null,
+   "particleEvent": false,
+   "suggestedStormLevel": 1
+  },
+  {
+   "date": "2024-05-24",
+   "flares": 4,
+   "maxFlareClass": "M1.4",
+   "cmes": 8,
+   "maxCmeSpeedKmS": 854,
+   "maxKp": null,
+   "particleEvent": false,
+   "suggestedStormLevel": 1
+  },
+  {
+   "date": "2024-05-25",
+   "flares": 0,
+   "maxFlareClass": null,
+   "cmes": 1,
+   "maxCmeSpeedKmS": 652,
+   "maxKp": null,
+   "particleEvent": false,
+   "suggestedStormLevel": 0
+  },
+  {
+   "date": "2024-05-26",
+   "flares": 0,
+   "maxFlareClass": null,
+   "cmes": 1,
+   "maxCmeSpeedKmS": 435,
+   "maxKp": null,
+   "particleEvent": false,
+   "suggestedStormLevel": 0
+  },
+  {
+   "date": "2024-05-27",
+   "flares": 1,
+   "maxFlareClass": "X2.8",
+   "cmes": 2,
+   "maxCmeSpeedKmS": 1220,
+   "maxKp": null,
+   "particleEvent": false,
+   "suggestedStormLevel": 2
+  },
+  {
+   "date": "2024-05-28",
+   "flares": 0,
+   "maxFlareClass": null,
+   "cmes": 3,
+   "maxCmeSpeedKmS": 976,
+   "maxKp": null,
+   "particleEvent": false,
+   "suggestedStormLevel": 0
+  },
+  {
+   "date": "2024-05-29",
+   "flares": 9,
+   "maxFlareClass": "X1.4",
+   "cmes": 8,
+   "maxCmeSpeedKmS": 1033,
+   "maxKp": null,
+   "particleEvent": false,
+   "suggestedStormLevel": 2
+  },
+  {
+   "date": "2024-05-30",
+   "flares": 1,
+   "maxFlareClass": "M1.0",
+   "cmes": 4,
+   "maxCmeSpeedKmS": 750,
+   "maxKp": null,
+   "particleEvent": false,
+   "suggestedStormLevel": 1
+  },
+  {
+   "date": "2024-05-31",
+   "flares": 2,
+   "maxFlareClass": "X1.1",
+   "cmes": 1,
+   "maxCmeSpeedKmS": 817,
+   "maxKp": null,
+   "particleEvent": false,
+   "suggestedStormLevel": 2
+  }
+ ]
+}
