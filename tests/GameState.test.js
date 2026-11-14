@@ -65,6 +65,11 @@ describe('GameState', () => {
   });
 
   it('saves and restores time-travel checkpoint snapshots accurately', () => {
+    let emitted = null;
+    gs.on('meters', (m) => {
+      emitted = { ...m };
+    });
+
     gs.goTo('d2_oxygen_maker');
     gs.habLightsOn = true;
     gs.d2OxBuilt = true;
@@ -84,6 +89,11 @@ describe('GameState', () => {
     expect(gs.habLightsOn).toBe(true);
     expect(gs.meters.power).toBe(60);
     expect(gs.meters.oxygen).toBe(100);
+    expect(emitted).toMatchObject({ power: 60, oxygen: 100 });
+
+    // Ensure listener Map was preserved and continues emitting cleanly after restore
+    gs.setMeters({ power: 70 });
+    expect(emitted.power).toBe(70);
     expect(gs.restoreCheckpoint('missing_key')).toBe(false);
   });
 });

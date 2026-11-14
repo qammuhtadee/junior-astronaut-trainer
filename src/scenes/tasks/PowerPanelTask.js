@@ -99,7 +99,7 @@ export class PowerPanelTask extends Phaser.Scene {
         {
           id: 'light',
           label: 'LIGHTS',
-          desc: 'Habitat illumination (ON: -10% Power | OFF: +10% Power)',
+          desc: 'Main habitat illumination',
           on: gameState.habLightsOn,
           load: 10,
           locked: false,
@@ -109,7 +109,7 @@ export class PowerPanelTask extends Phaser.Scene {
         this.switches.push({
           id: 'oxygen',
           label: 'OXYGEN',
-          desc: 'Electrolysis life support (ON: -40% Power | OFF: +40% Power, O2 drops!)',
+          desc: 'Life support water splitting',
           on: gameState.d2OxSwitchOn,
           load: 40,
           locked: false,
@@ -450,9 +450,7 @@ export class PowerPanelTask extends Phaser.Scene {
         if (oxTurnedOff || stillOxOff) {
           this.game.events.emit('oxygen:start-rapid-drain');
           this.game.events.emit('warning:show', {
-            text: oxTurnedOff
-              ? 'Power +40% saved, BUT Oxygen Maker is OFF and O2 is dropping fast! Flip OXYGEN back ON or rewind.'
-              : 'Oxygen Maker is still OFF and O2 is dropping! Flip OXYGEN ON or rewind before sleeping.',
+            text: 'Warning: Never switch off the Oxygen Maker! Without life support, breathable air in the habitat will run out fast.',
             rewindEvent: 'checkpoint:rewind-d2-night',
           });
           return;
@@ -472,22 +470,19 @@ export class PowerPanelTask extends Phaser.Scene {
           this.game.events.emit(
             'toast',
             oxTurnedOn
-              ? `Oxygen restored (-40% Power) & Night Lights OFF (+10% Power)! Battery: ${curPower}%`
-              : `Lights OFF (+10% Power saved! Battery: ${curPower}%). Room is dark — head to the bunks!`
+              ? 'Oxygen Maker back online and habitat lights off for the night.'
+              : 'Habitat lights off for the night. Rest on the bunks!'
           );
         } else if (changeState === 'turned_on') {
           this.game.events.emit('warning:hide');
           this.game.events.emit('lights:restored');
           if (oxTurnedOn) {
-            this.game.events.emit('toast', `Oxygen Maker ON (-40% Power) & Lights ON. Battery: ${curPower}%`);
+            this.game.events.emit('toast', 'Oxygen Maker back online.');
           }
         } else if (changeState === 'off_warning') {
           this.game.events.emit('lights:turned-off', { silentWarning: false });
         } else if (oxTurnedOn) {
-          this.game.events.emit(
-            'toast',
-            `Oxygen Maker back ON (-40% Power trade-off)! Breathing air restoring. Battery: ${curPower}%`
-          );
+          this.game.events.emit('toast', 'Oxygen Maker back online.');
         }
       },
     });

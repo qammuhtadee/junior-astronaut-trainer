@@ -59,9 +59,18 @@ export class GameState {
 
   saveCheckpoint(key) {
     if (!key) return;
+    const skip = new Set([
+      'listeners',
+      'snapshots',
+      'discoveredFacts',
+      'hasUnreadLogbook',
+      'tutorialLogbookDone',
+      'tutorialMoveDone',
+      'tutorialSolarDone',
+    ]);
     const snap = {};
     for (const k of Object.keys(this)) {
-      if (k === 'snapshots') continue;
+      if (skip.has(k)) continue;
       const val = this[k];
       if (typeof val === 'function') continue;
       snap[k] = val && typeof val === 'object' ? JSON.parse(JSON.stringify(val)) : val;
@@ -73,8 +82,10 @@ export class GameState {
     const snap = this.snapshots?.[key];
     if (!snap) return false;
     for (const [k, val] of Object.entries(snap)) {
+      if (k === 'listeners' || k === 'snapshots') continue;
       this[k] = val && typeof val === 'object' ? JSON.parse(JSON.stringify(val)) : val;
     }
+    this.emit('meters', this.meters);
     return true;
   }
 

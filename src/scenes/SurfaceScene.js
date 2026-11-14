@@ -671,7 +671,7 @@ export class SurfaceScene extends RoomScene {
         const lines = [
           {
             speaker: 'Maisha',
-            text: 'Muntasir! I just checked the life support logs—our oxygen tanks are down to 20%!',
+            text: 'Muntasir! I just checked the life support console—our habitat oxygen reserves are getting dangerously low!',
             target: this.companion,
             exclamation: true,
           },

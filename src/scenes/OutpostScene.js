@@ -603,17 +603,17 @@ export class OutpostScene extends RoomScene {
         [
           {
             speaker: 'Maisha',
-            text: 'Awesome! The Oxygen Maker frame is locked in and powered up—that takes 40% of our solar battery.',
+            text: 'Great! The Oxygen Maker is assembled and wired into the habitat power grid.',
             target: this.player,
           },
           {
             speaker: 'Muntasir',
-            text: 'Now it needs Martian water ice to actually make oxygen! Interact with the machine and drop our ice blocks into its top Hopper.',
+            text: 'Now we need to feed our harvested Martian ice blocks into its top Hopper so it can melt the ice and produce breathable air.',
             target: this.companion,
           },
           {
             speaker: 'Maisha',
-            text: "Let's load those Martian ice chunks into the Hopper to start splitting H2O into breathable O2!",
+            text: 'I should walk up to the Oxygen Maker and load the ice blocks into the Hopper.',
             target: this.player,
             isThought: true,
           },
@@ -651,17 +651,20 @@ export class OutpostScene extends RoomScene {
           [
             {
               speaker: 'Maisha',
-              text: 'Ice loaded! Electrolysis is refilling our Oxygen tanks to 100%, though it trades off 40% of our Power.',
+              text: 'The ice is melting inside the Hopper! Fresh breathable oxygen is flowing into the habitat now.',
               target: this.player,
             },
             {
               speaker: 'Muntasir',
-              text: "Night is falling fast and we don't have a nuclear reactor yet, so our battery will slowly lose 1% every 5 seconds.",
+              text: 'Night has fallen and the solar panels cannot charge in the dark, so keeping both the lights and the Oxygen Maker running all night will drain our battery.',
               target: this.companion,
+              onStart: () => {
+                this.startNightDrain();
+              },
             },
             {
               speaker: 'Maisha',
-              text: 'I should open the Power Panel, switch OFF the Lights (+10% Power saved) while keeping Oxygen ON, and then rest on the bunks.',
+              text: 'I should open the Power Panel and turn off the habitat lights to save power for the Oxygen Maker before we rest on the bunks.',
               target: this.player,
               isThought: true,
             },
@@ -671,7 +674,6 @@ export class OutpostScene extends RoomScene {
               'fact:show',
               "Fact: On Mars, splitting water with electricity makes O2 just like on the ISS. Perseverance's MOXIE also made ~122g of oxygen from Martian CO2 air. One person needs ~0.84 kg O2/day."
             );
-            this.startNightDrain();
             this.muntasirRestAtBunks();
           }
         );
