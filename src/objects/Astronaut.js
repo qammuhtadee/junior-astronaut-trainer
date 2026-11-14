@@ -25,6 +25,21 @@ export class Astronaut extends Phaser.GameObjects.Container {
     this.body_.setScale(0.323); // 85% of original size (~110px height)
     this.body_.setTint(color);
 
+    this.body_.on('animationupdate', (_anim, frame) => {
+      if (_anim.key === 'walk' && (frame.index === 2 || frame.index === 6)) {
+        const now = scene.time.now;
+        if (!scene.game.lastFootstepTime || now < scene.game.lastFootstepTime || now - scene.game.lastFootstepTime >= 160) {
+          if (scene.cache.audio.exists('sfx-footstep')) {
+            scene.game.lastFootstepTime = now;
+            scene.sound.play('sfx-footstep', {
+              volume: 0.45,
+              detune: Phaser.Math.Between(-80, 80),
+            });
+          }
+        }
+      }
+    });
+
     this.tag = scene.add
       .text(0, -this.body_.displayHeight - 8, name, { fontFamily: 'monospace', fontSize: '14px', color: '#fff' })
       .setOrigin(0.5, 1);

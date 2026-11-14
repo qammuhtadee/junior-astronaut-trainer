@@ -65,8 +65,10 @@ export class IntroScene extends Phaser.Scene {
     });
 
     this.showLine(0);
+    this.ensureBgmPlaying();
 
     const advance = () => {
+      this.ensureBgmPlaying();
       if (this.transitioning) return;
       this.lineIndex++;
       if (this.lineIndex < this.lines.length) {
@@ -78,6 +80,16 @@ export class IntroScene extends Phaser.Scene {
 
     this.input.on('pointerdown', advance);
     this.input.keyboard.on('keydown-SPACE', advance);
+  }
+
+  ensureBgmPlaying() {
+    if (!this.cache.audio.exists('bgm-main')) return;
+    const existing = this.sound.get('bgm-main');
+    if (existing) {
+      if (!existing.isPlaying) existing.play({ loop: true, volume: 0.35 });
+      return;
+    }
+    this.sound.add('bgm-main', { loop: true, volume: 0.35 }).play();
   }
 
   showLine(idx) {

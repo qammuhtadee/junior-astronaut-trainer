@@ -29,6 +29,12 @@ export class PreloadScene extends Phaser.Scene {
       frameWidth: 129,
       frameHeight: 129,
     });
+
+    this.load.audio('bgm-main', 'assets/audio/bgm/main-theme.mp3');
+    this.load.audio('sfx-airlock', 'assets/audio/sfx/airlock.wav');
+    this.load.audio('sfx-footstep', 'assets/audio/sfx/footstep.wav');
+    this.load.audio('sfx-radio', 'assets/audio/sfx/radio.ogg');
+    this.load.audio('voice-talk', 'assets/audio/voice/talking.mp3');
   }
 
   create() {

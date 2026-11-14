@@ -239,6 +239,10 @@ export class RoomScene extends Phaser.Scene {
     this.transitioning = true;
     this.game.events.emit('prompt', null);
 
+    if (this.cache.audio.exists('sfx-airlock')) {
+      this.sound.play('sfx-airlock', { volume: 0.65 });
+    }
+
     // When Muntasir enters the Outpost after aligning the solar panel on Day 1,
     // hand player control to Maisha inside the Outpost so she can turn on the lights.
     if (gameState.day === 1 && this.roomId === 'surface' && targetRoom === 'outpost' && gameState.solarAligned && !gameState.habLightsOn) {

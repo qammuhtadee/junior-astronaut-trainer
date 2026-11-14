@@ -23,6 +23,8 @@ export class DialogueBox extends Phaser.GameObjects.Container {
     this.sequence = [];
     this.sequenceIndex = 0;
     this.onSequenceComplete = null;
+    this.talkSound = null;
+    this.radioSound = null;
 
     // 1. Speech bubble sub-container
     this.bubbleContainer = scene.add.container(0, 0);
@@ -93,6 +95,7 @@ export class DialogueBox extends Phaser.GameObjects.Container {
 
     if (this.isTyping) {
       if (this.typeEvent) this.typeEvent.remove();
+      if (this.talkSound?.isPlaying) this.talkSound.stop();
       this.dialogueText.setText(this.currentLine.text);
       this.isTyping = false;
       this.nextIndicator.setVisible(true);
@@ -103,6 +106,7 @@ export class DialogueBox extends Phaser.GameObjects.Container {
   }
 
   advanceStep() {
+    this.stopLineAudio();
     this.heldRadio.stop();
     this.heldRadio.setVisible(false);
 
@@ -295,6 +299,7 @@ export class DialogueBox extends Phaser.GameObjects.Container {
     this.dialogueText.setText('');
     this.isTyping = true;
     this.nextIndicator.setVisible(false);
+    this.startLineAudio(isRadio, isThought);
 
     let charIdx = 0;
     const fullText = line.text;
@@ -308,6 +313,7 @@ export class DialogueBox extends Phaser.GameObjects.Container {
         this.dialogueText.setText(fullText.substring(0, charIdx));
         if (charIdx >= fullText.length) {
           this.isTyping = false;
+          if (this.talkSound?.isPlaying) this.talkSound.stop();
           this.nextIndicator.setVisible(true);
         }
       },
@@ -323,7 +329,32 @@ export class DialogueBox extends Phaser.GameObjects.Container {
     });
   }
 
+  startLineAudio(isRadio, isThought) {
+    this.stopLineAudio();
+    if (isRadio) {
+      if (this.scene.cache.audio.exists('sfx-radio')) {
+        if (!this.radioSound) {
+          this.radioSound = this.scene.sound.add('sfx-radio', { loop: true, volume: 0.55 });
+        }
+        this.radioSound.play({ loop: true, volume: 0.55, seek: 22 });
+      }
+    } else if (!isThought) {
+      if (this.scene.cache.audio.exists('voice-talk')) {
+        if (!this.talkSound) {
+          this.talkSound = this.scene.sound.add('voice-talk', { loop: true, volume: 0.45 });
+        }
+        this.talkSound.play({ loop: true, volume: 0.45 });
+      }
+    }
+  }
+
+  stopLineAudio() {
+    if (this.talkSound?.isPlaying) this.talkSound.stop();
+    if (this.radioSound?.isPlaying) this.radioSound.stop();
+  }
+
   close() {
+    this.stopLineAudio();
     if (this.typeEvent) this.typeEvent.remove();
     this.isTyping = false;
     this.isActive = false;
@@ -350,6 +381,15 @@ export class DialogueBox extends Phaser.GameObjects.Container {
   }
 
   destroy() {
+    this.stopLineAudio();
+    if (this.talkSound) {
+      this.talkSound.destroy();
+      this.talkSound = null;
+    }
+    if (this.radioSound) {
+      this.radioSound.destroy();
+      this.radioSound = null;
+    }
     if (this.typeEvent) this.typeEvent.remove();
     if (this.scene && this.scene.input) {
       if (this.scene.input.keyboard && this.onSpaceDown) {

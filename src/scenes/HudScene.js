@@ -118,6 +118,15 @@ export class HudScene extends Phaser.Scene {
     });
 
     this.refresh();
+
+    if (this.cache.audio.exists('bgm-main')) {
+      const bgm = this.sound.get('bgm-main');
+      if (!bgm) {
+        this.sound.add('bgm-main', { loop: true, volume: 0.35 }).play();
+      } else if (!bgm.isPlaying) {
+        bgm.play({ loop: true, volume: 0.35 });
+      }
+    }
   }
 
   refresh() {
