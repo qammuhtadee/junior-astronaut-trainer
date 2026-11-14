@@ -4,6 +4,8 @@ import { gameState } from '../state/GameState.js';
 import { PillMeter } from '../ui/PillMeter.js';
 import { FactCard } from '../ui/FactCard.js';
 import { WarningCard } from '../ui/WarningCard.js';
+import { LogbookModal } from '../ui/LogbookModal.js';
+import { matchLogbookEntry } from '../data/logbookData.js';
 
 /**
  * Always-on overlay scene: capsule pill meters, "Press SPACE" prompt, day badge.
@@ -66,11 +68,14 @@ export class HudScene extends Phaser.Scene {
     this.createPauseButton();
     this.createPauseOverlay();
 
-    // Floating NASA Fact Card (stays visible until manually closed by the user)
-    this.factCard = new FactCard(this, GAME_WIDTH - 360, 62);
+    // Floating NASA Fact Card (shifted left so it never covers the Airlock, larger for legibility)
+    this.factCard = new FactCard(this, GAME_WIDTH - 595, 58);
 
     // Floating Side Warning Card (shows wrong decisions with Rewind to Checkpoint)
     this.warningCard = new WarningCard(this, 24, 136);
+
+    // Live Two-Page Astronaut Mission Logbook modal
+    this.logbookModal = new LogbookModal(this);
 
     // Floating interaction prompt
     this.prompt = this.add
@@ -91,12 +96,16 @@ export class HudScene extends Phaser.Scene {
     const unsub = [
       gameState.on('meters', () => this.refresh()),
       gameState.on('step', () => this.refresh()),
+      gameState.on('logbook', () => this.syncLogbookDot()),
     ];
     this.game.events.on('prompt', this.showPrompt, this);
     this.game.events.on('toast', this.showToast, this);
     this.game.events.on('station:interact', this.onInteract, this);
     this.game.events.on('fact:show', this.onShowFact, this);
     this.game.events.on('fact:hide', this.onHideFact, this);
+    this.game.events.on('logbook:unlock', this.onUnlockFact, this);
+    this.game.events.on('tutorial:logbook', this.showLogbookTutorial, this);
+    this.game.events.on('tutorial:move', this.showMoveTutorial, this);
     this.game.events.on('warning:show', this.onShowWarning, this);
     this.game.events.on('warning:hide', this.onHideWarning, this);
     this.game.events.on('checkpoint:rewind-lights', this.onRewindLightsCheckpoint, this);
@@ -108,6 +117,7 @@ export class HudScene extends Phaser.Scene {
     this.game.events.on('power:start-dust-drain', this.startDustDrain, this);
     this.game.events.on('power:stop-dust-drain', this.stopDustDrain, this);
     this.game.events.on('oxygen:gradual-charge', this.startGradualOxygenCharge, this);
+    this.game.events.on('lights:restored', this.stopInitialPowerCharge, this);
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       unsub.forEach((fn) => fn());
@@ -116,6 +126,9 @@ export class HudScene extends Phaser.Scene {
       this.game.events.off('station:interact', this.onInteract, this);
       this.game.events.off('fact:show', this.onShowFact, this);
       this.game.events.off('fact:hide', this.onHideFact, this);
+      this.game.events.off('logbook:unlock', this.onUnlockFact, this);
+      this.game.events.off('tutorial:logbook', this.showLogbookTutorial, this);
+      this.game.events.off('tutorial:move', this.showMoveTutorial, this);
       this.game.events.off('warning:show', this.onShowWarning, this);
       this.game.events.off('warning:hide', this.onHideWarning, this);
       this.game.events.off('checkpoint:rewind-lights', this.onRewindLightsCheckpoint, this);
@@ -127,6 +140,7 @@ export class HudScene extends Phaser.Scene {
       this.game.events.off('power:start-dust-drain', this.startDustDrain, this);
       this.game.events.off('power:stop-dust-drain', this.stopDustDrain, this);
       this.game.events.off('oxygen:gradual-charge', this.startGradualOxygenCharge, this);
+      this.game.events.off('lights:restored', this.stopInitialPowerCharge, this);
     });
 
     this.refresh();
@@ -169,7 +183,16 @@ export class HudScene extends Phaser.Scene {
 
   onShowFact(payload) {
     const text = typeof payload === 'string' ? payload : payload.text;
+    const matchedId = (typeof payload === 'object' && payload?.id) || matchLogbookEntry(text);
+    if (matchedId) {
+      gameState.unlockFact(matchedId);
+    }
     this.factCard.show(text);
+  }
+
+  onUnlockFact(factId) {
+    const resolved = matchLogbookEntry(factId) || factId;
+    gameState.unlockFact(resolved);
   }
 
   onHideFact() {
@@ -177,6 +200,10 @@ export class HudScene extends Phaser.Scene {
   }
 
   onShowWarning(payload) {
+    const msg = typeof payload === 'string' ? payload : payload?.text;
+    if (msg && msg.includes('0.84 kg')) {
+      gameState.unlockFact('human_o2_consumption');
+    }
     this.warningCard.show(payload);
   }
 
@@ -186,14 +213,10 @@ export class HudScene extends Phaser.Scene {
 
   onRewindLightsCheckpoint() {
     this.warningCard.hide();
-    if (this.chargeEvent) {
-      this.chargeEvent.remove();
-      this.chargeEvent = null;
-    }
+    this.stopInitialPowerCharge();
 
-    // Restore first checkpoint state (d1_panel_built: Power 100%, lights about to turn on at Power Panel)
+    // Restore lights-off checkpoint state without resetting drained battery power back to 100%
     gameState.habLightsOn = false;
-    gameState.setMeters({ power: 100 });
 
     if (this.scene.isActive('PowerPanelTask')) {
       this.scene.stop('PowerPanelTask');
@@ -284,6 +307,7 @@ export class HudScene extends Phaser.Scene {
   }
 
   startGradualPowerFromCurrent() {
+    gameState.unlockFact('opportunity_dust_2018');
     this.stopDustDrain();
     if (this.chargeFromEvent) {
       this.chargeFromEvent.remove();
@@ -316,6 +340,7 @@ export class HudScene extends Phaser.Scene {
   }
 
   startGradualOxygenCharge() {
+    gameState.unlockFact('human_o2_consumption');
     if (this.chargeFromEvent) {
       this.chargeFromEvent.remove();
       this.chargeFromEvent = null;
@@ -347,8 +372,16 @@ export class HudScene extends Phaser.Scene {
     });
   }
 
+  stopInitialPowerCharge() {
+    if (this.chargeEvent) {
+      this.chargeEvent.remove();
+      this.chargeEvent = null;
+    }
+  }
+
   startGradualPowerCharge() {
-    if (this.chargeEvent) this.chargeEvent.remove();
+    gameState.unlockFact('solar_arrays');
+    this.stopInitialPowerCharge();
     gameState.setMeters({ power: 0 });
 
     // Charge smoothly from 0% to 100% over 6 seconds (60 ticks at 100ms each)
@@ -477,14 +510,263 @@ export class HudScene extends Phaser.Scene {
     drawBg(false);
     btn.add(bg);
 
+    this.logbookRedDot = this.add
+      .circle(13, -13, 6, 0xef4444)
+      .setStrokeStyle(2, 0xffffff)
+      .setVisible(!!gameState.hasUnreadLogbook);
+    btn.add(this.logbookRedDot);
+
+    this.tweens.add({
+      targets: this.logbookRedDot,
+      scale: 1.25,
+      duration: 500,
+      yoyo: true,
+      repeat: -1,
+    });
+
     const hit = this.add.rectangle(0, 0, 34, 34, 0x000000, 0).setInteractive({ useHandCursor: true });
     hit.on('pointerover', () => drawBg(true));
     hit.on('pointerout', () => drawBg(false));
-    hit.on('pointerdown', () => {
-      this.toast.setText('LOGBOOK: Sol 1 recorded. NASA archives synced.');
-      this.time.delayedCall(2000, () => this.toast.setText(''));
+    hit.on('pointerdown', (_p, _lx, _ly, event) => {
+      if (event) event.stopPropagation();
+      this.logbookModal.openLatest();
     });
     btn.add(hit);
+  }
+
+  syncLogbookDot() {
+    if (this.logbookRedDot) {
+      this.logbookRedDot.setVisible(!!gameState.hasUnreadLogbook);
+    }
+  }
+
+  drawKeyCap(parent, x, y, label, w = 46, h = 46) {
+    const g = this.add.graphics();
+    g.fillStyle(0x1e293b, 1);
+    g.fillRoundedRect(x - w / 2, y - h / 2, w, h, 8);
+    g.lineStyle(2, 0x38bdf8, 0.95);
+    g.strokeRoundedRect(x - w / 2, y - h / 2, w, h, 8);
+    const t = this.add
+      .text(x, y, label, {
+        fontFamily: 'monospace',
+        fontSize: '16px',
+        fontStyle: 'bold',
+        color: '#f8fafc',
+      })
+      .setOrigin(0.5);
+    parent.add([g, t]);
+  }
+
+  showLogbookTutorial(onComplete) {
+    const bx = GAME_WIDTH / 2 + 236;
+    const by = 28;
+    const overlay = this.add.container(0, 0).setDepth(2450);
+
+    // Full-screen dim hue overlay that absorbs clicks
+    const hue = this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x060b19, 0.84).setOrigin(0).setInteractive();
+    hue.on('pointerdown', (_p, _lx, _ly, event) => {
+      if (event) event.stopPropagation();
+    });
+    overlay.add(hue);
+
+    // Spotlight halo + highlighted Logbook icon replica
+    const halo = this.add.graphics();
+    halo.fillStyle(0x38bdf8, 0.16);
+    halo.fillCircle(bx, by, 34);
+    halo.lineStyle(3, 0xffd166, 1);
+    halo.strokeCircle(bx, by, 26);
+
+    halo.fillStyle(0x273142, 1);
+    halo.fillRoundedRect(bx - 17, by - 17, 34, 34, 6);
+    halo.lineStyle(2, 0x38bdf8, 1);
+    halo.strokeRoundedRect(bx - 17, by - 17, 34, 34, 6);
+    halo.fillStyle(0xf8fafc, 1);
+    halo.fillRect(bx - 10, by - 8, 9, 15);
+    halo.fillRect(bx + 1, by - 8, 9, 15);
+    halo.fillStyle(0xef4444, 1);
+    halo.fillCircle(bx + 13, by - 13, 6);
+    overlay.add(halo);
+
+    // Upward bouncing arrow pointing to Logbook button
+    const arrow = this.add
+      .text(bx, by + 44, '▲', {
+        fontFamily: 'monospace',
+        fontSize: '28px',
+        fontStyle: 'bold',
+        color: '#ffd166',
+      })
+      .setOrigin(0.5);
+    overlay.add(arrow);
+    this.tweens.add({
+      targets: arrow,
+      y: by + 34,
+      duration: 450,
+      yoyo: true,
+      repeat: -1,
+    });
+
+    // Callout Tutorial Box
+    const cardW = 540;
+    const cardH = 220;
+    const cardX = GAME_WIDTH / 2;
+    const cardY = 230;
+    const card = this.add.graphics();
+    card.fillStyle(0x0f172a, 0.96);
+    card.fillRoundedRect(cardX - cardW / 2, cardY - cardH / 2, cardW, cardH, 14);
+    card.lineStyle(2.5, 0x38bdf8, 1);
+    card.strokeRoundedRect(cardX - cardW / 2, cardY - cardH / 2, cardW, cardH, 14);
+    overlay.add(card);
+
+    overlay.add(
+      this.add
+        .text(
+          cardX,
+          cardY - 12,
+          'MISSION LOGBOOK UPDATED!\n\nMaisha records every NASA fact, mission photo, and reference\nin this open 2-page journal.\n\nWhenever you see the RED DOT on the Logbook icon above,\na new discovery has been added. Click it anytime to flip pages!',
+          {
+            fontFamily: 'monospace',
+            fontSize: '14px',
+            align: 'center',
+            lineSpacing: 6,
+            color: '#f8fafc',
+          }
+        )
+        .setOrigin(0.5)
+    );
+
+    overlay.add(
+      this.add
+        .text(cardX, cardY + 84, '▶ TAP / PRESS SPACE TO CONTINUE', {
+          fontFamily: 'monospace',
+          fontSize: '13px',
+          fontStyle: 'bold',
+          color: '#ffd166',
+        })
+        .setOrigin(0.5)
+    );
+
+    let done = false;
+    const dismiss = () => {
+      if (done) return;
+      done = true;
+      hue.off('pointerdown', dismiss);
+      this.input.keyboard.off('keydown-SPACE', dismiss);
+      overlay.destroy();
+      if (onComplete) {
+        this.time.delayedCall(30, onComplete);
+      }
+    };
+
+    this.time.delayedCall(220, () => {
+      if (done) return;
+      hue.on('pointerdown', dismiss);
+      this.input.keyboard.on('keydown-SPACE', dismiss);
+    });
+  }
+
+  showMoveTutorial(onComplete) {
+    const activeRoom = gameState.room === 'surface' ? SCENES.SURFACE : SCENES.OUTPOST;
+    let pausedRoom = null;
+    if (this.scene.isActive(activeRoom) && !this.isPaused) {
+      this.scene.pause(activeRoom);
+      pausedRoom = activeRoom;
+    }
+
+    const overlay = this.add.container(0, 0).setDepth(2450);
+    const hue = this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x060b19, 0.8).setOrigin(0).setInteractive();
+    hue.on('pointerdown', (_p, _lx, _ly, event) => {
+      if (event) event.stopPropagation();
+    });
+    overlay.add(hue);
+
+    const cx = GAME_WIDTH / 2;
+    const cy = GAME_HEIGHT / 2;
+    const cardW = 580;
+    const cardH = 310;
+
+    const card = this.add.graphics();
+    card.fillStyle(0x0f172a, 0.96);
+    card.fillRoundedRect(cx - cardW / 2, cy - cardH / 2, cardW, cardH, 16);
+    card.lineStyle(2.5, 0xffd166, 1);
+    card.strokeRoundedRect(cx - cardW / 2, cy - cardH / 2, cardW, cardH, 16);
+    overlay.add(card);
+
+    overlay.add(
+      this.add
+        .text(cx, cy - 118, 'MISSION CONTROLS TUTORIAL', {
+          fontFamily: 'monospace',
+          fontSize: '18px',
+          fontStyle: 'bold',
+          color: '#ffd166',
+        })
+        .setOrigin(0.5)
+    );
+
+    // Drawn Arrow Key cluster (left) & SPACE / TAP badge (right)
+    this.drawKeyCap(overlay, cx - 125, cy - 52, '▲');
+    this.drawKeyCap(overlay, cx - 177, cy + 2, '◄');
+    this.drawKeyCap(overlay, cx - 125, cy + 2, '▼');
+    this.drawKeyCap(overlay, cx - 73, cy + 2, '►');
+    this.drawKeyCap(overlay, cx + 115, cy - 22, 'SPACE / TAP', 175, 48);
+
+    overlay.add(
+      this.add
+        .text(
+          cx,
+          cy + 68,
+          '• Use ARROW KEYS (◄ ▲ ▼ ►) to walk around the Martian surface & outpost.\n• Stand near any glowing station or Airlock and press SPACE (or TAP) to interact.',
+          {
+            fontFamily: 'monospace',
+            fontSize: '13px',
+            align: 'center',
+            lineSpacing: 6,
+            color: '#e2e8f0',
+          }
+        )
+        .setOrigin(0.5)
+    );
+
+    overlay.add(
+      this.add
+        .text(cx, cy + 124, '▶ TAP / PRESS SPACE OR ARROW KEYS TO BEGIN', {
+          fontFamily: 'monospace',
+          fontSize: '13px',
+          fontStyle: 'bold',
+          color: '#34d399',
+        })
+        .setOrigin(0.5)
+    );
+
+    let done = false;
+    const dismiss = () => {
+      if (done) return;
+      done = true;
+      hue.off('pointerdown', dismiss);
+      this.input.keyboard.off('keydown-SPACE', dismiss);
+      this.input.keyboard.off('keydown-LEFT', dismiss);
+      this.input.keyboard.off('keydown-RIGHT', dismiss);
+      this.input.keyboard.off('keydown-UP', dismiss);
+      this.input.keyboard.off('keydown-DOWN', dismiss);
+      overlay.destroy();
+      if (pausedRoom) {
+        this.time.delayedCall(30, () => {
+          this.scene.resume(pausedRoom);
+          if (onComplete) onComplete();
+        });
+      } else if (onComplete) {
+        this.time.delayedCall(30, onComplete);
+      }
+    };
+
+    this.time.delayedCall(220, () => {
+      if (done) return;
+      hue.on('pointerdown', dismiss);
+      this.input.keyboard.on('keydown-SPACE', dismiss);
+      this.input.keyboard.on('keydown-LEFT', dismiss);
+      this.input.keyboard.on('keydown-RIGHT', dismiss);
+      this.input.keyboard.on('keydown-UP', dismiss);
+      this.input.keyboard.on('keydown-DOWN', dismiss);
+    });
   }
 
   createPauseButton() {

@@ -19,6 +19,7 @@ export class SurfaceScene extends RoomScene {
 
     this.maishaActor = null;
     this.spacecraft = null;
+    this.craterShadow = null;
     this.dottedBox = null;
     this.buildGuide = null;
     this.solarDustOverlay = null;
@@ -65,6 +66,30 @@ export class SurfaceScene extends RoomScene {
     this.add.image(0, 0, 'bg-surface').setOrigin(0).setDepth(DEPTH.BACKGROUND);
   }
 
+  update(time, delta) {
+    super.update(time, delta);
+    if (this.player && this.spacecraft && this.player.x < 215 && this.player.y < 525) {
+      this.player.y = 525;
+      this.player.syncDepth();
+    }
+  }
+
+  spawnGroundedSpacecraft(x = -10, y = 425) {
+    if (!this.craterShadow) {
+      this.craterShadow = this.add
+        .ellipse(x, y + 42, 430, 58, 0x1c0f0a, 0.65)
+        .setDepth(DEPTH.WORLD_MIN + 20);
+    }
+    if (!this.spacecraft) {
+      this.spacecraft = this.add
+        .sprite(x, y, 'spacecraft-damaged', 0)
+        .setScale(2.8)
+        .setDepth(DEPTH.WORLD_MIN + 45);
+      this.spacecraft.play('anim-spacecraft-smoke');
+    }
+    return this.spacecraft;
+  }
+
   // ==========================================
   // DAY 1 CRASH CUTSCENE
   // ==========================================
@@ -79,18 +104,18 @@ export class SurfaceScene extends RoomScene {
     this.stations.forEach((s) => s.setVisible(false));
 
     // Spacecraft enters diagonally from top-left, scaled large compared to astronauts
-    const scScale = 3.2;
+    const scScale = 2.8;
     this.spacecraft = this.add
       .sprite(-420, 110, 'spacecraft-damaged', 0)
       .setScale(scScale)
       .setRotation(Phaser.Math.DegToRad(18))
-      .setDepth(150);
+      .setDepth(DEPTH.WORLD_MIN + 45);
 
     // Diagonal crash into Martian soil, straightening horizontally
     this.tweens.add({
       targets: this.spacecraft,
-      x: -20,
-      y: 495,
+      x: -55,
+      y: 425,
       rotation: 0,
       duration: 850,
       ease: 'Quad.easeIn',
@@ -98,15 +123,20 @@ export class SurfaceScene extends RoomScene {
         // Moderate scene vibration for grittiness
         this.cameras.main.shake(650, 0.015);
 
+        // Dark impact crater shadow beneath the grounded hull
+        this.craterShadow = this.add
+          .ellipse(-10, 467, 430, 58, 0x1c0f0a, 0.65)
+          .setDepth(DEPTH.WORLD_MIN + 20);
+
         // Multi-frame explosion sprite at impact point
-        const explosion = this.add.sprite(-30, 485, 'explosion', 0).setScale(2.5).setDepth(160);
+        const explosion = this.add.sprite(-30, 430, 'explosion', 0).setScale(2.5).setDepth(160);
         explosion.play('anim-explosion');
         explosion.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => explosion.destroy());
 
-        // Slip and decelerate horizontally near the left edge of the camera view (-220) without cutting off
+        // Slip and decelerate horizontally onto the upper-left ridge without clipping
         this.tweens.add({
           targets: this.spacecraft,
-          x: 55,
+          x: -10,
           duration: 650,
           ease: 'Cubic.easeOut',
           onComplete: () => {
@@ -119,36 +149,36 @@ export class SurfaceScene extends RoomScene {
   }
 
   popOutAstronauts() {
-    // Both astronauts pop up on the behind side of the spacecraft, one front and one back
-    this.player.setPosition(10, 440).setScale(0).setVisible(true).setDepth(145);
+    // Both astronauts eject forward onto solid flat Martian soil clear of the hull
+    this.player.setPosition(175, 470).setScale(0).setVisible(true).setDepth(DEPTH.WORLD_MIN + 555);
 
-    this.maishaActor = new Astronaut(this, -45, 440, {
+    this.maishaActor = new Astronaut(this, 145, 485, {
       name: 'Maisha',
       color: COLORS.maisha,
     });
-    this.maishaActor.setScale(0).setDepth(138);
+    this.maishaActor.setScale(0).setDepth(DEPTH.WORLD_MIN + 585);
 
-    // Front astronaut pop-up
+    // Front astronaut lands solidly on terrain
     this.tweens.add({
       targets: this.player,
       scale: 1,
-      x: 35,
-      y: 550,
+      x: 275,
+      y: 555,
       duration: 380,
       ease: 'Back.easeOut',
     });
 
-    // Back astronaut pop-up
+    // Companion lands beside him on flat soil
     this.tweens.add({
       targets: this.maishaActor,
       scale: 1,
-      x: -25,
-      y: 520,
+      x: 195,
+      y: 585,
       duration: 380,
       delay: 120,
       ease: 'Back.easeOut',
       onComplete: () => {
-        // Wait for tap to continue after they pop out behind the spacecraft
+        // Wait for tap to continue after they pop out onto the ground
         this.waitForTapToContinue(() => {
           this.stepForwardActors();
         });
@@ -205,9 +235,9 @@ export class SurfaceScene extends RoomScene {
       this.time.delayedCall(250, () => this.startIntroDialogue());
     };
 
-    // Both move forward; Maisha moves forward to a rather open space and they face each other
-    this.walkActorTo(this.player, 210, 540, 310, checkDone);
-    this.walkActorTo(this.maishaActor, 380, 540, 310, checkDone);
+    // Both move forward across flat open terrain and face each other
+    this.walkActorTo(this.player, 330, 555, 310, checkDone);
+    this.walkActorTo(this.maishaActor, 485, 555, 310, checkDone);
   }
 
   startIntroDialogue() {
@@ -233,11 +263,27 @@ export class SurfaceScene extends RoomScene {
         speaker: 'Muntasir',
         text: "Seems like our base on earth doesn't know about the crash. We have some facts to check.",
         target: this.player,
-        onStart: () => {
-          this.game.events.emit(
-            'fact:show',
-            'Fact: depending on relative position of earth to mars, it can take from 3-22 minutes to send a message and get a response back between earth and mars due to the vast distance it has to cover.'
-          );
+      },
+      {
+        isFactReveal: true,
+        text: 'Fact: depending on relative position of earth to mars, it can take from 3-22 minutes to send a message and get a response back between earth and mars due to the vast distance it has to cover.',
+      },
+      {
+        speaker: 'Muntasir',
+        text: 'How are we going to keep track of all these NASA facts and mission telemetry?',
+        target: this.player,
+      },
+      {
+        speaker: 'Maisha',
+        text: "I'm keeping track of everything we learn in our Mission Logbook! Every task and NASA fact gets recorded live at the top of our screen.",
+        target: this.maishaActor,
+        onAfterLine: (resume) => {
+          if (!gameState.tutorialLogbookDone) {
+            gameState.tutorialLogbookDone = true;
+            this.game.events.emit('tutorial:logbook', resume);
+          } else {
+            resume();
+          }
         },
       },
       {
@@ -266,12 +312,10 @@ export class SurfaceScene extends RoomScene {
         speaker: 'Maisha',
         text: 'Seems like we have an outpost already build for living.',
         target: this.maishaActor,
-        onStart: () => {
-          this.game.events.emit(
-            'fact:show',
-            'Fact: NASA has plans to build an outpost on Mars Surface using regolith, a type of martian soil that can be compressed into bricks when combined with other chemicals, which will be 3D printed. The Mars Dune Alpha at the Johnson Space Centre has already simulated the process of building, on Earth in artificial environments'
-          );
-        },
+      },
+      {
+        isFactReveal: true,
+        text: 'Fact: NASA has plans to build an outpost on Mars Surface using regolith, a type of martian soil that can be compressed into bricks when combined with other chemicals, which will be 3D printed. The Mars Dune Alpha at the Johnson Space Centre has already simulated the process of building, on Earth in artificial environments',
       },
       {
         speaker: 'Muntasir',
@@ -298,6 +342,11 @@ export class SurfaceScene extends RoomScene {
       this.transitioning = false;
       this.companion = this.maishaActor;
       this.game.events.emit('prompt', 'Airlock');
+
+      if (!gameState.tutorialMoveDone) {
+        gameState.tutorialMoveDone = true;
+        this.game.events.emit('tutorial:move');
+      }
     };
 
     // Both walk autonomously to the outpost airlock at brisk speed
@@ -317,6 +366,7 @@ export class SurfaceScene extends RoomScene {
   // ==========================================
   initSurfacePostCrash() {
     this.cameras.main.scrollX = 0;
+    if (!this.spacecraft) this.spawnGroundedSpacecraft(-10, 425);
 
     // Do NOT spawn an idle companion on the surface (prevents duplicate Maisha outside)
     // If returning from the dark Outpost on Day 1 before building the solar panel
@@ -327,10 +377,6 @@ export class SurfaceScene extends RoomScene {
         gameState.seenSolarThought = true;
         this.transitioning = true;
         this.time.delayedCall(250, () => {
-          this.game.events.emit(
-            'fact:show',
-            'Fact: NASA uses solar cells and panels on spacecraft to make them navigate on space where other manners of electricity production is impractical'
-          );
           this.dialogueBox.showSequence(
             [
               {
@@ -341,6 +387,10 @@ export class SurfaceScene extends RoomScene {
               },
             ],
             () => {
+              this.game.events.emit(
+                'fact:show',
+                'Fact: NASA uses solar cells and panels on spacecraft to make them navigate on space where other manners of electricity production is impractical'
+              );
               this.transitioning = false;
             }
           );
@@ -450,6 +500,7 @@ export class SurfaceScene extends RoomScene {
   // ==========================================
   initDay2Surface() {
     this.cameras.main.scrollX = 0;
+    if (!this.spacecraft) this.spawnGroundedSpacecraft(-10, 425);
 
     const solarStation = this.stations.find((s) => s.def.id === 'solar_panel');
     if (solarStation) solarStation.setVisible(true);
@@ -630,12 +681,10 @@ export class SurfaceScene extends RoomScene {
             speaker: 'Muntasir',
             text: 'We can melt subsurface Martian ice and split water with electricity to make oxygen, just like the ISS!',
             target: this.player,
-            onStart: () => {
-              this.game.events.emit(
-                'fact:show',
-                "Fact: Just like the ISS Oxygen Generation System (OGS) splits water into hydrogen and breathable oxygen via electrolysis, NASA's MOXIE experiment on Perseverance proved we can generate oxygen on Mars—producing 122 grams of pure oxygen."
-              );
-            },
+          },
+          {
+            isFactReveal: true,
+            text: "Fact: Just like the ISS Oxygen Generation System (OGS) splits water into hydrogen and breathable oxygen via electrolysis, NASA's MOXIE experiment on Perseverance proved we can generate oxygen on Mars—producing 122 grams of pure oxygen.",
           },
           {
             speaker: 'Maisha',

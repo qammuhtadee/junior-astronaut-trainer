@@ -140,6 +140,7 @@ export class SolarAlignTask extends Phaser.Scene {
     });
 
     this.completed = false;
+    this.tutorialActive = false;
     this.speed = 150; // px/sec
 
     // Slide up from bottom
@@ -149,6 +150,104 @@ export class SolarAlignTask extends Phaser.Scene {
       scrollY: 0,
       duration: 450,
       ease: 'Back.easeOut',
+    });
+
+    if (!gameState.tutorialSolarDone) {
+      gameState.tutorialSolarDone = true;
+      this.tutorialActive = true;
+      this.createSolarTutorial(cx, cy);
+    }
+  }
+
+  createSolarTutorial(cx, cy) {
+    this.tutorialOverlay = this.add.container(cx, cy).setScrollFactor(0).setDepth(500);
+
+    const cardW = 520;
+    const cardH = 260;
+    const bg = this.add.graphics();
+    bg.fillStyle(0x0b1220, 0.96);
+    bg.fillRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, 16);
+    bg.lineStyle(2.5, 0xffd166, 1);
+    bg.strokeRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, 16);
+    this.tutorialOverlay.add(bg);
+
+    this.tutorialOverlay.add(
+      this.add
+        .text(0, -96, 'FIRST-TIME TUTORIAL: AIM SOLAR PANEL', {
+          fontFamily: 'monospace',
+          fontSize: '16px',
+          fontStyle: 'bold',
+          color: '#ffd166',
+        })
+        .setOrigin(0.5)
+    );
+
+    const drawArrowCap = (kx, ky, label) => {
+      const cap = this.add.graphics();
+      cap.fillStyle(0x1e293b, 1);
+      cap.fillRoundedRect(kx - 20, ky - 20, 40, 40, 8);
+      cap.lineStyle(2, 0x38bdf8, 1);
+      cap.strokeRoundedRect(kx - 20, ky - 20, 40, 40, 8);
+      const txt = this.add
+        .text(kx, ky, label, { fontFamily: 'monospace', fontSize: '16px', fontStyle: 'bold', color: '#f8fafc' })
+        .setOrigin(0.5);
+      this.tutorialOverlay.add([cap, txt]);
+    };
+
+    drawArrowCap(0, -46, '▲');
+    drawArrowCap(-48, 0, '◄');
+    drawArrowCap(0, 0, '▼');
+    drawArrowCap(48, 0, '►');
+
+    this.tutorialOverlay.add(
+      this.add
+        .text(
+          0,
+          56,
+          'Use the ARROW KEYS (◄ ▲ ▼ ►) to steer the solar array\nand center the glowing Sun inside the crosshair!\n(You can also drag with mouse or touch.)',
+          {
+            fontFamily: 'monospace',
+            fontSize: '13px',
+            align: 'center',
+            lineSpacing: 5,
+            color: '#e2e8f0',
+          }
+        )
+        .setOrigin(0.5)
+    );
+
+    this.tutorialOverlay.add(
+      this.add
+        .text(0, 106, '▶ TAP OR PRESS ANY KEY TO START', {
+          fontFamily: 'monospace',
+          fontSize: '13px',
+          fontStyle: 'bold',
+          color: '#34d399',
+        })
+        .setOrigin(0.5)
+    );
+
+    const dismiss = (event) => {
+      if (event && event.key === 'Escape') return;
+      if (!this.tutorialActive) return;
+      this.tutorialActive = false;
+      this.input.off('pointerdown', dismiss);
+      if (this.input?.keyboard) this.input.keyboard.off('keydown', dismiss);
+      if (this.tutorialOverlay) {
+        this.tutorialOverlay.destroy();
+        this.tutorialOverlay = null;
+      }
+    };
+
+    this.time.delayedCall(150, () => {
+      if (!this.tutorialActive) return;
+      this.input.on('pointerdown', dismiss);
+      this.input.keyboard.on('keydown', dismiss);
+    });
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.input.off('pointerdown', dismiss);
+      if (this.input?.keyboard) this.input.keyboard.off('keydown', dismiss);
     });
   }
 
@@ -168,7 +267,7 @@ export class SolarAlignTask extends Phaser.Scene {
   }
 
   update(_time, delta) {
-    if (this.completed) return;
+    if (this.completed || this.tutorialActive) return;
 
     const dt = delta / 1000;
     let dx = 0;

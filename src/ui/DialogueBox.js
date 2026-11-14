@@ -87,6 +87,31 @@ export class DialogueBox extends Phaser.GameObjects.Container {
     scene.input.keyboard.on('keydown-SPACE', this.onSpaceDown);
     scene.input.on('pointerdown', this.onPointerDown);
 
+    // Bottom prompt shown when a separated fact reveal pauses dialogue
+    this.factContinueHint = scene.add
+      .text(GAME_WIDTH / 2, 675, '▶ TAP / SPACE TO CONTINUE', {
+        fontFamily: 'monospace',
+        fontSize: '15px',
+        fontStyle: 'bold',
+        color: '#ffd166',
+        backgroundColor: '#000c',
+        padding: { x: 14, y: 6 },
+      })
+      .setOrigin(0.5)
+      .setDepth(1650)
+      .setVisible(false);
+    this.add(this.factContinueHint);
+
+    scene.tweens.add({
+      targets: this.factContinueHint,
+      alpha: 0.45,
+      duration: 550,
+      yoyo: true,
+      repeat: -1,
+    });
+
+    this.afterLineRanIdx = -1;
+
     scene.add.existing(this);
   }
 
@@ -102,6 +127,20 @@ export class DialogueBox extends Phaser.GameObjects.Container {
       return;
     }
 
+    if (this.currentLine?.onAfterLine && this.afterLineRanIdx !== this.sequenceIndex) {
+      this.afterLineRanIdx = this.sequenceIndex;
+      this.stopLineAudio();
+      this.bubbleContainer.setVisible(false);
+      this.heldRadio.stop();
+      this.heldRadio.setVisible(false);
+      this.waitingForExclamation = true;
+      this.currentLine.onAfterLine(() => {
+        this.waitingForExclamation = false;
+        this.advanceStep();
+      });
+      return;
+    }
+
     this.advanceStep();
   }
 
@@ -109,6 +148,7 @@ export class DialogueBox extends Phaser.GameObjects.Container {
     this.stopLineAudio();
     this.heldRadio.stop();
     this.heldRadio.setVisible(false);
+    this.factContinueHint.setVisible(false);
 
     this.sequenceIndex++;
     if (this.sequenceIndex < this.sequence.length) {
@@ -130,6 +170,7 @@ export class DialogueBox extends Phaser.GameObjects.Container {
     }
     this.sequence = lines;
     this.sequenceIndex = 0;
+    this.afterLineRanIdx = -1;
     this.onSequenceComplete = onComplete;
     this.isActive = true;
     this.setVisible(true);
@@ -139,9 +180,30 @@ export class DialogueBox extends Phaser.GameObjects.Container {
   renderCurrentLine() {
     const line = this.sequence[this.sequenceIndex];
     this.currentLine = line;
+    this.factContinueHint.setVisible(false);
 
     if (line.onStart) {
       line.onStart();
+    }
+
+    if (line.isFactReveal) {
+      this.stopLineAudio();
+      this.bubbleContainer.setVisible(false);
+      this.radioSprite.stop();
+      this.radioSprite.setVisible(false);
+      this.heldRadio.stop();
+      this.heldRadio.setVisible(false);
+      this.isTyping = false;
+
+      const camLeft = this.scene.cameras?.main?.scrollX ?? 0;
+      this.factContinueHint.setPosition(camLeft + GAME_WIDTH / 2, 675).setVisible(true);
+      this.scene.game.events.emit('fact:show', line.text);
+
+      this.waitingForExclamation = true;
+      this.scene.time.delayedCall(250, () => {
+        this.waitingForExclamation = false;
+      });
+      return;
     }
 
     if (line.exclamation && line.target) {
@@ -193,6 +255,7 @@ export class DialogueBox extends Phaser.GameObjects.Container {
 
   displayBubble(line) {
     this.setVisible(true);
+    this.factContinueHint.setVisible(false);
     this.bubbleContainer.setVisible(true);
     this.bubbleContainer.setAlpha(1);
 
@@ -355,6 +418,7 @@ export class DialogueBox extends Phaser.GameObjects.Container {
 
   close() {
     this.stopLineAudio();
+    this.factContinueHint.setVisible(false);
     if (this.typeEvent) this.typeEvent.remove();
     this.isTyping = false;
     this.isActive = false;

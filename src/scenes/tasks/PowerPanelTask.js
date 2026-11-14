@@ -340,8 +340,12 @@ export class PowerPanelTask extends Phaser.Scene {
         if (lightSw.on) {
           if (!gameState.habLightsOn) {
             gameState.habLightsOn = true;
-            const cur = gameState.meters.power ?? 100;
-            gameState.setMeters({ power: Math.max(10, cur > 90 ? 90 : cur - 10) });
+            if (!gameState.lightsIntroDone) {
+              gameState.setMeters({ power: 90 });
+            } else {
+              const cur = gameState.meters.power ?? 100;
+              gameState.setMeters({ power: Math.max(10, cur - 10) });
+            }
           }
           this.lightsChangeState = 'turned_on';
         } else if (!gameState.lightsIntroDone) {

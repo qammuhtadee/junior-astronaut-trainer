@@ -188,6 +188,25 @@ export class OutpostScene extends RoomScene {
 
     if (!gameState.lightsIntroDone && !gameState.habLightsOn) {
       this.createPowerPanelGuide();
+      if (!gameState.seenLightsThought) {
+        gameState.seenLightsThought = true;
+        this.transitioning = true;
+        this.time.delayedCall(300, () => {
+          this.dialogueBox.showSequence(
+            [
+              {
+                speaker: 'Maisha',
+                isThought: true,
+                target: this.player,
+                text: 'Muntasir connected the solar array! I should walk over to the Power Panel and flip the breaker switch to turn on the habitat lights.',
+              },
+            ],
+            () => {
+              this.transitioning = false;
+            }
+          );
+        });
+      }
     }
 
     if (this.darknessLayer) {
@@ -304,12 +323,10 @@ export class OutpostScene extends RoomScene {
               speaker: 'Muntasir',
               text: 'At night there is no sun, so there is no natural light for the solar panels to be powered up, we have to be careful about energy consumption soon.',
               target: this.companion,
-              onStart: () => {
-                this.game.events.emit(
-                  'fact:show',
-                  'Fact: Mars surface has about 43% light level of earth, so its also harder for solar panels to recharge there'
-                );
-              },
+            },
+            {
+              isFactReveal: true,
+              text: 'Fact: Mars surface has about 43% light level of earth, so its also harder for solar panels to recharge there',
             },
             {
               speaker: 'Muntasir',
@@ -408,12 +425,10 @@ export class OutpostScene extends RoomScene {
               speaker: 'Muntasir',
               text: 'An overnight Martian dust storm must have coated our solar array outside!',
               target: this.player,
-              onStart: () => {
-                this.game.events.emit(
-                  'fact:show',
-                  "Fact: NASA's Mars Exploration Rover Opportunity went silent in the global Martian dust storm of June 2018, and its mission was declared over in February 2019."
-                );
-              },
+            },
+            {
+              isFactReveal: true,
+              text: "Fact: NASA's Mars Exploration Rover Opportunity went silent in the global Martian dust storm of June 2018, and its mission was declared over in February 2019.",
             },
             {
               speaker: 'Muntasir',
@@ -546,12 +561,10 @@ export class OutpostScene extends RoomScene {
               speaker: 'Maisha',
               text: 'The Oxygen Maker is running! Oxygen tanks are refilling to 100%, though it uses 40% of our power.',
               target: this.player,
-              onStart: () => {
-                this.game.events.emit(
-                  'fact:show',
-                  "Fact: On Mars, splitting water with electricity makes O2 just like on the ISS. Perseverance's MOXIE also made ~122g of oxygen from Martian CO2 air. One person needs ~0.84 kg O2/day."
-                );
-              },
+            },
+            {
+              isFactReveal: true,
+              text: "Fact: On Mars, splitting water with electricity makes O2 just like on the ISS. Perseverance's MOXIE also made ~122g of oxygen from Martian CO2 air. One person needs ~0.84 kg O2/day.",
             },
             {
               speaker: 'Muntasir',
