@@ -82,6 +82,11 @@ export class RoomScene extends Phaser.Scene {
         return;
       }
 
+      if (gameState.day === 1 && gameState.solarAligned) {
+        this.game.events.emit('toast', 'Solar array is aligned and perfectly fine.');
+        return;
+      }
+
       this.scene.pause();
       this.scene.launch('SolarAlignTask');
       return;
@@ -193,7 +198,7 @@ export class RoomScene extends Phaser.Scene {
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
       const door = STATIONS[targetRoom].find((s) => s.leadsTo === this.roomId);
       const isLeftDoor = door.x < 640;
-      const spawnX = isLeftDoor ? door.x + 35 : door.x - 35;
+      const spawnX = isLeftDoor ? door.x + 85 : door.x - 85;
       const spawnY = door.y + 35;
       const facingLeft = !isLeftDoor;
       this.scene.start(ROOM_TO_SCENE[targetRoom], { spawnX, spawnY, facingLeft });

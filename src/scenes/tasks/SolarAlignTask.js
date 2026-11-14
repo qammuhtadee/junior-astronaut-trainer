@@ -12,6 +12,9 @@ export class SolarAlignTask extends Phaser.Scene {
   }
 
   create() {
+    this.completed = false;
+    this.closing = false;
+
     const cx = GAME_WIDTH / 2;
     const cy = GAME_HEIGHT / 2;
     const viewRadius = 220; // circular telescope aperture
@@ -229,16 +232,22 @@ export class SolarAlignTask extends Phaser.Scene {
     this.hintText.setText('Photovoltaic array aligned! Transmitting charge to habitat...').setColor('#88ffbb');
 
     // Update game state
+    const firstTimeAligned = !gameState.solarAligned;
     gameState.solarAligned = true;
-    gameState.setMeters({ power: 0 }); // start at 0 so it charges up gradually on surface
+    if (firstTimeAligned) {
+      this.game.events.emit('power:gradual-charge');
+    }
 
     // Close after celebration
-    this.time.delayedCall(1200, () => {
+    this.time.delayedCall(900, () => {
       this.closeTask();
     });
   }
 
   closeTask() {
+    if (this.closing) return;
+    this.closing = true;
+
     this.tweens.add({
       targets: this.cameras.main,
       scrollY: 500,

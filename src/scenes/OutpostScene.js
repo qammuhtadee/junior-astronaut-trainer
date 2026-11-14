@@ -95,6 +95,14 @@ export class OutpostScene extends RoomScene {
     super.update(time, delta);
 
     if (this.darknessLayer && this.darknessLayer.visible && !gameState.habLightsOn) {
+      const px = this.player?.active ? Math.round(this.player.x) : -1;
+      const py = this.player?.active ? Math.round(this.player.y) : -1;
+      const cx = this.companion?.active ? Math.round(this.companion.x) : -1;
+      const cy = this.companion?.active ? Math.round(this.companion.y) : -1;
+      const darkKey = `${px},${py},${cx},${cy},${gameState.solarDeployed}`;
+      if (this.lastDarkKey === darkKey) return;
+      this.lastDarkKey = darkKey;
+
       this.darknessLayer.clear();
       this.darknessLayer.fill(0x03050a, 0.96);
 
@@ -259,10 +267,12 @@ export class OutpostScene extends RoomScene {
             speaker: 'Muntasir',
             text: 'At night there is no sun, so there is no natural light for the solar panels to be powered up, we have to be careful about energy consumption soon.',
             target: this.companion,
-          },
-          {
-            isFact: true,
-            text: 'Fact: Mars surface has about 43% light level of earth, so its also harder for solar panels to recharge there',
+            onStart: () => {
+              this.game.events.emit(
+                'fact:show',
+                'Fact: Mars surface has about 43% light level of earth, so its also harder for solar panels to recharge there'
+              );
+            },
           },
           {
             speaker: 'Muntasir',
@@ -278,29 +288,21 @@ export class OutpostScene extends RoomScene {
   }
 
   startNightDrain() {
-    if (this.drainTimer) return;
-    // The meter goes down by 1% every 10 seconds
-    this.drainTimer = this.time.addEvent({
-      delay: 10000,
-      loop: true,
-      callback: () => {
-        if (gameState.meters.power !== null && gameState.meters.power > 10) {
-          gameState.setMeters({ power: gameState.meters.power - 1 });
-        }
-      },
-    });
+    this.game.events.emit('power:start-night-drain');
   }
 
   muntasirRestAtBunks() {
+    // Immediately restore player control to Maisha so she can move freely while Muntasir approaches the bunk!
+    this.transitioning = false;
+
     if (!this.companion) {
-      this.transitioning = false;
       return;
     }
 
     const bunkX = GAME_WIDTH - 140;
     const bunkY = LANE.top + 15;
 
-    // Muntasir walks behind the bunks and disappears
+    // Muntasir walks behind the bunks autonomously and disappears
     this.walkActorTo(this.companion, bunkX, bunkY, 320, () => {
       this.tweens.add({
         targets: this.companion,
@@ -311,8 +313,6 @@ export class OutpostScene extends RoomScene {
             this.companion.destroy();
             this.companion = null;
           }
-          // Restore player control to Maisha so she can walk to the bunk and press SPACE
-          this.transitioning = false;
         },
       });
     });
@@ -345,6 +345,7 @@ export class OutpostScene extends RoomScene {
     const dist = Math.sqrt(dx * dx + dy * dy);
     const duration = Math.max(100, (dist / speed) * 1000);
 
+    actor.isAutoWalking = true;
     actor.body_.setFlipX(dx < 0);
     actor.body_.play('walk', true);
 
@@ -354,8 +355,12 @@ export class OutpostScene extends RoomScene {
       y: targetY,
       duration,
       ease: 'Linear',
+      onUpdate: () => {
+        if (actor && actor.active) actor.syncDepth();
+      },
       onComplete: () => {
         if (actor && actor.active && actor.body_) {
+          actor.isAutoWalking = false;
           actor.body_.stop();
           actor.body_.setFrame(0);
         }

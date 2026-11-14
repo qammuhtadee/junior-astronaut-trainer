@@ -13,6 +13,9 @@ export class PowerPanelTask extends Phaser.Scene {
   }
 
   create() {
+    this.closing = false;
+    this.lightsJustRestored = false;
+
     const cx = GAME_WIDTH / 2;
     const cy = GAME_HEIGHT / 2;
 
@@ -215,15 +218,6 @@ export class PowerPanelTask extends Phaser.Scene {
           sw.on = !sw.on;
           updateSwitchVisual(sw.on);
           this.updateLoad();
-
-          if (gameState.day === 1 && sw.id === 'light' && sw.on && !gameState.habLightsOn) {
-            gameState.habLightsOn = true;
-            gameState.setMeters({ power: 90 });
-            this.lightsJustRestored = true;
-            this.time.delayedCall(450, () => {
-              this.closeTask();
-            });
-          }
         });
         rowContainer.add(hitArea);
       }
@@ -287,7 +281,8 @@ export class PowerPanelTask extends Phaser.Scene {
       const lightSw = this.switches.find((s) => s.id === 'light');
       if (lightSw && lightSw.on && !gameState.habLightsOn) {
         gameState.habLightsOn = true;
-        gameState.setMeters({ power: 90 });
+        const cur = gameState.meters.power ?? 100;
+        gameState.setMeters({ power: Math.max(10, cur > 90 ? 90 : cur - 10) });
         this.lightsJustRestored = true;
       }
     }

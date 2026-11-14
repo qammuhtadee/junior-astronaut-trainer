@@ -213,10 +213,12 @@ export class SurfaceScene extends RoomScene {
         speaker: 'Muntasir',
         text: "Seems like our base on earth doesn't know about the crash. We have some facts to check.",
         target: this.player,
-      },
-      {
-        isFact: true,
-        text: 'Fact: depending on relative position of earth to mars, it can take from 3-22 minutes to send a message and get a response back between earth and mars due to the vast distance it has to cover.',
+        onStart: () => {
+          this.game.events.emit(
+            'fact:show',
+            'Fact: depending on relative position of earth to mars, it can take from 3-22 minutes to send a message and get a response back between earth and mars due to the vast distance it has to cover.'
+          );
+        },
       },
       {
         speaker: 'Maisha',
@@ -244,10 +246,12 @@ export class SurfaceScene extends RoomScene {
         speaker: 'Maisha',
         text: 'Seems like we have an outpost already build for living.',
         target: this.maishaActor,
-      },
-      {
-        isFact: true,
-        text: 'Fact: NASA has plans to build an outpost on Mars Surface using regolith, a type of martian soil that can be compressed into bricks when combined with other chemicals, which will be 3D printed. The Mars Dune Alpha at the Johnson Space Centre has already simulated the process of building, on Earth in artificial environments',
+        onStart: () => {
+          this.game.events.emit(
+            'fact:show',
+            'Fact: NASA has plans to build an outpost on Mars Surface using regolith, a type of martian soil that can be compressed into bricks when combined with other chemicals, which will be 3D printed. The Mars Dune Alpha at the Johnson Space Centre has already simulated the process of building, on Earth in artificial environments'
+          );
+        },
       },
       {
         speaker: 'Muntasir',
@@ -294,20 +298,19 @@ export class SurfaceScene extends RoomScene {
   initSurfacePostCrash() {
     this.cameras.main.scrollX = 0;
 
-    // Companion Maisha stands outside near the airlock with Muntasir
-    if (gameState.day === 1) {
-      this.companion = new Astronaut(this, GAME_WIDTH - 165, LANE.top + 48, {
-        name: 'Maisha',
-        color: COLORS.maisha,
-      });
-      this.companion.body_.setFlipX(true);
-    }
-
+    // Do NOT spawn an idle companion on the surface (prevents duplicate Maisha outside)
     // If returning from the dark Outpost on Day 1 before building the solar panel
-    if (gameState.visitedDarkOutpost && !gameState.solarDeployed && !gameState.solarAligned) {
-      if (!gameState.solarUnfurled) {
+    if (gameState.visitedDarkOutpost && !gameState.solarUnfurled) {
+      this.createSolarBuildGuide();
+
+      if (!gameState.seenSolarThought) {
+        gameState.seenSolarThought = true;
         this.transitioning = true;
-        this.time.delayedCall(350, () => {
+        this.time.delayedCall(250, () => {
+          this.game.events.emit(
+            'fact:show',
+            'Fact: NASA uses solar cells and panels on spacecraft to make them navigate on space where other manners of electricity production is impractical'
+          );
           this.dialogueBox.showSequence(
             [
               {
@@ -316,14 +319,9 @@ export class SurfaceScene extends RoomScene {
                 target: this.player,
                 isThought: true,
               },
-              {
-                isFact: true,
-                text: 'Fact: NASA uses solar cells and panels on spacecraft to make them navigate on space where other manners of electricity production is impractical',
-              },
             ],
             () => {
               this.transitioning = false;
-              this.createSolarBuildGuide();
             }
           );
         });
@@ -423,6 +421,8 @@ export class SurfaceScene extends RoomScene {
     this.game.events.emit('prompt', null);
     gameState.solarDeployed = true;
 
+    // Note: The power pill meter charges from 0% to 100% over 6s independently in HudScene
+    // via the 'power:gradual-charge' event emitted by SolarAlignTask, so Muntasir is not stuck waiting!
     if (!this.companion) {
       this.companion = new Astronaut(this, GAME_WIDTH - 165, LANE.top + 48, {
         name: 'Maisha',
@@ -431,36 +431,19 @@ export class SurfaceScene extends RoomScene {
       this.companion.body_.setFlipX(true);
     }
 
-    // Power pill meter appears at 0% and gradually fills to 100% over 6 seconds
-    gameState.setMeters({ power: 0 });
-
-    this.tweens.addCounter({
-      from: 0,
-      to: 100,
-      duration: 6000,
-      ease: 'Linear',
-      onUpdate: (tw) => {
-        const val = Math.round(tw.getValue());
-        gameState.setMeters({ power: val });
-      },
-      onComplete: () => {
-        gameState.setMeters({ power: 100 });
-
-        this.time.delayedCall(400, () => {
-          this.dialogueBox.showSequence(
-            [
-              {
-                speaker: 'Maisha',
-                text: 'Seems like power is restored, we can go inside.',
-                target: this.companion,
-              },
-            ],
-            () => {
-              this.bothEnterOutpostAfterPower();
-            }
-          );
-        });
-      },
+    this.time.delayedCall(250, () => {
+      this.dialogueBox.showSequence(
+        [
+          {
+            speaker: 'Maisha',
+            text: 'Seems like power is restored, we can go inside.',
+            target: this.companion,
+          },
+        ],
+        () => {
+          this.bothEnterOutpostAfterPower();
+        }
+      );
     });
   }
 
@@ -493,6 +476,7 @@ export class SurfaceScene extends RoomScene {
     const dist = Math.sqrt(dx * dx + dy * dy);
     const duration = Math.max(100, (dist / speed) * 1000);
 
+    actor.isAutoWalking = true;
     actor.body_.setFlipX(dx < 0);
     actor.body_.play('walk', true);
 
@@ -502,8 +486,12 @@ export class SurfaceScene extends RoomScene {
       y: targetY,
       duration,
       ease: 'Linear',
+      onUpdate: () => {
+        if (actor && actor.active) actor.syncDepth();
+      },
       onComplete: () => {
         if (actor && actor.active && actor.body_) {
+          actor.isAutoWalking = false;
           actor.body_.stop();
           actor.body_.setFrame(0);
         }

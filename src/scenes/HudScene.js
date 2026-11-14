@@ -65,8 +65,8 @@ export class HudScene extends Phaser.Scene {
     this.createPauseButton();
     this.createPauseOverlay();
 
-    // Floating NASA Fact Card
-    this.factCard = new FactCard(this, GAME_WIDTH - 330, 70);
+    // Floating NASA Fact Card (stays visible until manually closed by the user)
+    this.factCard = new FactCard(this, GAME_WIDTH - 360, 62);
 
     // Floating interaction prompt
     this.prompt = this.add
@@ -75,24 +75,36 @@ export class HudScene extends Phaser.Scene {
       .setVisible(false);
 
     this.toast = this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT - 30, '', { ...font, color: '#ffd166' })
-      .setOrigin(0.5);
+      .text(GAME_WIDTH / 2, GAME_HEIGHT - 30, '', {
+        ...font,
+        color: '#ffd166',
+        backgroundColor: '#0f172acc',
+        padding: { x: 14, y: 6 },
+      })
+      .setOrigin(0.5)
+      .setVisible(false);
 
     const unsub = [
       gameState.on('meters', () => this.refresh()),
       gameState.on('step', () => this.refresh()),
     ];
     this.game.events.on('prompt', this.showPrompt, this);
+    this.game.events.on('toast', this.showToast, this);
     this.game.events.on('station:interact', this.onInteract, this);
     this.game.events.on('fact:show', this.onShowFact, this);
     this.game.events.on('fact:hide', this.onHideFact, this);
+    this.game.events.on('power:gradual-charge', this.startGradualPowerCharge, this);
+    this.game.events.on('power:start-night-drain', this.startNightDrain, this);
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       unsub.forEach((fn) => fn());
       this.game.events.off('prompt', this.showPrompt, this);
+      this.game.events.off('toast', this.showToast, this);
       this.game.events.off('station:interact', this.onInteract, this);
       this.game.events.off('fact:show', this.onShowFact, this);
       this.game.events.off('fact:hide', this.onHideFact, this);
+      this.game.events.off('power:gradual-charge', this.startGradualPowerCharge, this);
+      this.game.events.off('power:start-night-drain', this.startNightDrain, this);
     });
 
     this.refresh();
@@ -111,19 +123,64 @@ export class HudScene extends Phaser.Scene {
     if (label) this.prompt.setText(`${label}  -  Press SPACE / tap`);
   }
 
+  showToast(message) {
+    if (this.toastTimer) this.toastTimer.remove();
+    this.toast.setText(message);
+    this.toast.setVisible(true);
+    this.toastTimer = this.time.delayedCall(2200, () => {
+      this.toast.setVisible(false);
+    });
+  }
+
   onInteract({ station }) {
-    this.toast.setText(`[${station}] mini-game not built yet`);
-    this.time.delayedCall(1500, () => this.toast.setText(''));
+    this.showToast(`[${station}] mini-game not built yet`);
   }
 
   onShowFact(payload) {
     const text = typeof payload === 'string' ? payload : payload.text;
-    const duration = typeof payload === 'object' && payload.duration !== undefined ? payload.duration : 14000;
-    this.factCard.show(text, { duration });
+    this.factCard.show(text);
   }
 
   onHideFact() {
     this.factCard.hide();
+  }
+
+  startGradualPowerCharge() {
+    if (this.chargeEvent) this.chargeEvent.remove();
+    gameState.setMeters({ power: 0 });
+
+    // Charge smoothly from 0% to 100% over 6 seconds (60 ticks at 100ms each)
+    let current = 0;
+    this.chargeEvent = this.time.addEvent({
+      delay: 60,
+      repeat: 99,
+      callback: () => {
+        // Stop charging if lights were already turned on
+        if (gameState.habLightsOn) {
+          this.chargeEvent.remove();
+          return;
+        }
+        current = Math.min(100, current + 1);
+        gameState.setMeters({ power: current });
+      },
+    });
+  }
+
+  startNightDrain() {
+    gameState.nightDrainActive = true;
+    if (this.nightDrainEvent) return;
+
+    // Drain 1% every 5 seconds while night drain is active on Day 1
+    this.nightDrainEvent = this.time.addEvent({
+      delay: 5000,
+      loop: true,
+      callback: () => {
+        if (!gameState.nightDrainActive || gameState.day > 1) return;
+        if (gameState.meters.power !== null && gameState.meters.power > 10) {
+          gameState.setMeters({ power: gameState.meters.power - 1 });
+        }
+      },
+    });
   }
 
   createTitleBanner() {

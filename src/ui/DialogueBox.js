@@ -1,14 +1,10 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH } from '../config/constants.js';
-import { FactCard } from './FactCard.js';
 
 /**
- * Story-driven dialogue & fact system.
- * Supports:
- * - Character speech bubbles positioned cleanly above the astronaut's helmet.
- * - Thought bubbles with cloud styling.
- * - Radio comms where Muntasir holds the whirring radio and a radio dialogue box appears.
- * - Top-right breathing paper Fact Notes that type out on screen and advance on tap/SPACE.
+ * Story-driven dialogue system.
+ * Handles character speech bubbles, thought bubbles, and radio comms.
+ * Fact notes are completely independent (rendered in HudScene) and never block dialogue or movement.
  */
 export class DialogueBox extends Phaser.GameObjects.Container {
   constructor(scene) {
@@ -83,11 +79,7 @@ export class DialogueBox extends Phaser.GameObjects.Container {
       repeat: -1,
     });
 
-    // 7. Dedicated top-right Fact Note card (fixed to camera viewport)
-    this.factCard = new FactCard(scene, GAME_WIDTH - 360, 62);
-    this.factCard.setScrollFactor(0);
-
-    // Tap & Keyboard input to advance
+    // Tap & Keyboard input to advance dialogue
     this.spaceKey = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
     this.spaceKey.on('down', () => this.handleAdvance());
     scene.input.on('pointerdown', () => this.handleAdvance());
@@ -97,15 +89,6 @@ export class DialogueBox extends Phaser.GameObjects.Container {
 
   handleAdvance() {
     if (!this.isActive || this.waitingForExclamation) return;
-
-    // If current step is a Fact Note
-    if (this.currentLine?.isFact) {
-      if (this.factCard.completeTyping()) {
-        return;
-      }
-      this.advanceStep();
-      return;
-    }
 
     if (this.isTyping) {
       if (this.typeEvent) this.typeEvent.remove();
@@ -154,13 +137,6 @@ export class DialogueBox extends Phaser.GameObjects.Container {
 
     if (line.onStart) {
       line.onStart();
-    }
-
-    // Fact card step
-    if (line.isFact) {
-      this.bubbleContainer.setVisible(false);
-      this.factCard.show(line.text);
-      return;
     }
 
     if (line.exclamation && line.target) {
@@ -225,7 +201,11 @@ export class DialogueBox extends Phaser.GameObjects.Container {
 
     if (isRadio) {
       if (line.target) {
-        bx = Phaser.Math.Clamp(line.target.x - this.boxWidth / 2, camLeft + 30, camLeft + GAME_WIDTH - this.boxWidth - 30);
+        bx = Phaser.Math.Clamp(
+          line.target.x - this.boxWidth / 2,
+          camLeft + 30,
+          camLeft + GAME_WIDTH - this.boxWidth - 30
+        );
         by = Math.max(20, line.target.y - this.boxHeight - 135);
 
         // Show Muntasir holding the radio sprite
@@ -246,7 +226,11 @@ export class DialogueBox extends Phaser.GameObjects.Container {
       this.dialogueText.setStyle({ wordWrap: { width: this.boxWidth - 40 } });
 
       if (line.target) {
-        bx = Phaser.Math.Clamp(line.target.x - this.boxWidth / 2, camLeft + 30, camLeft + GAME_WIDTH - this.boxWidth - 30);
+        bx = Phaser.Math.Clamp(
+          line.target.x - this.boxWidth / 2,
+          camLeft + 30,
+          camLeft + GAME_WIDTH - this.boxWidth - 30
+        );
         by = Math.max(20, line.target.y - this.boxHeight - 135);
       }
     }
@@ -351,7 +335,6 @@ export class DialogueBox extends Phaser.GameObjects.Container {
     this.radioSprite.setVisible(false);
     this.heldRadio.stop();
     this.heldRadio.setVisible(false);
-    this.factCard.hide();
 
     this.scene.tweens.add({
       targets: this.bubbleContainer,

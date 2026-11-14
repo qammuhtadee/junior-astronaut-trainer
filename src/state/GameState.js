@@ -20,10 +20,12 @@ export class GameState {
     this.activeAstronaut = 'muntasir';
     this.hasSeenCrash = false;
     this.visitedDarkOutpost = false;
+    this.seenSolarThought = false;
     this.solarUnfurled = false;
     this.solarDeployed = false;
     this.solarAligned = false;
     this.habLightsOn = false;
+    this.nightDrainActive = false;
   }
 
   get step() {

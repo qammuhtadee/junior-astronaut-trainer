@@ -9,6 +9,7 @@ export class Astronaut extends Phaser.GameObjects.Container {
   constructor(scene, x, y, { name, color }) {
     super(scene, x, y);
     this.name = name;
+    this.isAutoWalking = false;
 
     if (!scene.anims.exists('walk')) {
       scene.anims.create({
@@ -35,13 +36,15 @@ export class Astronaut extends Phaser.GameObjects.Container {
 
   /** dir: { x: -1..1, y: -1..1 } */
   move(dir, deltaMs) {
+    if (this.isAutoWalking) return;
+
     const isMoving = dir.x !== 0 || dir.y !== 0;
 
     if (isMoving) {
       if (!this.body_.anims.isPlaying || this.body_.anims.currentAnim?.key !== 'walk') {
         this.body_.play('walk');
       }
-      const dt = deltaMs / 1000;
+      const dt = Math.min(deltaMs / 1000, 0.04);
       const len = Math.hypot(dir.x, dir.y) || 1;
       this.x += (dir.x / len) * PLAYER.speedX * dt;
       this.y += (dir.y / len) * PLAYER.speedX * PLAYER.speedYRatio * dt;
