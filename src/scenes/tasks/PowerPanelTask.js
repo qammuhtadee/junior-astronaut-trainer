@@ -73,47 +73,35 @@ export class PowerPanelTask extends Phaser.Scene {
     this.modal.add(closeBtn);
 
     // Configure switch list per day / narrative progression
+    // On Day 1, only the option of lights is inside the power board
     if (gameState.day === 1) {
       this.switches = [
         {
           id: 'light',
-          label: 'HAB LIGHTING',
-          desc: 'Main habitat illumination array',
+          label: 'LIGHTS',
+          desc: 'Main habitat illumination',
           on: gameState.habLightsOn || false,
           load: 10,
           locked: false,
         },
-        {
-          id: 'oxygen',
-          label: 'O2 GENERATOR',
-          desc: 'Life support water splitting (Sol 2)',
-          on: false,
-          load: 40,
-          locked: true,
-        },
-        {
-          id: 'water',
-          label: 'WATER PURIFIER',
-          desc: 'Filtration and melting pumps (Sol 3)',
-          on: false,
-          load: 20,
-          locked: true,
-        },
-        {
-          id: 'safemode',
-          label: 'SAFE MODE',
-          desc: 'Cut non-essential auxiliary draw (Sol 4)',
-          on: false,
-          load: -20,
-          locked: true,
-        },
+      ];
+    } else if (gameState.day === 2) {
+      this.switches = [
+        { id: 'light', label: 'LIGHTS', desc: 'Main habitat illumination', on: true, load: 15, locked: false },
+        { id: 'oxygen', label: 'OXYGEN', desc: 'Life support water splitting', on: true, load: 40, locked: false },
+      ];
+    } else if (gameState.day === 3) {
+      this.switches = [
+        { id: 'light', label: 'LIGHTS', desc: 'Main habitat illumination', on: true, load: 15, locked: false },
+        { id: 'oxygen', label: 'OXYGEN', desc: 'Life support water splitting', on: true, load: 40, locked: false },
+        { id: 'water', label: 'WATER', desc: 'Filtration and melting pumps', on: false, load: 20, locked: false },
       ];
     } else {
       this.switches = [
-        { id: 'light', label: 'HAB LIGHTING', desc: 'Main habitat illumination', on: true, load: 15, locked: false },
-        { id: 'oxygen', label: 'O2 GENERATOR', desc: 'Life support water splitting', on: true, load: 40, locked: false },
-        { id: 'water', label: 'WATER PURIFIER', desc: 'Filtration and melting pumps', on: false, load: 20, locked: gameState.day < 3 },
-        { id: 'safemode', label: 'SAFE MODE', desc: 'Cut non-essential auxiliary draw', on: false, load: -20, locked: gameState.day < 4 },
+        { id: 'light', label: 'LIGHTS', desc: 'Main habitat illumination', on: true, load: 15, locked: false },
+        { id: 'oxygen', label: 'OXYGEN', desc: 'Life support water splitting', on: true, load: 40, locked: false },
+        { id: 'water', label: 'WATER', desc: 'Filtration and melting pumps', on: false, load: 20, locked: false },
+        { id: 'safemode', label: 'SAFE MODE', desc: 'Cut non-essential auxiliary draw', on: false, load: -20, locked: false },
       ];
     }
 
@@ -227,6 +215,15 @@ export class PowerPanelTask extends Phaser.Scene {
           sw.on = !sw.on;
           updateSwitchVisual(sw.on);
           this.updateLoad();
+
+          if (gameState.day === 1 && sw.id === 'light' && sw.on && !gameState.habLightsOn) {
+            gameState.habLightsOn = true;
+            gameState.setMeters({ power: 90 });
+            this.lightsJustRestored = true;
+            this.time.delayedCall(450, () => {
+              this.closeTask();
+            });
+          }
         });
         rowContainer.add(hitArea);
       }
@@ -288,19 +285,20 @@ export class PowerPanelTask extends Phaser.Scene {
   applyAndClose() {
     if (gameState.day === 1) {
       const lightSw = this.switches.find((s) => s.id === 'light');
-      if (lightSw && lightSw.on) {
-        const wasOff = !gameState.habLightsOn;
+      if (lightSw && lightSw.on && !gameState.habLightsOn) {
         gameState.habLightsOn = true;
         gameState.setMeters({ power: 90 });
-        if (wasOff) {
-          this.game.events.emit('lights:restored');
-        }
+        this.lightsJustRestored = true;
       }
     }
     this.closeTask();
   }
 
   closeTask() {
+    if (this.closing) return;
+    this.closing = true;
+    const restored = this.lightsJustRestored;
+
     this.tweens.add({
       targets: this.modal,
       y: GAME_HEIGHT + 350,
@@ -310,6 +308,9 @@ export class PowerPanelTask extends Phaser.Scene {
         this.scene.stop();
         const activeRoom = gameState.room === 'surface' ? 'Surface' : 'Outpost';
         this.scene.resume(activeRoom);
+        if (restored) {
+          this.game.events.emit('lights:restored');
+        }
       },
     });
   }

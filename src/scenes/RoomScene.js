@@ -29,7 +29,7 @@ export class RoomScene extends Phaser.Scene {
 
     const who = gameState.activeAstronaut;
     const spawnX = data.spawnX ?? this.defaultSpawnX();
-    const spawnY = data.spawnY ?? (LANE.top + 35);
+    const spawnY = data.spawnY ?? LANE.top + 35;
     this.player = new Astronaut(this, spawnX, spawnY, {
       name: who === 'muntasir' ? 'Muntasir' : 'Maisha',
       color: COLORS[who],
@@ -41,7 +41,7 @@ export class RoomScene extends Phaser.Scene {
 
     this.cursors = this.input.keyboard.createCursorKeys();
     this.input.keyboard.on('keydown-SPACE', () => this.tryInteract());
-    this.input.on('pointerdown', () => this.tryInteract()); // tap anywhere near a station
+    this.input.on('pointerdown', () => this.tryInteract());
 
     this.nearby = null;
     this.transitioning = false;
@@ -49,7 +49,10 @@ export class RoomScene extends Phaser.Scene {
   }
 
   update(_time, delta) {
-    if (this.transitioning) return;
+    if (this.transitioning || this.dialogueBox?.isActive || this.dialogueBox?.justClosed) {
+      this.player.move({ x: 0, y: 0 }, delta);
+      return;
+    }
 
     const dir = {
       x: (this.cursors.right.isDown ? 1 : 0) - (this.cursors.left.isDown ? 1 : 0),
@@ -57,47 +60,25 @@ export class RoomScene extends Phaser.Scene {
     };
     this.player.move(dir, delta);
 
-    const near = this.stations.find((s) => s.isInRange(this.player.x, this.player.y)) ?? null;
+    const near =
+      this.stations.find((s) => (s.visible || s.allowBuildInteract) && s.isInRange(this.player.x, this.player.y)) ??
+      null;
     if (near !== this.nearby) {
       this.nearby = near;
-      this.game.events.emit('prompt', near ? near.def.label : null);
+      const label = near ? (near.customPromptLabel ?? near.def.label) : null;
+      this.game.events.emit('prompt', label);
     }
   }
 
   tryInteract() {
-    if (!this.nearby || this.transitioning) return;
+    if (!this.nearby || this.transitioning || this.dialogueBox?.isActive || this.dialogueBox?.justClosed) return;
     const def = this.nearby.def;
 
     if (def.leadsTo) return this.goThroughAirlock(def.leadsTo);
 
     if (def.id === 'solar_panel') {
-      if (gameState.stepId === 'd1_start') {
-        // Step 1: Establish & deploy the solar array first
-        this.transitioning = true;
-        this.game.events.emit('prompt', null);
-        this.cameras.main.flash(300, 255, 209, 102);
-
-        const banner = this.add
-          .text(GAME_WIDTH / 2, 140, 'ESTABLISHING SOLAR ARRAY...\nUnfolding photovoltaic solar wings...', {
-            fontFamily: 'monospace',
-            fontSize: '16px',
-            align: 'center',
-            backgroundColor: '#000c',
-            padding: { x: 14, y: 8 },
-            color: '#ffd166',
-          })
-          .setOrigin(0.5);
-
-        this.time.delayedCall(1500, () => {
-          banner.setText('SOLAR ARRAY ESTABLISHED!\nNow calibrating telescope to align with the Sun...');
-          banner.setColor('#38bdf8');
-          this.time.delayedCall(1200, () => {
-            banner.destroy();
-            this.transitioning = false;
-            this.scene.pause();
-            this.scene.launch('SolarAlignTask');
-          });
-        });
+      if (!gameState.solarUnfurled) {
+        this.unfurlAndAlignSolar(this.nearby);
         return;
       }
 
@@ -117,14 +98,44 @@ export class RoomScene extends Phaser.Scene {
       return;
     }
 
-    // Other mini-game pop-ups plug in here. For now, announce it.
     this.game.events.emit('station:interact', { room: this.roomId, station: def.id });
+  }
+
+  unfurlAndAlignSolar(solarStation) {
+    this.transitioning = true;
+    this.game.events.emit('prompt', null);
+    gameState.solarUnfurled = true;
+    solarStation.allowBuildInteract = false;
+    solarStation.customPromptLabel = null;
+
+    if (this.onSolarUnfurlStart) {
+      this.onSolarUnfurlStart();
+    }
+
+    // Flashy unfurling effect
+    this.cameras.main.flash(350, 255, 220, 100);
+    solarStation.setVisible(true);
+    solarStation.setScale(0.05, 1);
+
+    this.tweens.add({
+      targets: solarStation,
+      scaleX: 1,
+      duration: 900,
+      ease: 'Back.easeOut',
+      onComplete: () => {
+        this.time.delayedCall(350, () => {
+          this.transitioning = false;
+          this.scene.pause();
+          this.scene.launch('SolarAlignTask');
+        });
+      },
+    });
   }
 
   handleSleep() {
     if (gameState.day === 1) {
-      if (gameState.meters.power === null) {
-        this.game.events.emit('prompt', 'Align the solar array outside first!');
+      if (!gameState.habLightsOn) {
+        this.game.events.emit('prompt', 'Turn on the lights first!');
         return;
       }
 
@@ -138,7 +149,7 @@ export class RoomScene extends Phaser.Scene {
         .text(
           cx,
           cy,
-          'NIGHT FALLS ON MARS...\n\nMuntasir and Maisha rest inside the habitat.\nOutside, a Martian dust storm sweeps across the solar array.',
+          'END OF SOL 1\n\nMuntasir and Maisha rest on their bunks.\nOvernight, a Martian dust storm sweeps across the outpost and coats the solar panels...\n\nSOL 2 BEGINS',
           {
             fontFamily: 'monospace',
             fontSize: '18px',
@@ -160,23 +171,14 @@ export class RoomScene extends Phaser.Scene {
             targets: sleepText,
             alpha: 1,
             duration: 600,
-            hold: 2400,
+            hold: 2600,
             yoyo: true,
             onComplete: () => {
               // Advance to Day 2
               gameState.goTo('d2_dust');
               gameState.setMeters({ power: 75, oxygen: 20 });
-
-              this.tweens.add({
-                targets: overlay,
-                fillAlpha: 0,
-                duration: 800,
-                onComplete: () => {
-                  overlay.destroy();
-                  sleepText.destroy();
-                  this.transitioning = false;
-                },
-              });
+              gameState.activeAstronaut = 'muntasir';
+              this.scene.restart();
             },
           });
         },
@@ -190,11 +192,10 @@ export class RoomScene extends Phaser.Scene {
     this.cameras.main.fadeOut(FADE_MS, 0, 0, 0);
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
       const door = STATIONS[targetRoom].find((s) => s.leadsTo === this.roomId);
-      // Place astronaut naturally at the threshold of the connecting airlock
       const isLeftDoor = door.x < 640;
       const spawnX = isLeftDoor ? door.x + 35 : door.x - 35;
       const spawnY = door.y + 35;
-      const facingLeft = !isLeftDoor; // Face toward room center
+      const facingLeft = !isLeftDoor;
       this.scene.start(ROOM_TO_SCENE[targetRoom], { spawnX, spawnY, facingLeft });
     });
   }

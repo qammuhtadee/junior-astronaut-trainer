@@ -19,6 +19,8 @@ export class GameState {
     this.room = 'surface';
     this.activeAstronaut = 'muntasir';
     this.hasSeenCrash = false;
+    this.visitedDarkOutpost = false;
+    this.solarUnfurled = false;
     this.solarDeployed = false;
     this.solarAligned = false;
     this.habLightsOn = false;

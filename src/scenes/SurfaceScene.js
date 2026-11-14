@@ -7,7 +7,7 @@ import { DialogueBox } from '../ui/DialogueBox.js';
 
 /**
  * Surface Scene: Martian terrain outside the outpost.
- * Handles the cinematic crash landing, autonomous walks, dialogues, and solar panel construction.
+ * Matches the Day 1 crash landing, dialogue sequence, camera pan, and solar array deployment 1-to-1.
  */
 export class SurfaceScene extends RoomScene {
   constructor() {
@@ -19,17 +19,29 @@ export class SurfaceScene extends RoomScene {
 
     this.dialogueBox = new DialogueBox(this);
 
+    // Hide solar panel station until it is actually unfurled by the player
+    const solarStation = this.stations.find((s) => s.def.id === 'solar_panel');
+    if (solarStation && !gameState.solarUnfurled) {
+      solarStation.setVisible(false);
+    }
+
+    this.game.events.on('solar:aligned', this.runPowerChargeUp, this);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.game.events.off('solar:aligned', this.runPowerChargeUp, this);
+    });
+
     const isCrashIntro = data.isCrashIntro || (!gameState.hasSeenCrash && gameState.day === 1);
 
     if (isCrashIntro) {
       this.initCrashCutscene();
     } else {
-      // Normal surface visit
       this.initSurfacePostCrash();
     }
   }
 
   drawBackground() {
+    // Draw main background plus a seamless left extension so camera pan (-220 -> 0) never shows black void
+    this.add.image(-260, 0, 'bg-surface').setOrigin(0).setFlipX(true).setDepth(DEPTH.BACKGROUND);
     this.add.image(0, 0, 'bg-surface').setOrigin(0).setDepth(DEPTH.BACKGROUND);
   }
 
@@ -40,38 +52,41 @@ export class SurfaceScene extends RoomScene {
     this.transitioning = true;
     this.player.setVisible(false);
 
-    // Hide stations until crash and reveal sequence completes
+    // Start camera panned left so the Outpost at x=1190 is completely off-screen to the right
+    this.cameras.main.scrollX = -220;
+
+    // Hide all stations initially (no equipment, nothing on screen)
     this.stations.forEach((s) => s.setVisible(false));
 
-    // Spacecraft scaling: huge compared to astronauts (scale 3.2)
+    // Spacecraft enters diagonally from top-left, scaled large compared to astronauts
     const scScale = 3.2;
     this.spacecraft = this.add
-      .sprite(-240, 110, 'spacecraft-damaged', 0)
+      .sprite(-420, 110, 'spacecraft-damaged', 0)
       .setScale(scScale)
       .setRotation(Phaser.Math.DegToRad(18))
       .setDepth(150);
 
-    // Diagonal descent into Mars soil
+    // Diagonal crash into Martian soil, straightening horizontally
     this.tweens.add({
       targets: this.spacecraft,
-      x: 180,
-      y: 490,
+      x: -20,
+      y: 495,
       rotation: 0,
       duration: 850,
       ease: 'Quad.easeIn',
       onComplete: () => {
-        // Impact vibration
-        this.cameras.main.shake(650, 0.018);
+        // Moderate scene vibration for grittiness
+        this.cameras.main.shake(650, 0.015);
 
-        // Multi-frame explosion sprite
-        const explosion = this.add.sprite(160, 480, 'explosion', 0).setScale(2.5).setDepth(160);
+        // Multi-frame explosion sprite at impact point
+        const explosion = this.add.sprite(-30, 485, 'explosion', 0).setScale(2.5).setDepth(160);
         explosion.play('anim-explosion');
         explosion.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => explosion.destroy());
 
-        // Horizontal skid and deceleration (settles at x: 245 without clipping offscreen)
+        // Slip and decelerate horizontally near the left edge of the camera view (-220) without cutting off
         this.tweens.add({
           targets: this.spacecraft,
-          x: 245,
+          x: 55,
           duration: 650,
           ease: 'Cubic.easeOut',
           onComplete: () => {
@@ -84,49 +99,95 @@ export class SurfaceScene extends RoomScene {
   }
 
   popOutAstronauts() {
-    // Muntasir is this.player; Maisha is companion
-    this.player.setPosition(240, 440).setScale(0).setVisible(true).setDepth(140);
+    // Both astronauts pop up on the behind side of the spacecraft, one front and one back
+    this.player.setPosition(10, 440).setScale(0).setVisible(true).setDepth(145);
 
-    this.maishaActor = new Astronaut(this, 190, 440, {
+    this.maishaActor = new Astronaut(this, -45, 440, {
       name: 'Maisha',
       color: COLORS.maisha,
     });
-    this.maishaActor.setScale(0).setDepth(139);
+    this.maishaActor.setScale(0).setDepth(138);
 
-    // Pop up animation from behind the cockpit hatch
+    // Front astronaut pop-up
     this.tweens.add({
       targets: this.player,
       scale: 1,
-      x: 270,
-      y: 535,
+      x: 35,
+      y: 550,
       duration: 380,
       ease: 'Back.easeOut',
     });
 
+    // Back astronaut pop-up
     this.tweens.add({
       targets: this.maishaActor,
       scale: 1,
-      x: 210,
-      y: 555,
+      x: -25,
+      y: 520,
       duration: 380,
       delay: 120,
       ease: 'Back.easeOut',
       onComplete: () => {
-        this.time.delayedCall(500, () => this.stepForwardActors());
+        // Wait for tap to continue after they pop out behind the spacecraft
+        this.waitForTapToContinue(() => {
+          this.stepForwardActors();
+        });
       },
     });
   }
 
-  stepForwardActors() {
-    // Both move forward into open space at brisk speed (300 px/s)
-    this.walkActorTo(this.player, 380, 535, 300, () => {
-      this.player.body_.setFlipX(false); // Face right
+  waitForTapToContinue(onTap) {
+    const camLeft = this.cameras.main.scrollX;
+    const hint = this.add
+      .text(camLeft + GAME_WIDTH / 2, GAME_HEIGHT - 45, '▶ TAP / SPACE TO CONTINUE', {
+        fontFamily: 'monospace',
+        fontSize: '15px',
+        fontStyle: 'bold',
+        color: '#ffd166',
+        backgroundColor: '#000c',
+        padding: { x: 14, y: 6 },
+      })
+      .setOrigin(0.5)
+      .setDepth(1900);
+
+    const pulse = this.tweens.add({
+      targets: hint,
+      alpha: 0.35,
+      duration: 550,
+      yoyo: true,
+      repeat: -1,
     });
 
-    this.walkActorTo(this.maishaActor, 520, 535, 300, () => {
-      this.maishaActor.body_.setFlipX(true); // Face Muntasir
-      this.time.delayedCall(350, () => this.startIntroDialogue());
+    let triggered = false;
+    const trigger = () => {
+      if (triggered) return;
+      triggered = true;
+      pulse.stop();
+      hint.destroy();
+      this.input.off('pointerdown', trigger);
+      this.input.keyboard.off('keydown-SPACE', trigger);
+      onTap();
+    };
+
+    this.time.delayedCall(150, () => {
+      this.input.on('pointerdown', trigger);
+      this.input.keyboard.on('keydown-SPACE', trigger);
     });
+  }
+
+  stepForwardActors() {
+    let doneCount = 0;
+    const checkDone = () => {
+      doneCount++;
+      if (doneCount < 2) return;
+      this.player.body_.setFlipX(false); // Muntasir faces right
+      this.maishaActor.body_.setFlipX(true); // Maisha faces left toward Muntasir
+      this.time.delayedCall(250, () => this.startIntroDialogue());
+    };
+
+    // Both move forward; Maisha moves forward to a rather open space and they face each other
+    this.walkActorTo(this.player, 210, 540, 310, checkDone);
+    this.walkActorTo(this.maishaActor, 380, 540, 310, checkDone);
   }
 
   startIntroDialogue() {
@@ -145,18 +206,17 @@ export class SurfaceScene extends RoomScene {
       {
         speaker: 'Radio',
         isRadio: true,
-        text: '[COMM-NET DISPATCH] Orbital telemetry lost during entry deceleration. Emergency frequency 437.1 MHz active. Awaiting transponder confirmation...',
+        target: this.player,
+        text: 'Spacecraft is bound on orbit. Telemetry link severed during atmospheric entry—executing automated orbital relay protocol.',
       },
       {
         speaker: 'Muntasir',
-        text: "Seems like our base on Earth doesn't know about the crash. We have some facts to check.",
+        text: "Seems like our base on earth doesn't know about the crash. We have some facts to check.",
         target: this.player,
-        onStart: () => {
-          this.game.events.emit(
-            'fact:show',
-            'Fact: Depending on relative position of Earth to Mars, it can take from 3 to 22 minutes to send a message and get a response back between Earth and Mars due to the vast distance it has to cover.'
-          );
-        },
+      },
+      {
+        isFact: true,
+        text: 'Fact: depending on relative position of earth to mars, it can take from 3-22 minutes to send a message and get a response back between earth and mars due to the vast distance it has to cover.',
       },
       {
         speaker: 'Maisha',
@@ -168,28 +228,26 @@ export class SurfaceScene extends RoomScene {
         text: 'Where do we take shelter?',
         target: this.player,
         onStart: () => {
-          // Camera pan right to reveal the 3D-printed Outpost
-          this.stations.forEach((s) => s.setVisible(true));
+          // Reveal ONLY the Outpost (airlock) as the camera pans right
+          const airlockStation = this.stations.find((s) => s.def.id === 'airlock');
+          if (airlockStation) airlockStation.setVisible(true);
+
           this.tweens.add({
             targets: this.cameras.main,
-            scrollX: 180,
-            duration: 1000,
+            scrollX: 0,
+            duration: 1200,
             ease: 'Cubic.easeInOut',
-            yoyo: true,
-            hold: 1200,
           });
         },
       },
       {
         speaker: 'Maisha',
-        text: 'Seems like we have an outpost already built for living.',
+        text: 'Seems like we have an outpost already build for living.',
         target: this.maishaActor,
-        onStart: () => {
-          this.game.events.emit(
-            'fact:show',
-            'Fact: NASA has plans to build an outpost on Mars surface using regolith, a type of Martian soil that can be compressed into bricks when combined with other chemicals, which will be 3D printed. The Mars Dune Alpha at Johnson Space Center has simulated this building process on Earth.'
-          );
-        },
+      },
+      {
+        isFact: true,
+        text: 'Fact: NASA has plans to build an outpost on Mars Surface using regolith, a type of martian soil that can be compressed into bricks when combined with other chemicals, which will be 3D printed. The Mars Dune Alpha at the Johnson Space Centre has already simulated the process of building, on Earth in artificial environments',
       },
       {
         speaker: 'Muntasir',
@@ -218,14 +276,14 @@ export class SurfaceScene extends RoomScene {
       this.game.events.emit('prompt', 'Airlock');
     };
 
-    // Both walk autonomously to the airlock at brisk speed (320 px/s)
-    this.walkActorTo(this.player, doorX - 55, doorY, 320, () => {
+    // Both walk autonomously to the outpost airlock at brisk speed
+    this.walkActorTo(this.player, doorX - 35, doorY, 340, () => {
       this.player.body_.setFlipX(false);
       onBothArrived();
     });
 
-    this.walkActorTo(this.maishaActor, doorX - 15, doorY + 15, 300, () => {
-      this.maishaActor.body_.setFlipX(true);
+    this.walkActorTo(this.maishaActor, doorX - 75, doorY + 15, 340, () => {
+      this.maishaActor.body_.setFlipX(false);
       onBothArrived();
     });
   }
@@ -234,40 +292,42 @@ export class SurfaceScene extends RoomScene {
   // POST-CRASH SURFACE (Solar Panel Loop)
   // ==========================================
   initSurfacePostCrash() {
-    // If returning from Outpost before power is restored, trigger Muntasir's thought
-    if (gameState.hasSeenCrash && !gameState.solarDeployed && !gameState.solarAligned) {
-      // Companion Maisha stands near airlock
-      this.companion = new Astronaut(this, GAME_WIDTH - 120, LANE.top + 45, {
+    this.cameras.main.scrollX = 0;
+
+    // Companion Maisha stands outside near the airlock with Muntasir
+    if (gameState.day === 1) {
+      this.companion = new Astronaut(this, GAME_WIDTH - 165, LANE.top + 48, {
         name: 'Maisha',
         color: COLORS.maisha,
       });
       this.companion.body_.setFlipX(true);
+    }
 
-      // Highlight the solar panel construction site with bouncing indicator
-      this.createSolarBuildGuide();
-
-      this.time.delayedCall(400, () => {
-        this.dialogueBox.showSequence(
-          [
-            {
-              speaker: 'Muntasir',
-              text: 'We can build a solar panel right there, so that we can harvest light energy and turn it into electricity.',
-              target: this.player,
-              isThought: true,
-              onStart: () => {
-                this.game.events.emit(
-                  'fact:show',
-                  'Fact: NASA uses solar cells and panels on spacecraft and surface missions to generate power where other manners of electricity production is impractical.'
-                );
+    // If returning from the dark Outpost on Day 1 before building the solar panel
+    if (gameState.visitedDarkOutpost && !gameState.solarDeployed && !gameState.solarAligned) {
+      if (!gameState.solarUnfurled) {
+        this.transitioning = true;
+        this.time.delayedCall(350, () => {
+          this.dialogueBox.showSequence(
+            [
+              {
+                speaker: 'Muntasir',
+                text: 'We can build a solar panel right there, so that we can harvest light energy and turn it into electricity.',
+                target: this.player,
+                isThought: true,
               },
-            },
-          ],
-          () => {}
-        );
-      });
-    } else if (gameState.solarAligned && !gameState.solarDeployed) {
-      // Just completed SolarAlignTask! Run gradual charge-up sequence
-      this.runPowerChargeUp();
+              {
+                isFact: true,
+                text: 'Fact: NASA uses solar cells and panels on spacecraft to make them navigate on space where other manners of electricity production is impractical',
+              },
+            ],
+            () => {
+              this.transitioning = false;
+              this.createSolarBuildGuide();
+            }
+          );
+        });
+      }
     }
   }
 
@@ -275,11 +335,26 @@ export class SurfaceScene extends RoomScene {
     const sp = this.stations.find((s) => s.def.id === 'solar_panel');
     if (!sp) return;
 
-    this.buildGuide = this.add.container(sp.def.x, sp.def.y - 70).setDepth(200);
+    // Enable interaction on the dotted build zone while keeping the solid station box hidden until unfurled
+    sp.setVisible(false);
+    sp.allowBuildInteract = true;
+    sp.customPromptLabel = 'Build Solar Panel';
 
-    // Bouncing downward arrow
-    const arrow = this.add
-      .text(0, 0, '▼ BUILD SOLAR PANEL', {
+    // Dotted rectangular bound on the ground
+    this.dottedBox = this.add.graphics().setDepth(DEPTH.WORLD_MIN + sp.def.y - 1);
+    const bx = sp.def.x - sp.def.w / 2;
+    const by = sp.def.y - sp.def.h;
+    const bw = sp.def.w;
+    const bh = sp.def.h;
+
+    this.dottedBox.fillStyle(0xf59e0b, 0.12);
+    this.dottedBox.fillRect(bx, by, bw, bh);
+    this.drawDashedRect(this.dottedBox, bx, by, bw, bh, 0xffd166, 3, 8, 6);
+
+    // Bouncing arrow pointing downwards: "Build Solar Panel"
+    this.buildGuide = this.add.container(sp.def.x, by - 28).setDepth(900);
+    const label = this.add
+      .text(0, -22, 'Build Solar Panel', {
         fontFamily: 'monospace',
         fontSize: '13px',
         fontStyle: 'bold',
@@ -288,56 +363,77 @@ export class SurfaceScene extends RoomScene {
         padding: { x: 8, y: 4 },
       })
       .setOrigin(0.5);
-    this.buildGuide.add(arrow);
+
+    const arrow = this.add
+      .text(0, 2, '▼', {
+        fontFamily: 'monospace',
+        fontSize: '22px',
+        fontStyle: 'bold',
+        color: '#ffd166',
+      })
+      .setOrigin(0.5);
+
+    this.buildGuide.add([label, arrow]);
 
     this.tweens.add({
       targets: this.buildGuide,
-      y: sp.def.y - 82,
-      duration: 600,
+      y: by - 42,
+      duration: 550,
       yoyo: true,
       repeat: -1,
       ease: 'Sine.easeInOut',
     });
+
+    this.onSolarUnfurlStart = () => {
+      if (this.dottedBox) {
+        this.dottedBox.destroy();
+        this.dottedBox = null;
+      }
+      if (this.buildGuide) {
+        this.buildGuide.destroy();
+        this.buildGuide = null;
+      }
+    };
+  }
+
+  drawDashedRect(gfx, x, y, w, h, color, lineWidth, dashLen, gapLen) {
+    gfx.lineStyle(lineWidth, color, 0.95);
+    const drawSide = (x1, y1, x2, y2) => {
+      const dist = Phaser.Math.Distance.Between(x1, y1, x2, y2);
+      const angle = Phaser.Math.Angle.Between(x1, y1, x2, y2);
+      for (let d = 0; d < dist; d += dashLen + gapLen) {
+        const seg = Math.min(dashLen, dist - d);
+        gfx.lineBetween(
+          x1 + Math.cos(angle) * d,
+          y1 + Math.sin(angle) * d,
+          x1 + Math.cos(angle) * (d + seg),
+          y1 + Math.sin(angle) * (d + seg)
+        );
+      }
+    };
+    drawSide(x, y, x + w, y);
+    drawSide(x + w, y, x + w, y + h);
+    drawSide(x + w, y + h, x, y + h);
+    drawSide(x, y + h, x, y);
   }
 
   runPowerChargeUp() {
+    if (gameState.solarDeployed) return;
     this.transitioning = true;
+    this.game.events.emit('prompt', null);
     gameState.solarDeployed = true;
 
-    if (this.buildGuide) {
-      this.buildGuide.destroy();
-      this.buildGuide = null;
-    }
-
-    // Companion Maisha is on surface
     if (!this.companion) {
-      this.companion = new Astronaut(this, GAME_WIDTH - 120, LANE.top + 45, {
+      this.companion = new Astronaut(this, GAME_WIDTH - 165, LANE.top + 48, {
         name: 'Maisha',
         color: COLORS.maisha,
       });
       this.companion.body_.setFlipX(true);
     }
 
-    // Charging ticker banner
-    const chargeBanner = this.add
-      .text(
-        GAME_WIDTH / 2,
-        140,
-        '⚡ SOLAR ARRAY ONLINE: CHARGING CAPACITORS...\n0%',
-        {
-          fontFamily: 'monospace',
-          fontSize: '16px',
-          fontStyle: 'bold',
-          align: 'center',
-          backgroundColor: '#000c',
-          padding: { x: 16, y: 8 },
-          color: '#ffd166',
-        }
-      )
-      .setOrigin(0.5)
-      .setDepth(1800);
+    // Power pill meter appears at 0% and gradually fills to 100% over 6 seconds
+    gameState.setMeters({ power: 0 });
 
-    // Gradually fill power from 0 to 100% over 6 seconds
     this.tweens.addCounter({
       from: 0,
       to: 100,
@@ -346,16 +442,11 @@ export class SurfaceScene extends RoomScene {
       onUpdate: (tw) => {
         const val = Math.round(tw.getValue());
         gameState.setMeters({ power: val });
-        chargeBanner.setText(`⚡ SOLAR ARRAY ONLINE: CHARGING CAPACITORS...\n${val}%`);
       },
       onComplete: () => {
-        chargeBanner.setText('⚡ CAPACITORS CHARGED TO 100%!\nHABITAT POWER RESTORED');
-        chargeBanner.setColor('#00ff88');
+        gameState.setMeters({ power: 100 });
 
-        this.time.delayedCall(1200, () => {
-          chargeBanner.destroy();
-
-          // Autonomous dialogue
+        this.time.delayedCall(400, () => {
           this.dialogueBox.showSequence(
             [
               {
@@ -382,14 +473,13 @@ export class SurfaceScene extends RoomScene {
       arrivedCount++;
       if (arrivedCount < 2) return;
 
-      // Switch active astronaut control to Maisha for Day 1 inside
+      // Switch active astronaut control to Maisha for turning on the lights inside
       gameState.activeAstronaut = 'maisha';
       this.goThroughAirlock('outpost');
     };
 
-    // Both walk briskly to airlock door (speed: 320 px/s)
-    this.walkActorTo(this.player, doorX - 45, doorY, 320, onBothArrived);
-    this.walkActorTo(this.companion, doorX - 15, doorY + 15, 300, onBothArrived);
+    this.walkActorTo(this.player, doorX - 35, doorY, 340, onBothArrived);
+    this.walkActorTo(this.companion, doorX - 65, doorY + 15, 340, onBothArrived);
   }
 
   // ==========================================
@@ -401,7 +491,7 @@ export class SurfaceScene extends RoomScene {
     const dx = targetX - actor.x;
     const dy = targetY - actor.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
-    const duration = (dist / speed) * 1000;
+    const duration = Math.max(100, (dist / speed) * 1000);
 
     actor.body_.setFlipX(dx < 0);
     actor.body_.play('walk', true);

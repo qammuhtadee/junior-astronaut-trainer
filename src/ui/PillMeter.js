@@ -112,7 +112,8 @@ export class PillMeter extends Phaser.GameObjects.Container {
     this.setVisible(true);
     const clamped = Math.max(0, Math.min(100, Math.round(val)));
 
-    if (!animate) {
+    if (!animate || Math.abs(clamped - this.currentValue) <= 2) {
+      if (this.tween) this.tween.stop();
       this.currentValue = clamped;
       this.renderFill(clamped);
       return;

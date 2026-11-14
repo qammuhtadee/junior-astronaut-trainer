@@ -2,73 +2,62 @@ import Phaser from 'phaser';
 import { GAME_WIDTH } from '../config/constants.js';
 
 /**
- * Animated NASA Fact Card that appears in the top-right corner.
- * Features:
- * - Curved edge rectangular card with glowing sci-fi border.
- * - Breathing / floating up-and-down tween.
- * - Typewriter text effect.
- * - Auto-fades or tap to dismiss.
+ * Curved-edge rectangular paper note on the almost top-right side.
+ * Breathes up and down gently, fades in, and types out the NASA fact onto the paper.
  */
 export class FactCard extends Phaser.GameObjects.Container {
-  constructor(scene, x = GAME_WIDTH - 340, y = 30) {
+  constructor(scene, x = GAME_WIDTH - 360, y = 62) {
     super(scene, x, y);
 
-    this.cardWidth = 315;
+    this.baseY = y;
+    this.cardWidth = 335;
     this.cardHeight = 135;
     this.visible = false;
+    this.isTyping = false;
+    this.fullText = '';
     this.setDepth(2000);
 
-    // 1. Background Card Graphics
+    // 1. Paper Note Background Graphics
     this.bg = scene.add.graphics();
     this.add(this.bg);
 
-    // 2. NASA Header Pill
-    this.headerBg = scene.add.graphics();
-    this.add(this.headerBg);
-
-    this.headerText = scene.add.text(12, 10, '🛰️ NASA MISSION FACT', {
+    // 2. Top Paper Header
+    this.headerText = scene.add.text(14, 10, 'NOTE // FACT CHECK', {
       fontFamily: 'monospace',
       fontSize: '11px',
       fontStyle: 'bold',
-      color: '#38bdf8',
+      color: '#92400e',
     });
     this.add(this.headerText);
 
-    // 3. Body Text (typewriter target)
-    this.bodyText = scene.add.text(12, 34, '', {
+    // 3. Typed Fact Text on Paper
+    this.bodyText = scene.add.text(14, 30, '', {
       fontFamily: 'monospace',
-      fontSize: '11px',
-      color: '#e2e8f0',
+      fontSize: '12px',
+      color: '#1e293b',
       lineSpacing: 4,
-      wordWrap: { width: this.cardWidth - 24 },
+      wordWrap: { width: this.cardWidth - 28 },
     });
     this.add(this.bodyText);
 
-    // 4. Subtle tap prompt at bottom right
+    // 4. Tap prompt at bottom right
     this.dismissPrompt = scene.add
-      .text(this.cardWidth - 12, this.cardHeight - 12, '[TAP TO DISMISS]', {
+      .text(this.cardWidth - 14, this.cardHeight - 10, '▶ TAP / SPACE', {
         fontFamily: 'monospace',
-        fontSize: '9px',
-        color: '#64748b',
+        fontSize: '10px',
+        fontStyle: 'bold',
+        color: '#b45309',
       })
       .setOrigin(1, 1);
     this.add(this.dismissPrompt);
 
-    // Interactive hit area to dismiss
-    this.setSize(this.cardWidth, this.cardHeight);
-    this.setInteractive(
-      new Phaser.Geom.Rectangle(0, 0, this.cardWidth, this.cardHeight),
-      Phaser.Geom.Rectangle.Contains
-    );
-    this.on('pointerdown', () => this.hide());
-
     this.redrawCard(this.cardHeight);
 
-    // Breathing float tween
+    // Gentle breathing up and down tween
     scene.tweens.add({
       targets: this,
-      y: y + 6,
-      duration: 2200,
+      y: y + 7,
+      duration: 2000,
       ease: 'Sine.easeInOut',
       yoyo: true,
       repeat: -1,
@@ -81,46 +70,48 @@ export class FactCard extends Phaser.GameObjects.Container {
     this.cardHeight = height;
     this.bg.clear();
 
-    // Dark glass background
-    this.bg.fillStyle(0x0a101d, 0.92);
-    this.bg.fillRoundedRect(0, 0, this.cardWidth, height, 12);
+    // Soft drop shadow
+    this.bg.fillStyle(0x000000, 0.35);
+    this.bg.fillRoundedRect(4, 5, this.cardWidth, height, 14);
 
-    // Sleek border
-    this.bg.lineStyle(2, 0x38bdf8, 0.7);
-    this.bg.strokeRoundedRect(0, 0, this.cardWidth, height, 12);
+    // Warm paper body with curved edges
+    this.bg.fillStyle(0xfef9c3, 0.97);
+    this.bg.fillRoundedRect(0, 0, this.cardWidth, height, 14);
 
-    // Accent line on top
-    this.bg.lineStyle(3, 0xf59e0b, 0.9);
-    this.bg.lineBetween(16, 0, 70, 0);
+    // Subtle ruled paper lines
+    this.bg.lineStyle(1, 0xfde68a, 0.7);
+    for (let ly = 46; ly < height - 20; ly += 18) {
+      this.bg.lineBetween(12, ly, this.cardWidth - 12, ly);
+    }
 
-    // Header plate background
-    this.headerBg.clear();
-    this.headerBg.fillStyle(0x1e293b, 0.85);
-    this.headerBg.fillRoundedRect(8, 6, 175, 20, 6);
+    // Paper border
+    this.bg.lineStyle(2, 0xd97706, 0.85);
+    this.bg.strokeRoundedRect(0, 0, this.cardWidth, height, 14);
 
-    this.dismissPrompt.setY(height - 8);
+    this.dismissPrompt.setY(height - 10);
   }
 
-  show(text, { duration = 14000 } = {}) {
+  show(text, { duration = 0 } = {}) {
     if (this.typeTimer) this.typeTimer.remove();
     if (this.autoDismissTimer) this.autoDismissTimer.remove();
 
     this.fullText = text;
+    this.isTyping = true;
     this.bodyText.setText('');
     this.setVisible(true);
     this.setAlpha(0);
 
-    // Measure required height
+    // Measure height required for text
     const dummy = this.scene.add
       .text(0, 0, text, {
         fontFamily: 'monospace',
-        fontSize: '11px',
+        fontSize: '12px',
         lineSpacing: 4,
-        wordWrap: { width: this.cardWidth - 24 },
+        wordWrap: { width: this.cardWidth - 28 },
       })
       .setVisible(false);
 
-    const neededHeight = Math.max(120, dummy.height + 56);
+    const neededHeight = Math.max(115, dummy.height + 54);
     dummy.destroy();
     this.redrawCard(neededHeight);
 
@@ -132,7 +123,7 @@ export class FactCard extends Phaser.GameObjects.Container {
       ease: 'Cubic.easeOut',
     });
 
-    // Typewriter effect
+    // Typewriter effect onto paper
     let charIdx = 0;
     this.typeTimer = this.scene.time.addEvent({
       delay: 18,
@@ -140,6 +131,9 @@ export class FactCard extends Phaser.GameObjects.Container {
       callback: () => {
         charIdx++;
         this.bodyText.setText(text.substring(0, charIdx));
+        if (charIdx >= text.length) {
+          this.isTyping = false;
+        }
       },
     });
 
@@ -150,10 +144,19 @@ export class FactCard extends Phaser.GameObjects.Container {
     }
   }
 
+  completeTyping() {
+    if (!this.isTyping) return false;
+    if (this.typeTimer) this.typeTimer.remove();
+    this.bodyText.setText(this.fullText);
+    this.isTyping = false;
+    return true;
+  }
+
   hide() {
     if (!this.visible) return;
     if (this.typeTimer) this.typeTimer.remove();
     if (this.autoDismissTimer) this.autoDismissTimer.remove();
+    this.isTyping = false;
 
     this.scene.tweens.add({
       targets: this,

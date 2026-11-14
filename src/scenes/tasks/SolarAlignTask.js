@@ -245,9 +245,13 @@ export class SolarAlignTask extends Phaser.Scene {
       duration: 300,
       ease: 'Back.easeIn',
       onComplete: () => {
+        const wasAligned = this.completed;
         this.scene.stop();
         const activeRoom = gameState.room === 'surface' ? 'Surface' : 'Outpost';
         this.scene.resume(activeRoom);
+        if (wasAligned) {
+          this.game.events.emit('solar:aligned');
+        }
       },
     });
   }

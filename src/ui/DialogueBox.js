@@ -1,9 +1,14 @@
 import Phaser from 'phaser';
-import { GAME_WIDTH, GAME_HEIGHT, COLORS } from '../config/constants.js';
+import { GAME_WIDTH } from '../config/constants.js';
+import { FactCard } from './FactCard.js';
 
 /**
- * Story-driven dialogue system with speech bubbles, typewriter effect,
- * speaker badges, radio comms display, and tap-to-continue progression.
+ * Story-driven dialogue & fact system.
+ * Supports:
+ * - Character speech bubbles positioned cleanly above the astronaut's helmet.
+ * - Thought bubbles with cloud styling.
+ * - Radio comms where Muntasir holds the whirring radio and a radio dialogue box appears.
+ * - Top-right breathing paper Fact Notes that type out on screen and advance on tap/SPACE.
  */
 export class DialogueBox extends Phaser.GameObjects.Container {
   constructor(scene) {
@@ -11,6 +16,8 @@ export class DialogueBox extends Phaser.GameObjects.Container {
 
     this.scene = scene;
     this.visible = false;
+    this.isActive = false;
+    this.justClosed = false;
     this.setDepth(1500);
 
     this.boxWidth = 460;
@@ -21,11 +28,14 @@ export class DialogueBox extends Phaser.GameObjects.Container {
     this.sequenceIndex = 0;
     this.onSequenceComplete = null;
 
-    // 1. Shadow & Main bubble graphics
-    this.bubbleGfx = scene.add.graphics();
-    this.add(this.bubbleGfx);
+    // 1. Speech bubble sub-container
+    this.bubbleContainer = scene.add.container(0, 0);
+    this.add(this.bubbleContainer);
 
-    // 2. Speaker badge container
+    this.bubbleGfx = scene.add.graphics();
+    this.bubbleContainer.add(this.bubbleGfx);
+
+    // 2. Speaker badge
     this.badgeContainer = scene.add.container(0, 0);
     this.badgeBg = scene.add.graphics();
     this.badgeText = scene.add.text(12, 4, '', {
@@ -35,13 +45,16 @@ export class DialogueBox extends Phaser.GameObjects.Container {
       color: '#ffffff',
     });
     this.badgeContainer.add([this.badgeBg, this.badgeText]);
-    this.add(this.badgeContainer);
+    this.bubbleContainer.add(this.badgeContainer);
 
-    // 3. Radio sprite for comms broadcasts
+    // 3. Radio sprite inside dialogue box for comms broadcasts
     this.radioSprite = scene.add.sprite(50, 52, 'radio', 0).setVisible(false).setScale(0.55);
-    this.add(this.radioSprite);
+    this.bubbleContainer.add(this.radioSprite);
 
-    // 4. Dialogue content text
+    // 4. Held radio sprite next to Muntasir's hand when holding the radio
+    this.heldRadio = scene.add.sprite(0, 0, 'radio', 0).setVisible(false).setScale(0.32).setDepth(1450);
+
+    // 5. Dialogue content text
     this.dialogueText = scene.add.text(20, 32, '', {
       fontFamily: 'monospace',
       fontSize: '14px',
@@ -49,9 +62,9 @@ export class DialogueBox extends Phaser.GameObjects.Container {
       lineSpacing: 5,
       wordWrap: { width: this.boxWidth - 40 },
     });
-    this.add(this.dialogueText);
+    this.bubbleContainer.add(this.dialogueText);
 
-    // 5. "Tap to continue" prompt indicator
+    // 6. "Tap to continue" prompt indicator
     this.nextIndicator = scene.add
       .text(this.boxWidth - 18, this.boxHeight - 12, '▶ TAP / SPACE', {
         fontFamily: 'monospace',
@@ -60,9 +73,8 @@ export class DialogueBox extends Phaser.GameObjects.Container {
         color: '#ffd166',
       })
       .setOrigin(1, 1);
-    this.add(this.nextIndicator);
+    this.bubbleContainer.add(this.nextIndicator);
 
-    // Pulsing indicator tween
     scene.tweens.add({
       targets: this.nextIndicator,
       alpha: 0.3,
@@ -71,20 +83,31 @@ export class DialogueBox extends Phaser.GameObjects.Container {
       repeat: -1,
     });
 
+    // 7. Dedicated top-right Fact Note card (fixed to camera viewport)
+    this.factCard = new FactCard(scene, GAME_WIDTH - 360, 62);
+    this.factCard.setScrollFactor(0);
+
     // Tap & Keyboard input to advance
     this.spaceKey = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
     this.spaceKey.on('down', () => this.handleAdvance());
-
     scene.input.on('pointerdown', () => this.handleAdvance());
 
     scene.add.existing(this);
   }
 
   handleAdvance() {
-    if (!this.visible) return;
+    if (!this.isActive || this.waitingForExclamation) return;
+
+    // If current step is a Fact Note
+    if (this.currentLine?.isFact) {
+      if (this.factCard.completeTyping()) {
+        return;
+      }
+      this.advanceStep();
+      return;
+    }
 
     if (this.isTyping) {
-      // Fast forward typewriter to end of current line
       if (this.typeEvent) this.typeEvent.remove();
       this.dialogueText.setText(this.currentLine.text);
       this.isTyping = false;
@@ -92,7 +115,13 @@ export class DialogueBox extends Phaser.GameObjects.Container {
       return;
     }
 
-    // Advance to next line in sequence
+    this.advanceStep();
+  }
+
+  advanceStep() {
+    this.heldRadio.stop();
+    this.heldRadio.setVisible(false);
+
     this.sequenceIndex++;
     if (this.sequenceIndex < this.sequence.length) {
       this.renderCurrentLine();
@@ -114,6 +143,8 @@ export class DialogueBox extends Phaser.GameObjects.Container {
     this.sequence = lines;
     this.sequenceIndex = 0;
     this.onSequenceComplete = onComplete;
+    this.isActive = true;
+    this.setVisible(true);
     this.renderCurrentLine();
   }
 
@@ -125,8 +156,18 @@ export class DialogueBox extends Phaser.GameObjects.Container {
       line.onStart();
     }
 
+    // Fact card step
+    if (line.isFact) {
+      this.bubbleContainer.setVisible(false);
+      this.factCard.show(line.text);
+      return;
+    }
+
     if (line.exclamation && line.target) {
+      this.waitingForExclamation = true;
+      this.bubbleContainer.setVisible(false);
       this.popExclamation(line.target.x, line.target.y, () => {
+        this.waitingForExclamation = false;
         this.displayBubble(line);
       });
     } else {
@@ -159,7 +200,7 @@ export class DialogueBox extends Phaser.GameObjects.Container {
           targets: mark,
           scale: 1,
           duration: 150,
-          hold: 400,
+          hold: 350,
           onComplete: () => {
             mark.destroy();
             if (onComplete) onComplete();
@@ -171,19 +212,27 @@ export class DialogueBox extends Phaser.GameObjects.Container {
 
   displayBubble(line) {
     this.setVisible(true);
-    this.setAlpha(1);
+    this.bubbleContainer.setVisible(true);
+    this.bubbleContainer.setAlpha(1);
 
     const isRadio = !!line.isRadio;
     const isThought = !!line.isThought;
     const speaker = line.speaker || 'Radio';
 
-    // Position bubble
-    let bx = GAME_WIDTH / 2 - this.boxWidth / 2;
+    const camLeft = this.scene.cameras.main.scrollX;
+    let bx = camLeft + GAME_WIDTH / 2 - this.boxWidth / 2;
     let by = 130;
 
     if (isRadio) {
-      bx = GAME_WIDTH / 2 - this.boxWidth / 2;
-      by = 130;
+      if (line.target) {
+        bx = Phaser.Math.Clamp(line.target.x - this.boxWidth / 2, camLeft + 30, camLeft + GAME_WIDTH - this.boxWidth - 30);
+        by = Math.max(20, line.target.y - this.boxHeight - 135);
+
+        // Show Muntasir holding the radio sprite
+        this.heldRadio.setPosition(line.target.x + 26, line.target.y - 56);
+        this.heldRadio.setVisible(true);
+        this.heldRadio.play('anim-radio');
+      }
       this.radioSprite.setVisible(true);
       this.radioSprite.play('anim-radio');
       this.dialogueText.setX(100);
@@ -191,17 +240,18 @@ export class DialogueBox extends Phaser.GameObjects.Container {
     } else {
       this.radioSprite.setVisible(false);
       this.radioSprite.stop();
+      this.heldRadio.setVisible(false);
+      this.heldRadio.stop();
       this.dialogueText.setX(20);
       this.dialogueText.setStyle({ wordWrap: { width: this.boxWidth - 40 } });
 
       if (line.target) {
-        bx = Phaser.Math.Clamp(line.target.x - this.boxWidth / 2, 40, GAME_WIDTH - this.boxWidth - 40);
-        // Position speech bubble cleanly ABOVE the astronaut's helmet (helmet is at target.y - 110)
+        bx = Phaser.Math.Clamp(line.target.x - this.boxWidth / 2, camLeft + 30, camLeft + GAME_WIDTH - this.boxWidth - 30);
         by = Math.max(20, line.target.y - this.boxHeight - 135);
       }
     }
 
-    this.setPosition(bx, by);
+    this.bubbleContainer.setPosition(bx, by);
 
     // Color theme per speaker
     let themeColor = 0x38bdf8;
@@ -209,28 +259,37 @@ export class DialogueBox extends Phaser.GameObjects.Container {
     else if (speaker.toLowerCase().includes('maisha')) themeColor = 0xff69b4;
     else if (isRadio) themeColor = 0x06b6d4;
 
-    // Draw speech bubble graphics
     this.bubbleGfx.clear();
 
-    // Bubble shadow
+    // Shadow
     this.bubbleGfx.fillStyle(0x000000, 0.45);
     this.bubbleGfx.fillRoundedRect(4, 4, this.boxWidth, this.boxHeight, 14);
 
-    // Bubble body
     if (isThought) {
-      this.bubbleGfx.fillStyle(0x131926, 0.94);
+      this.bubbleGfx.fillStyle(0x131926, 0.95);
       this.bubbleGfx.fillRoundedRect(0, 0, this.boxWidth, this.boxHeight, 18);
-      this.bubbleGfx.lineStyle(2, 0xa5b4fc, 0.85);
+      this.bubbleGfx.lineStyle(2, 0xa5b4fc, 0.9);
       this.bubbleGfx.strokeRoundedRect(0, 0, this.boxWidth, this.boxHeight, 18);
+
+      // Thought bubble circles leading down to astronaut's head
+      if (line.target) {
+        const tailX = Phaser.Math.Clamp(line.target.x - bx, 35, this.boxWidth - 35);
+        this.bubbleGfx.fillStyle(0x131926, 0.95);
+        this.bubbleGfx.lineStyle(2, 0xa5b4fc, 0.9);
+        this.bubbleGfx.fillCircle(tailX, this.boxHeight + 8, 5);
+        this.bubbleGfx.strokeCircle(tailX, this.boxHeight + 8, 5);
+        this.bubbleGfx.fillCircle(tailX, this.boxHeight + 18, 3);
+        this.bubbleGfx.strokeCircle(tailX, this.boxHeight + 18, 3);
+      }
     } else {
-      this.bubbleGfx.fillStyle(0x0f172a, 0.94);
+      this.bubbleGfx.fillStyle(0x0f172a, 0.95);
       this.bubbleGfx.fillRoundedRect(0, 0, this.boxWidth, this.boxHeight, 12);
       this.bubbleGfx.lineStyle(2, themeColor, 0.9);
       this.bubbleGfx.strokeRoundedRect(0, 0, this.boxWidth, this.boxHeight, 12);
 
-      // Tail pointing downwards toward target
-      if (line.target && !isRadio) {
-        const tailX = Phaser.Math.Clamp(line.target.x - bx, 30, this.boxWidth - 30);
+      // Tail pointing downwards toward astronaut's head
+      if (line.target) {
+        const tailX = Phaser.Math.Clamp(line.target.x - bx, 35, this.boxWidth - 35);
         this.bubbleGfx.fillStyle(0x0f172a, 1);
         this.bubbleGfx.fillTriangle(tailX - 10, this.boxHeight, tailX + 10, this.boxHeight, tailX, this.boxHeight + 14);
         this.bubbleGfx.lineStyle(2, themeColor, 0.9);
@@ -240,7 +299,7 @@ export class DialogueBox extends Phaser.GameObjects.Container {
     }
 
     // Speaker Badge
-    this.badgeText.setText(isThought ? `💭 ${speaker} (Thinking)` : isRadio ? '📡 EMERGENCY RADIO' : speaker);
+    this.badgeText.setText(isThought ? `💭 ${speaker} (Thinking)` : isRadio ? '📡 RADIO' : speaker);
     const badgeW = this.badgeText.width + 24;
     this.badgeBg.clear();
     this.badgeBg.fillStyle(themeColor, 1);
@@ -269,10 +328,10 @@ export class DialogueBox extends Phaser.GameObjects.Container {
       },
     });
 
-    // Bouncy pop-in tween for the bubble
-    this.setScale(0.85);
+    // Bouncy pop-in
+    this.bubbleContainer.setScale(0.88);
     this.scene.tweens.add({
-      targets: this,
+      targets: this.bubbleContainer,
       scale: 1,
       duration: 180,
       ease: 'Back.easeOut',
@@ -282,14 +341,25 @@ export class DialogueBox extends Phaser.GameObjects.Container {
   close() {
     if (this.typeEvent) this.typeEvent.remove();
     this.isTyping = false;
+    this.isActive = false;
+    this.justClosed = true;
+    this.scene.time.delayedCall(250, () => {
+      this.justClosed = false;
+    });
+
     this.radioSprite.stop();
     this.radioSprite.setVisible(false);
+    this.heldRadio.stop();
+    this.heldRadio.setVisible(false);
+    this.factCard.hide();
+
     this.scene.tweens.add({
-      targets: this,
+      targets: this.bubbleContainer,
       alpha: 0,
       scale: 0.9,
       duration: 150,
       onComplete: () => {
+        this.bubbleContainer.setVisible(false);
         this.setVisible(false);
       },
     });
