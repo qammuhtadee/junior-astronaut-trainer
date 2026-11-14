@@ -99,10 +99,14 @@ export class RoomScene extends Phaser.Scene {
           return;
         }
         if (this.roomId === 'outpost' && gameState.solarDeployed && !gameState.habLightsOn) {
-          this.game.events.emit(
-            'warning:show',
-            "You can't navigate around without lights! Turn on the lights or rewind to the checkpoint."
-          );
+          if (!gameState.lightsIntroDone) {
+            this.game.events.emit('toast', 'Turn on the lights at the Power Panel first!');
+          } else {
+            this.game.events.emit(
+              'warning:show',
+              "You can't navigate around without lights! Turn on the lights or rewind to the checkpoint."
+            );
+          }
           return;
         }
       }
@@ -173,10 +177,14 @@ export class RoomScene extends Phaser.Scene {
   handleSleep() {
     if (gameState.day === 1) {
       if (!gameState.habLightsOn) {
-        this.game.events.emit(
-          'warning:show',
-          "You can't navigate around without lights! Turn on the lights before resting."
-        );
+        if (!gameState.lightsIntroDone) {
+          this.game.events.emit('toast', 'Turn on the lights at the Power Panel first!');
+        } else {
+          this.game.events.emit(
+            'warning:show',
+            "You can't navigate around without lights! Turn on the lights before resting."
+          );
+        }
         return;
       }
 

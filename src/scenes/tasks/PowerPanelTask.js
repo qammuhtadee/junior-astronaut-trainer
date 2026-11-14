@@ -309,6 +309,8 @@ export class PowerPanelTask extends Phaser.Scene {
             gameState.setMeters({ power: Math.max(10, cur > 90 ? 90 : cur - 10) });
           }
           this.lightsChangeState = 'turned_on';
+        } else if (!gameState.lightsIntroDone) {
+          this.game.events.emit('toast', 'Switch LIGHTS to [ONLINE] to turn on the habitat lights!');
         } else {
           if (gameState.habLightsOn) {
             gameState.habLightsOn = false;
