@@ -41,7 +41,7 @@ export class SurfaceScene extends RoomScene {
     this.player.setVisible(false);
 
     // Hide stations until crash and reveal sequence completes
-    this.stations.forEach((s) => s.container.setVisible(false));
+    this.stations.forEach((s) => s.setVisible(false));
 
     // Spacecraft starting diagonally off-screen top-left
     this.spacecraft = this.add
@@ -88,17 +88,17 @@ export class SurfaceScene extends RoomScene {
       name: 'Muntasir',
       color: COLORS.muntasir,
     });
-    this.muntasirActor.container.setScale(0).setDepth(140);
+    this.muntasirActor.setScale(0).setDepth(140);
 
     this.maishaActor = new Astronaut(this, 185, 505, {
       name: 'Maisha',
       color: COLORS.maisha,
     });
-    this.maishaActor.container.setScale(0).setDepth(139);
+    this.maishaActor.setScale(0).setDepth(139);
 
     // Pop up animation
     this.tweens.add({
-      targets: this.muntasirActor.container,
+      targets: this.muntasirActor,
       scale: 1,
       x: 240,
       y: 540,
@@ -107,7 +107,7 @@ export class SurfaceScene extends RoomScene {
     });
 
     this.tweens.add({
-      targets: this.maishaActor.container,
+      targets: this.maishaActor,
       scale: 1,
       x: 200,
       y: 560,
@@ -172,7 +172,7 @@ export class SurfaceScene extends RoomScene {
         target: this.muntasirActor,
         onStart: () => {
           // Camera pan right to reveal the 3D-printed Outpost
-          this.stations.forEach((s) => s.container.setVisible(true));
+          this.stations.forEach((s) => s.setVisible(true));
           this.tweens.add({
             targets: this.cameras.main,
             scrollX: 180,
@@ -225,7 +225,7 @@ export class SurfaceScene extends RoomScene {
       // Sync player astronaut position to Muntasir
       this.player.setPosition(this.muntasirActor.x, this.muntasirActor.y);
       this.player.setVisible(true);
-      this.muntasirActor.container.destroy();
+      this.muntasirActor.destroy();
       this.muntasirActor = null;
 
       // Keep companion actor Maisha waiting by airlock
@@ -393,7 +393,7 @@ export class SurfaceScene extends RoomScene {
   // HELPER: Autonomous Actor Movement
   // ==========================================
   walkActorTo(actor, targetX, targetY, speed = 160, onComplete) {
-    if (!actor || !actor.container) return;
+    if (!actor || !actor.active) return;
 
     const dx = targetX - actor.x;
     const dy = targetY - actor.y;
@@ -401,10 +401,10 @@ export class SurfaceScene extends RoomScene {
     const duration = (dist / speed) * 1000;
 
     actor.body_.setFlipX(dx < 0);
-    actor.body_.play('anim-walk', true);
+    actor.body_.play('walk', true);
 
     this.tweens.add({
-      targets: actor.container,
+      targets: actor,
       x: targetX,
       y: targetY,
       duration,

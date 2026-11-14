@@ -91,10 +91,10 @@ export class OutpostScene extends RoomScene {
       this.darknessLayer.clear();
       this.darknessLayer.fill(0x060912, 0.93);
 
-      if (this.player && this.player.container) {
+      if (this.player && this.player.active) {
         this.darknessLayer.erase(this.spotlightImg, this.player.x, this.player.y);
       }
-      if (this.companion && this.companion.container) {
+      if (this.companion && this.companion.active) {
         this.darknessLayer.erase(this.spotlightImg, this.companion.x, this.companion.y);
       }
     }
@@ -256,11 +256,11 @@ export class OutpostScene extends RoomScene {
     this.walkActorTo(this.companion, bunkX - 20, bunkY, 170, () => {
       // Disappear behind bunks
       this.tweens.add({
-        targets: this.companion.container,
+        targets: this.companion,
         alpha: 0,
         duration: 400,
         onComplete: () => {
-          this.companion.container.destroy();
+          this.companion.destroy();
           this.companion = null;
         },
       });
@@ -318,7 +318,7 @@ export class OutpostScene extends RoomScene {
   // HELPER: Autonomous Movement
   // ==========================================
   walkActorTo(actor, targetX, targetY, speed = 160, onComplete) {
-    if (!actor || !actor.container) return;
+    if (!actor || !actor.active) return;
 
     const dx = targetX - actor.x;
     const dy = targetY - actor.y;
@@ -326,10 +326,10 @@ export class OutpostScene extends RoomScene {
     const duration = (dist / speed) * 1000;
 
     actor.body_.setFlipX(dx < 0);
-    actor.body_.play('anim-walk', true);
+    actor.body_.play('walk', true);
 
     this.tweens.add({
-      targets: actor.container,
+      targets: actor,
       x: targetX,
       y: targetY,
       duration,
