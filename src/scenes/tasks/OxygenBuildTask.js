@@ -87,6 +87,14 @@ export class OxygenBuildTask extends Phaser.Scene {
     this.slotViews = {};
     this.partCards = {};
 
+    // Randomize card positions so players must match each module to its matching blueprint slot
+    let order = [0, 1, 2];
+    Phaser.Utils.Array.Shuffle(order);
+    if (order[0] === 0 && order[1] === 1 && order[2] === 2) {
+      order = [2, 0, 1];
+    }
+    const shuffledYSlots = [-88, 2, 92];
+
     PARTS.forEach((part, idx) => {
       const sy = part.slotY;
       const isPlaced = !!gameState.d2OxPlacedParts[part.id];
@@ -105,10 +113,10 @@ export class OxygenBuildTask extends Phaser.Scene {
       this.slotViews[part.id] = { gfx: slotGfx, label: slotLabel, x: slotX, y: sy, color: part.color, name: part.label };
       this.drawSlot(part.id, isPlaced);
 
-      // Draggable / Clickable Component on Left (if not already placed)
+      // Draggable Component on Left in scrambled order (if not already placed)
       if (!isPlaced) {
         const homeX = -150;
-        const homeY = -88 + idx * 90;
+        const homeY = shuffledYSlots[order[idx]];
         const card = this.add.container(homeX, homeY);
         const bg = this.add.graphics();
         bg.fillStyle(0x1e293b, 1);
@@ -139,9 +147,14 @@ export class OxygenBuildTask extends Phaser.Scene {
         });
         card.on('dragend', () => {
           const dist = Phaser.Math.Distance.Between(card.x, card.y, slotX, sy);
-          if (dist < 110 || !wasDragged) {
+          if (dist < 85) {
             this.placePart(part.id, card);
           } else {
+            if (this.statusText) {
+              this.statusText
+                .setText(`Drag ${part.label || part.name || 'this module'} to its matching slot on the right!`)
+                .setColor('#ffd166');
+            }
             this.tweens.add({ targets: card, x: homeX, y: homeY, duration: 200, ease: 'Back.easeOut' });
           }
         });
@@ -189,9 +202,11 @@ export class OxygenBuildTask extends Phaser.Scene {
       this.choiceResult = 'allocated';
       gameState.d2OxBuilt = true;
       gameState.d2OxSwitchOn = true;
+      const curPower = typeof gameState.meters?.power === 'number' ? gameState.meters.power : 100;
+      gameState.setMeters({ power: Math.max(10, curPower - 40) });
+      gameState.unlockFact?.('human_o2_consumption');
       gameState.stepId = 'd2_oxygen_maker';
       gameState.checkpointId = 'd2_oxygen_maker';
-      this.game.events.emit('oxygen:gradual-charge');
       this.closeTask();
     });
 

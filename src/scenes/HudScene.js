@@ -117,6 +117,8 @@ export class HudScene extends Phaser.Scene {
     this.game.events.on('power:start-dust-drain', this.startDustDrain, this);
     this.game.events.on('power:stop-dust-drain', this.stopDustDrain, this);
     this.game.events.on('oxygen:gradual-charge', this.startGradualOxygenCharge, this);
+    this.game.events.on('oxygen:start-rapid-drain', this.startRapidOxygenDrain, this);
+    this.game.events.on('oxygen:stop-rapid-drain', this.stopRapidOxygenDrain, this);
     this.game.events.on('lights:restored', this.stopInitialPowerCharge, this);
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -140,6 +142,8 @@ export class HudScene extends Phaser.Scene {
       this.game.events.off('power:start-dust-drain', this.startDustDrain, this);
       this.game.events.off('power:stop-dust-drain', this.stopDustDrain, this);
       this.game.events.off('oxygen:gradual-charge', this.startGradualOxygenCharge, this);
+    this.game.events.off('oxygen:start-rapid-drain', this.startRapidOxygenDrain, this);
+    this.game.events.off('oxygen:stop-rapid-drain', this.stopRapidOxygenDrain, this);
       this.game.events.off('lights:restored', this.stopInitialPowerCharge, this);
     });
 
@@ -195,8 +199,8 @@ export class HudScene extends Phaser.Scene {
     gameState.unlockFact(resolved);
   }
 
-  onHideFact() {
-    this.factCard.hide();
+  onHideFact(immediate = true) {
+    this.factCard.hide(immediate);
   }
 
   onShowWarning(payload) {
@@ -232,6 +236,7 @@ export class HudScene extends Phaser.Scene {
   }
 
   onRewindD2Oxygen() {
+    this.stopRapidOxygenDrain();
     this.warningCard.hide();
     if (this.oxygenChargeEvent) {
       this.oxygenChargeEvent.remove();
@@ -240,9 +245,12 @@ export class HudScene extends Phaser.Scene {
 
     // Restore d2_ice_drilled checkpoint (Power: 100%, Oxygen: 20%) and keep assembled parts
     gameState.d2OxBuilt = false;
+    gameState.d2OxLoaded = false;
     gameState.d2OxSwitchOn = true;
     gameState.d2OxPlacedParts = { hopper: true, electrolysis: true, valve: true };
-    gameState.goTo('d2_ice_drilled');
+    gameState.stepId = 'd2_ice_drilled';
+    gameState.checkpointId = 'd2_ice_drilled';
+    gameState.setMeters({ power: 100, oxygen: 20 });
 
     if (this.scene.isActive('OxygenBuildTask')) {
       this.scene.stop('OxygenBuildTask');
@@ -255,18 +263,23 @@ export class HudScene extends Phaser.Scene {
   }
 
   onRewindD2Night() {
+    this.stopRapidOxygenDrain();
     this.warningCard.hide();
     if (this.oxygenChargeEvent) {
       this.oxygenChargeEvent.remove();
       this.oxygenChargeEvent = null;
     }
 
-    // Restore d2_oxygen_maker checkpoint (Power: 60%, Oxygen: 100%)
-    gameState.d2OxBuilt = true;
-    gameState.d2OxSwitchOn = true;
-    gameState.habLightsOn = true;
-    gameState.d2NightModeSet = false;
-    gameState.goTo('d2_oxygen_maker');
+    // Time-travel rewind back to snapshot saved right before evening switch decisions
+    const restored = gameState.restoreCheckpoint('d2_night_ready');
+    if (!restored) {
+      gameState.d2OxBuilt = true;
+      gameState.d2OxLoaded = true;
+      gameState.d2OxSwitchOn = true;
+      gameState.habLightsOn = true;
+      gameState.d2NightModeSet = false;
+      gameState.setMeters({ power: 60, oxygen: 100 });
+    }
     this.game.events.emit('lights:sync');
 
     if (this.scene.isActive('PowerPanelTask')) {
@@ -339,7 +352,46 @@ export class HudScene extends Phaser.Scene {
     });
   }
 
+  startRapidOxygenDrain() {
+    this.oxygenMeter?.setShaking(true);
+    if (this.oxygenChargeEvent) {
+      this.oxygenChargeEvent.remove();
+      this.oxygenChargeEvent = null;
+    }
+    if (this.rapidOxDrainEvent) return;
+
+    this.rapidOxDrainEvent = this.time.addEvent({
+      delay: 350,
+      loop: true,
+      callback: () => {
+        if (gameState.day !== 2 || gameState.d2OxSwitchOn) {
+          this.stopRapidOxygenDrain();
+          return;
+        }
+        const cur = gameState.meters.oxygen ?? 100;
+        const next = Math.max(0, cur - 2);
+        gameState.setMeters({ oxygen: next });
+        if (next <= 0) {
+          this.stopRapidOxygenDrain();
+          this.warningCard.show({
+            text: 'CRITICAL: Habitat Oxygen hit 0%! Turn OXYGEN MAKER back ON or rewind!',
+            rewindEvent: 'checkpoint:rewind-d2-night',
+          });
+        }
+      },
+    });
+  }
+
+  stopRapidOxygenDrain() {
+    if (this.rapidOxDrainEvent) {
+      this.rapidOxDrainEvent.remove();
+      this.rapidOxDrainEvent = null;
+    }
+    this.oxygenMeter?.setShaking(false);
+  }
+
   startGradualOxygenCharge() {
+    this.stopRapidOxygenDrain();
     gameState.unlockFact('human_o2_consumption');
     if (this.chargeFromEvent) {
       this.chargeFromEvent.remove();
@@ -350,14 +402,13 @@ export class HudScene extends Phaser.Scene {
       this.oxygenChargeEvent = null;
     }
 
-    gameState.setMeters({ power: 60 });
     let current = gameState.meters.oxygen ?? 20;
 
     this.oxygenChargeEvent = this.time.addEvent({
       delay: 40,
       loop: true,
       callback: () => {
-        if (gameState.day !== 2) {
+        if (gameState.day !== 2 || !gameState.d2OxSwitchOn) {
           this.oxygenChargeEvent.remove();
           this.oxygenChargeEvent = null;
           return;
@@ -410,7 +461,7 @@ export class HudScene extends Phaser.Scene {
       delay: 5000,
       loop: true,
       callback: () => {
-        if (!gameState.nightDrainActive || gameState.day > 1) return;
+        if (!gameState.nightDrainActive || gameState.day > 2) return;
         if (gameState.meters.power !== null && gameState.meters.power > 10) {
           gameState.setMeters({ power: gameState.meters.power - 1 });
         }

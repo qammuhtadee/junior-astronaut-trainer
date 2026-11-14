@@ -16,6 +16,8 @@ export class FactCard extends Phaser.GameObjects.Container {
     this.visible = false;
     this.isTyping = false;
     this.fullText = '';
+    this.autoCloseTimer = null;
+    this.fadeTween = null;
     this.setDepth(2000);
 
     // 1. Paper Note Background Graphics
@@ -144,8 +146,18 @@ export class FactCard extends Phaser.GameObjects.Container {
     dummy.destroy();
     this.redrawCard(neededHeight);
 
+    // Auto-close after 15 seconds if player hasn't manually dismissed it
+    if (this.autoCloseTimer) {
+      this.autoCloseTimer.remove();
+      this.autoCloseTimer = null;
+    }
+    this.autoCloseTimer = this.scene.time.delayedCall(15000, () => {
+      this.hide(false);
+    });
+
     // Fade in
-    this.scene.tweens.add({
+    if (this.fadeTween) this.fadeTween.stop();
+    this.fadeTween = this.scene.tweens.add({
       targets: this,
       alpha: 1,
       duration: 350,
@@ -175,18 +187,37 @@ export class FactCard extends Phaser.GameObjects.Container {
     return true;
   }
 
-  hide() {
-    if (!this.visible) return;
-    if (this.typeTimer) this.typeTimer.remove();
+  hide(immediate = false) {
+    if (this.typeTimer) {
+      this.typeTimer.remove();
+      this.typeTimer = null;
+    }
+    if (this.autoCloseTimer) {
+      this.autoCloseTimer.remove();
+      this.autoCloseTimer = null;
+    }
+    if (this.fadeTween) {
+      this.fadeTween.stop();
+      this.fadeTween = null;
+    }
     this.isTyping = false;
 
-    this.scene.tweens.add({
+    if (!this.visible) return;
+
+    if (immediate) {
+      this.alpha = 0;
+      this.setVisible(false);
+      return;
+    }
+
+    this.fadeTween = this.scene.tweens.add({
       targets: this,
       alpha: 0,
       duration: 250,
       ease: 'Cubic.easeIn',
       onComplete: () => {
         this.setVisible(false);
+        this.fadeTween = null;
       },
     });
   }

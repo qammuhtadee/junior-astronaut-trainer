@@ -120,8 +120,13 @@ export class RoomScene extends Phaser.Scene {
             return;
           }
         }
-        if (this.roomId === 'outpost' && gameState.d2IceDrilled && !gameState.d2OxBuilt) {
-          this.game.events.emit('toast', 'Build the Oxygen Maker inside first!');
+        if (this.roomId === 'outpost' && gameState.d2IceDrilled && (!gameState.d2OxBuilt || !gameState.d2OxLoaded)) {
+          this.game.events.emit(
+            'toast',
+            !gameState.d2OxBuilt
+              ? 'Build the Oxygen Maker inside first!'
+              : 'Load Martian ice into the Oxygen Maker Hopper first!'
+          );
           return;
         }
       }
@@ -173,6 +178,9 @@ export class RoomScene extends Phaser.Scene {
         if (!gameState.d2OxBuilt) {
           this.scene.pause();
           this.scene.launch('OxygenBuildTask');
+        } else if (!gameState.d2OxLoaded) {
+          this.scene.pause();
+          this.scene.launch('IceLoadTask');
         } else {
           this.game.events.emit('toast', 'Oxygen Maker is online and producing breathable air.');
         }
@@ -256,6 +264,19 @@ export class RoomScene extends Phaser.Scene {
         return;
       }
 
+      if (!gameState.d2OxLoaded) {
+        this.game.events.emit('toast', 'Load Martian ice into the Oxygen Maker Hopper first!');
+        return;
+      }
+
+      if (!gameState.d2OxSwitchOn) {
+        this.game.events.emit('warning:show', {
+          text: 'Oxygen Maker is OFF and oxygen is dropping! Flip OXYGEN back ON at the Power Panel or rewind before sleeping.',
+          rewindEvent: 'checkpoint:rewind-d2-night',
+        });
+        return;
+      }
+
       if (gameState.habLightsOn) {
         gameState.setMeters({ power: 0 });
         this.game.events.emit('warning:show', {
@@ -268,6 +289,7 @@ export class RoomScene extends Phaser.Scene {
       this.runSleepTransition(
         'END OF SOL 2\n\nWith the lights off and the Oxygen Maker humming softly, the crew rests safely through the night...\n\nSOL 3 BEGINS',
         () => {
+          gameState.nightDrainActive = false;
           gameState.goTo('d3_morning');
           gameState.habLightsOn = true;
           gameState.activeAstronaut = 'maisha';

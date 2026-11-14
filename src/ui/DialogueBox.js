@@ -168,6 +168,8 @@ export class DialogueBox extends Phaser.GameObjects.Container {
       if (onComplete) onComplete();
       return;
     }
+    // Ensure short notes never cover dialogues
+    this.scene.game.events.emit('fact:hide', true);
     this.sequence = lines;
     this.sequenceIndex = 0;
     this.afterLineRanIdx = -1;
@@ -254,6 +256,7 @@ export class DialogueBox extends Phaser.GameObjects.Container {
   }
 
   displayBubble(line) {
+    this.scene.game.events.emit('fact:hide', true);
     this.setVisible(true);
     this.factContinueHint.setVisible(false);
     this.bubbleContainer.setVisible(true);

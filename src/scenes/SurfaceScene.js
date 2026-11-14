@@ -366,7 +366,6 @@ export class SurfaceScene extends RoomScene {
   // ==========================================
   initSurfacePostCrash() {
     this.cameras.main.scrollX = 0;
-    if (!this.spacecraft) this.spawnGroundedSpacecraft(-10, 425);
 
     // Do NOT spawn an idle companion on the surface (prevents duplicate Maisha outside)
     // If returning from the dark Outpost on Day 1 before building the solar panel
@@ -500,7 +499,6 @@ export class SurfaceScene extends RoomScene {
   // ==========================================
   initDay2Surface() {
     this.cameras.main.scrollX = 0;
-    if (!this.spacecraft) this.spawnGroundedSpacecraft(-10, 425);
 
     const solarStation = this.stations.find((s) => s.def.id === 'solar_panel');
     if (solarStation) solarStation.setVisible(true);
@@ -683,10 +681,6 @@ export class SurfaceScene extends RoomScene {
             target: this.player,
           },
           {
-            isFactReveal: true,
-            text: "Fact: Just like the ISS Oxygen Generation System (OGS) splits water into hydrogen and breathable oxygen via electrolysis, NASA's MOXIE experiment on Perseverance proved we can generate oxygen on Mars—producing 122 grams of pure oxygen.",
-          },
-          {
             speaker: 'Maisha',
             text: 'Look over there—the surface scanner found subsurface ice! Drill a core sample while I prepare the outpost.',
             target: this.companion,
@@ -695,6 +689,10 @@ export class SurfaceScene extends RoomScene {
 
         this.dialogueBox.showSequence(lines, () => {
           this.transitioning = false;
+          this.game.events.emit(
+            'fact:show',
+            "Fact: Just like the ISS Oxygen Generation System (OGS) splits water into hydrogen and breathable oxygen via electrolysis, NASA's MOXIE experiment on Perseverance proved we can generate oxygen on Mars—producing 122 grams of pure oxygen."
+          );
         });
       });
     } else {

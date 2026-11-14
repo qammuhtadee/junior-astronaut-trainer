@@ -99,9 +99,9 @@ export class PowerPanelTask extends Phaser.Scene {
         {
           id: 'light',
           label: 'LIGHTS',
-          desc: 'Main habitat illumination',
+          desc: 'Habitat illumination (ON: -10% Power | OFF: +10% Power)',
           on: gameState.habLightsOn,
-          load: 15,
+          load: 10,
           locked: false,
         },
       ];
@@ -109,7 +109,7 @@ export class PowerPanelTask extends Phaser.Scene {
         this.switches.push({
           id: 'oxygen',
           label: 'OXYGEN',
-          desc: 'Life support water splitting',
+          desc: 'Electrolysis life support (ON: -40% Power | OFF: +40% Power, O2 drops!)',
           on: gameState.d2OxSwitchOn,
           load: 40,
           locked: false,
@@ -368,25 +368,58 @@ export class PowerPanelTask extends Phaser.Scene {
         if (oxSw) oxSw.on = true;
       }
 
-      if (oxSw && !oxSw.on) {
-        gameState.d2OxSwitchOn = false;
-        this.d2OxOffWarning = true;
-      } else if (lightSw) {
-        gameState.d2OxSwitchOn = true;
-        if (!lightSw.on) {
-          if (!gameState.d2OxBuilt) {
-            this.game.events.emit('toast', 'Build the Oxygen Maker before setting night mode!');
-          } else {
-            gameState.habLightsOn = false;
+      const prevLights = !!gameState.habLightsOn;
+      const nextLights = lightSw ? !!lightSw.on : prevLights;
+      const prevOx = !!gameState.d2OxSwitchOn;
+      const nextOx = oxSw ? !!oxSw.on : prevOx;
+
+      let powerDelta = 0;
+      if (prevLights !== nextLights) {
+        powerDelta += nextLights ? -10 : 10;
+      }
+      if (oxSw && prevOx !== nextOx) {
+        powerDelta += nextOx ? -40 : 40;
+      }
+
+      const curPower = gameState.meters.power ?? 60;
+      const nextPower = Math.max(0, Math.min(100, curPower + powerDelta));
+      gameState.setMeters({ power: nextPower });
+
+      gameState.habLightsOn = nextLights;
+      if (oxSw) {
+        gameState.d2OxSwitchOn = nextOx;
+      }
+
+      this.lightsChangeState = null;
+      this.d2SilentDark = false;
+      this.d2OxTurnedOff = false;
+      this.d2OxTurnedOn = false;
+      this.d2StillOxOff = false;
+
+      if (oxSw && !nextOx) {
+        gameState.d2NightModeSet = false;
+        if (prevOx) {
+          this.d2OxTurnedOff = true;
+        } else {
+          this.d2StillOxOff = true;
+        }
+      } else {
+        if (oxSw && !prevOx && nextOx) {
+          this.d2OxTurnedOn = true;
+        }
+        if (!nextLights) {
+          if (gameState.d2OxBuilt && gameState.d2OxLoaded) {
             gameState.d2NightModeSet = true;
-            gameState.setMeters({ power: 25, oxygen: 100 });
             this.d2SilentDark = true;
+          } else {
+            gameState.d2NightModeSet = false;
+            this.lightsChangeState = 'off_warning';
           }
         } else {
-          gameState.habLightsOn = true;
           gameState.d2NightModeSet = false;
-          gameState.setMeters({ power: gameState.d2OxBuilt ? 60 : 100 });
-          this.lightsChangeState = 'turned_on';
+          if (!prevLights) {
+            this.lightsChangeState = 'turned_on';
+          }
         }
       }
     }
@@ -397,8 +430,11 @@ export class PowerPanelTask extends Phaser.Scene {
     if (this.closing) return;
     this.closing = true;
     const changeState = this.lightsChangeState;
-    const oxOffWarning = this.d2OxOffWarning;
     const silentDark = this.d2SilentDark;
+    const oxTurnedOff = this.d2OxTurnedOff;
+    const oxTurnedOn = this.d2OxTurnedOn;
+    const stillOxOff = this.d2StillOxOff;
+    const curPower = Math.round(gameState.meters.power ?? 0);
 
     this.tweens.add({
       targets: this.modal,
@@ -409,20 +445,49 @@ export class PowerPanelTask extends Phaser.Scene {
         this.scene.stop();
         const activeRoom = gameState.room === 'surface' ? 'Surface' : 'Outpost';
         this.scene.resume(activeRoom);
-        if (oxOffWarning) {
+        this.game.events.emit('lights:sync');
+
+        if (oxTurnedOff || stillOxOff) {
+          this.game.events.emit('oxygen:start-rapid-drain');
           this.game.events.emit('warning:show', {
-            text: 'Warning: Never switch off the Oxygen Maker! One person needs 0.84 kg of oxygen a day to breathe.',
+            text: oxTurnedOff
+              ? 'Power +40% saved, BUT Oxygen Maker is OFF and O2 is dropping fast! Flip OXYGEN back ON or rewind.'
+              : 'Oxygen Maker is still OFF and O2 is dropping! Flip OXYGEN ON or rewind before sleeping.',
             rewindEvent: 'checkpoint:rewind-d2-night',
           });
-        } else if (silentDark) {
+          return;
+        }
+
+        if (oxTurnedOn) {
+          this.game.events.emit('oxygen:stop-rapid-drain');
+          if (gameState.d2OxLoaded) {
+            this.game.events.emit('oxygen:gradual-charge');
+          }
+          this.game.events.emit('warning:hide');
+        }
+
+        if (silentDark) {
           this.game.events.emit('warning:hide');
           this.game.events.emit('lights:turned-off', { silentWarning: true });
-          this.game.events.emit('toast', 'Night mode active (Power: 25%). Rest on the bunks!');
+          this.game.events.emit(
+            'toast',
+            oxTurnedOn
+              ? `Oxygen restored (-40% Power) & Night Lights OFF (+10% Power)! Battery: ${curPower}%`
+              : `Lights OFF (+10% Power saved! Battery: ${curPower}%). Room is dark — head to the bunks!`
+          );
         } else if (changeState === 'turned_on') {
           this.game.events.emit('warning:hide');
           this.game.events.emit('lights:restored');
+          if (oxTurnedOn) {
+            this.game.events.emit('toast', `Oxygen Maker ON (-40% Power) & Lights ON. Battery: ${curPower}%`);
+          }
         } else if (changeState === 'off_warning') {
           this.game.events.emit('lights:turned-off', { silentWarning: false });
+        } else if (oxTurnedOn) {
+          this.game.events.emit(
+            'toast',
+            `Oxygen Maker back ON (-40% Power trade-off)! Breathing air restoring. Battery: ${curPower}%`
+          );
         }
       },
     });

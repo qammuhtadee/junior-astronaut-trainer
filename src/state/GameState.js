@@ -43,6 +43,11 @@ export class GameState {
     this.d2NightIntroDone = false;
     this.d2NightModeSet = false;
 
+    // Day 2 hopper ice loading & time-travel checkpoint snapshots
+    this.d2IceLoadedCount = 0;
+    this.d2OxLoaded = false;
+    this.snapshots = {};
+
     // Logbook & one-time tutorial flags
     this.discoveredFacts = [];
     this.hasUnreadLogbook = false;
@@ -50,6 +55,27 @@ export class GameState {
     this.tutorialMoveDone = false;
     this.tutorialSolarDone = false;
     this.seenLightsThought = false;
+  }
+
+  saveCheckpoint(key) {
+    if (!key) return;
+    const snap = {};
+    for (const k of Object.keys(this)) {
+      if (k === 'snapshots') continue;
+      const val = this[k];
+      if (typeof val === 'function') continue;
+      snap[k] = val && typeof val === 'object' ? JSON.parse(JSON.stringify(val)) : val;
+    }
+    this.snapshots[key] = snap;
+  }
+
+  restoreCheckpoint(key) {
+    const snap = this.snapshots?.[key];
+    if (!snap) return false;
+    for (const [k, val] of Object.entries(snap)) {
+      this[k] = val && typeof val === 'object' ? JSON.parse(JSON.stringify(val)) : val;
+    }
+    return true;
   }
 
   /** Record a discovered NASA fact in the live logbook and light up the unread red dot. */

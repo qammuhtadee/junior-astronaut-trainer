@@ -44,6 +44,10 @@ export class OutpostScene extends RoomScene {
     } else if (gameState.day === 2) {
       if (oxStation && !gameState.d2OxBuilt) oxStation.setVisible(false);
       this.initDay2Outpost();
+      if (gameState.d2OxBuilt && !gameState.d2OxLoaded) {
+        if (oxStation) oxStation.setVisible(true);
+        this.createIceHopperGuide();
+      }
     } else {
       this.initStandardOutpost();
     }
@@ -52,12 +56,14 @@ export class OutpostScene extends RoomScene {
     this.game.events.on('lights:turned-off', this.onLightsTurnedOff, this);
     this.game.events.on('lights:sync', this.syncLightsLayer, this);
     this.game.events.on('d2:oxygen-built', this.onDay2OxygenBuilt, this);
+    this.game.events.on('d2:ice-loaded', this.onDay2IceLoaded, this);
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.game.events.off('lights:restored', this.onLightsRestored, this);
       this.game.events.off('lights:turned-off', this.onLightsTurnedOff, this);
       this.game.events.off('lights:sync', this.syncLightsLayer, this);
       this.game.events.off('d2:oxygen-built', this.onDay2OxygenBuilt, this);
+      this.game.events.off('d2:ice-loaded', this.onDay2IceLoaded, this);
       if (this.drainTimer) this.drainTimer.remove();
     });
   }
@@ -325,16 +331,16 @@ export class OutpostScene extends RoomScene {
               target: this.companion,
             },
             {
-              isFactReveal: true,
-              text: 'Fact: Mars surface has about 43% light level of earth, so its also harder for solar panels to recharge there',
-            },
-            {
               speaker: 'Muntasir',
               text: "Seems like we are both tired. Let's have some rest on our bunks.",
               target: this.companion,
             },
           ],
           () => {
+            this.game.events.emit(
+              'fact:show',
+              'Fact: Mars surface has about 43% light level of earth, so its also harder for solar panels to recharge there'
+            );
             this.muntasirRestAtBunks();
           }
         );
@@ -427,10 +433,6 @@ export class OutpostScene extends RoomScene {
               target: this.player,
             },
             {
-              isFactReveal: true,
-              text: "Fact: NASA's Mars Exploration Rover Opportunity went silent in the global Martian dust storm of June 2018, and its mission was declared over in February 2019.",
-            },
-            {
               speaker: 'Muntasir',
               text: 'I should go outside through the Airlock and wipe the dust off the solar panel.',
               target: this.player,
@@ -439,6 +441,10 @@ export class OutpostScene extends RoomScene {
           ],
           () => {
             this.transitioning = false;
+            this.game.events.emit(
+              'fact:show',
+              "Fact: NASA's Mars Exploration Rover Opportunity went silent in the global Martian dust storm of June 2018, and its mission was declared over in February 2019."
+            );
           }
         );
       });
@@ -534,6 +540,51 @@ export class OutpostScene extends RoomScene {
     });
   }
 
+  createIceHopperGuide() {
+    const ox = this.stations.find((s) => s.def.id === 'oxygen_maker');
+    if (!ox) return;
+
+    ox.setVisible(true);
+    ox.allowBuildInteract = true;
+    ox.customPromptLabel = 'Load Ice into Hopper';
+
+    if (this.hopperGuide) {
+      this.hopperGuide.destroy();
+      this.hopperGuide = null;
+    }
+
+    const by = ox.def.y - ox.def.h;
+    this.hopperGuide = this.add.container(ox.def.x, by - 28).setDepth(900);
+    const label = this.add
+      .text(0, -22, 'Load Ice into Hopper', {
+        fontFamily: 'monospace',
+        fontSize: '13px',
+        fontStyle: 'bold',
+        backgroundColor: '#38bdf8',
+        color: '#0f172a',
+        padding: { x: 8, y: 4 },
+      })
+      .setOrigin(0.5);
+    const arrow = this.add
+      .text(0, 2, '▼', {
+        fontFamily: 'monospace',
+        fontSize: '22px',
+        fontStyle: 'bold',
+        color: '#7dd3fc',
+      })
+      .setOrigin(0.5);
+    this.hopperGuide.add([label, arrow]);
+
+    this.tweens.add({
+      targets: this.hopperGuide,
+      y: by - 42,
+      duration: 550,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+  }
+
   onDay2OxygenBuilt() {
     if (this.oxDottedBox) {
       this.oxDottedBox.destroy();
@@ -542,6 +593,42 @@ export class OutpostScene extends RoomScene {
     if (this.oxBuildGuide) {
       this.oxBuildGuide.destroy();
       this.oxBuildGuide = null;
+    }
+
+    this.createIceHopperGuide();
+
+    this.transitioning = true;
+    this.time.delayedCall(350, () => {
+      this.dialogueBox.showSequence(
+        [
+          {
+            speaker: 'Maisha',
+            text: 'Awesome! The Oxygen Maker frame is locked in and powered up—that takes 40% of our solar battery.',
+            target: this.player,
+          },
+          {
+            speaker: 'Muntasir',
+            text: 'Now it needs Martian water ice to actually make oxygen! Interact with the machine and drop our ice blocks into its top Hopper.',
+            target: this.companion,
+          },
+          {
+            speaker: 'Maisha',
+            text: "Let's load those Martian ice chunks into the Hopper to start splitting H2O into breathable O2!",
+            target: this.player,
+            isThought: true,
+          },
+        ],
+        () => {
+          this.transitioning = false;
+        }
+      );
+    });
+  }
+
+  onDay2IceLoaded() {
+    if (this.hopperGuide) {
+      this.hopperGuide.destroy();
+      this.hopperGuide = null;
     }
 
     const ox = this.stations.find((s) => s.def.id === 'oxygen_maker');
@@ -553,32 +640,38 @@ export class OutpostScene extends RoomScene {
 
     if (!gameState.d2NightIntroDone) {
       gameState.d2NightIntroDone = true;
+      gameState.saveCheckpoint('d2_night_ready');
+      if (gameState.snapshots?.d2_night_ready?.meters) {
+        gameState.snapshots.d2_night_ready.meters.oxygen = 100;
+      }
+
       this.transitioning = true;
       this.time.delayedCall(350, () => {
         this.dialogueBox.showSequence(
           [
             {
               speaker: 'Maisha',
-              text: 'The Oxygen Maker is running! Oxygen tanks are refilling to 100%, though it uses 40% of our power.',
+              text: 'Ice loaded! Electrolysis is refilling our Oxygen tanks to 100%, though it trades off 40% of our Power.',
               target: this.player,
             },
             {
-              isFactReveal: true,
-              text: "Fact: On Mars, splitting water with electricity makes O2 just like on the ISS. Perseverance's MOXIE also made ~122g of oxygen from Martian CO2 air. One person needs ~0.84 kg O2/day.",
-            },
-            {
               speaker: 'Muntasir',
-              text: 'Night is falling fast, and with 60% spare power left, leaving lights on overnight will drain our battery!',
+              text: "Night is falling fast and we don't have a nuclear reactor yet, so our battery will slowly lose 1% every 5 seconds.",
               target: this.companion,
             },
             {
               speaker: 'Maisha',
-              text: 'I should open the Power Panel, turn OFF the Lights while keeping Oxygen ON, and then rest on the bunks.',
+              text: 'I should open the Power Panel, switch OFF the Lights (+10% Power saved) while keeping Oxygen ON, and then rest on the bunks.',
               target: this.player,
               isThought: true,
             },
           ],
           () => {
+            this.game.events.emit(
+              'fact:show',
+              "Fact: On Mars, splitting water with electricity makes O2 just like on the ISS. Perseverance's MOXIE also made ~122g of oxygen from Martian CO2 air. One person needs ~0.84 kg O2/day."
+            );
+            this.startNightDrain();
             this.muntasirRestAtBunks();
           }
         );

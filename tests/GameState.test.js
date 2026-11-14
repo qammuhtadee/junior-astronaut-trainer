@@ -63,4 +63,27 @@ describe('GameState', () => {
     expect(gs.discoveredFacts).toEqual(['comm_delay', 'regolith_3d']);
     expect(gs.hasUnreadLogbook).toBe(true);
   });
+
+  it('saves and restores time-travel checkpoint snapshots accurately', () => {
+    gs.goTo('d2_oxygen_maker');
+    gs.habLightsOn = true;
+    gs.d2OxBuilt = true;
+    gs.d2OxLoaded = true;
+    gs.d2OxSwitchOn = true;
+    gs.setMeters({ power: 60, oxygen: 100 });
+    gs.saveCheckpoint('d2_night_ready');
+
+    // Simulate non-canon switch flip (oxygen off, lights off) and rapid oxygen loss
+    gs.d2OxSwitchOn = false;
+    gs.habLightsOn = false;
+    gs.setMeters({ power: 100, oxygen: 18 });
+
+    expect(gs.restoreCheckpoint('d2_night_ready')).toBe(true);
+    expect(gs.day).toBe(2);
+    expect(gs.d2OxSwitchOn).toBe(true);
+    expect(gs.habLightsOn).toBe(true);
+    expect(gs.meters.power).toBe(60);
+    expect(gs.meters.oxygen).toBe(100);
+    expect(gs.restoreCheckpoint('missing_key')).toBe(false);
+  });
 });
