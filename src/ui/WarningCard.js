@@ -13,6 +13,7 @@ export class WarningCard extends Phaser.GameObjects.Container {
     this.cardWidth = 340;
     this.cardHeight = 148;
     this.visible = false;
+    this.rewindEvent = 'checkpoint:rewind-lights';
     this.setDepth(2100);
 
     // 1. High-contrast crimson card background & hazard border
@@ -77,7 +78,7 @@ export class WarningCard extends Phaser.GameObjects.Container {
     this.rewindBtn.on('pointerdown', (_pointer, _localX, _localY, event) => {
       if (event) event.stopPropagation();
       this.hide();
-      this.scene.game.events.emit('checkpoint:rewind-lights');
+      this.scene.game.events.emit(this.rewindEvent || 'checkpoint:rewind-lights');
     });
     this.add(this.rewindBtn);
 
@@ -118,7 +119,11 @@ export class WarningCard extends Phaser.GameObjects.Container {
     this.rewindBtn.setY(height - 26);
   }
 
-  show(text = "You can't navigate around without lights! Operating the outpost in pitch darkness is unsafe.") {
+  show(payload = "You can't navigate around without lights! Operating the outpost in pitch darkness is unsafe.") {
+    const defaultMsg = "You can't navigate around without lights! Operating the outpost in pitch darkness is unsafe.";
+    const text = typeof payload === 'string' ? payload : payload?.text || defaultMsg;
+    this.rewindEvent = (typeof payload === 'object' && payload?.rewindEvent) || 'checkpoint:rewind-lights';
+
     this.bodyText.setText(text);
     this.setVisible(true);
     this.setAlpha(0);

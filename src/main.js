@@ -7,6 +7,9 @@ import { SurfaceScene } from './scenes/SurfaceScene.js';
 import { HudScene } from './scenes/HudScene.js';
 import { SolarAlignTask } from './scenes/tasks/SolarAlignTask.js';
 import { PowerPanelTask } from './scenes/tasks/PowerPanelTask.js';
+import { SolarCleanTask } from './scenes/tasks/SolarCleanTask.js';
+import { IceDrillTask } from './scenes/tasks/IceDrillTask.js';
+import { OxygenBuildTask } from './scenes/tasks/OxygenBuildTask.js';
 
 const game = new Phaser.Game({
   type: Phaser.AUTO,
@@ -19,7 +22,18 @@ const game = new Phaser.Game({
     width: GAME_WIDTH,
     height: GAME_HEIGHT,
   },
-  scene: [PreloadScene, IntroScene, OutpostScene, SurfaceScene, HudScene, SolarAlignTask, PowerPanelTask],
+  scene: [
+    PreloadScene,
+    IntroScene,
+    OutpostScene,
+    SurfaceScene,
+    HudScene,
+    SolarAlignTask,
+    PowerPanelTask,
+    SolarCleanTask,
+    IceDrillTask,
+    OxygenBuildTask,
+  ],
 });
 
 // Handy for debugging in the browser console only.

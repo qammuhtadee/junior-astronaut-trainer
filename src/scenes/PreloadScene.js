@@ -9,10 +9,110 @@ export class PreloadScene extends Phaser.Scene {
 
   preload() {
     const { width, height } = this.scale;
-    const bar = this.add.rectangle(width / 2 - 200, height / 2, 0, 16, 0xffffff).setOrigin(0, 0.5);
-    this.load.on('progress', (p) => (bar.width = 400 * p));
+    const cx = width / 2;
+    const cy = height / 2;
+
+    // 1. Mars Mission Loading Backdrop
+    this.add.rectangle(0, 0, width, height, 0x070a12).setOrigin(0);
+
+    // Starfield
+    const stars = this.add.graphics();
+    stars.fillStyle(0xffffff, 0.7);
+    for (let i = 0; i < 85; i++) {
+      stars.fillCircle(
+        Phaser.Math.Between(16, width - 16),
+        Phaser.Math.Between(16, Math.round(height * 0.7)),
+        Phaser.Math.Between(1, 2)
+      );
+    }
+
+    // Martian horizon glow at bottom
+    const horizon = this.add.graphics();
+    horizon.fillStyle(0x7c2d12, 0.35);
+    horizon.fillEllipse(cx, height + 80, width * 1.35, 360);
+    horizon.fillStyle(0x9a3412, 0.25);
+    horizon.fillEllipse(cx, height + 110, width * 1.15, 290);
+    horizon.lineStyle(2, 0xf97316, 0.45);
+    horizon.lineBetween(80, height - 56, width - 80, height - 56);
+
+    // Outer telemetry frame corners
+    const frame = this.add.graphics();
+    frame.lineStyle(2, 0x38bdf8, 0.55);
+    const m = 34;
+    const arm = 26;
+    frame.lineBetween(m, m + arm, m, m).lineBetween(m, m, m + arm, m);
+    frame.lineBetween(width - m - arm, m, width - m, m).lineBetween(width - m, m, width - m, m + arm);
+    frame.lineBetween(m, height - m - arm, m, height - m).lineBetween(m, height - m, m + arm, height - m);
+    frame.lineBetween(width - m - arm, height - m, width - m, height - m).lineBetween(width - m, height - m, width - m, height - m - arm);
+
+    // Title Banner & Subtitle
+    this.add
+      .text(cx, cy - 115, 'STRANDED ON MARS: SEVEN SOLS', {
+        fontFamily: 'monospace',
+        fontSize: '32px',
+        fontStyle: 'bold',
+        color: '#f8fafc',
+      })
+      .setOrigin(0.5);
+
+    this.add
+      .text(cx, cy - 72, 'JUNIOR ASTRONAUT MISSION TRAINER  //  SOL Telemetry Boot', {
+        fontFamily: 'monospace',
+        fontSize: '15px',
+        color: '#38bdf8',
+      })
+      .setOrigin(0.5);
+
+    // Loading Bar Track
+    const barW = 440;
+    const barH = 22;
+    const barX = cx - barW / 2;
+    const barY = cy + 6;
+
+    const track = this.add.graphics();
+    track.fillStyle(0x111827, 0.95);
+    track.fillRoundedRect(barX, barY, barW, barH, 11);
+    track.lineStyle(2, 0x334155, 1);
+    track.strokeRoundedRect(barX, barY, barW, barH, 11);
+
+    const fill = this.add.graphics();
+
+    const pctText = this.add
+      .text(cx, barY + barH + 22, '0%', {
+        fontFamily: 'monospace',
+        fontSize: '16px',
+        fontStyle: 'bold',
+        color: '#ffd166',
+      })
+      .setOrigin(0.5);
+
+    const statusText = this.add
+      .text(cx, barY - 22, 'INITIALIZING MISSION TELEMETRY...', {
+        fontFamily: 'monospace',
+        fontSize: '13px',
+        color: '#94a3b8',
+      })
+      .setOrigin(0.5);
+
+    this.load.on('progress', (p) => {
+      const pct = Math.round(p * 100);
+      fill.clear();
+      const innerW = Math.max(12, (barW - 8) * p);
+      if (p > 0) {
+        fill.fillStyle(0xf59e0b, 1);
+        fill.fillRoundedRect(barX + 4, barY + 4, innerW, barH - 8, 7);
+        fill.fillStyle(0xfef08a, 0.45);
+        fill.fillRoundedRect(barX + 6, barY + 5, Math.max(4, innerW - 4), 4, 2);
+      }
+      pctText.setText(`${pct}%`);
+      if (p < 0.35) statusText.setText('INITIALIZING MISSION TELEMETRY...');
+      else if (p < 0.7) statusText.setText('LOADING MARTIAN TERRAIN & OUTPOST...');
+      else if (p < 0.98) statusText.setText('BOOTING LIFE SUPPORT AUDIO...');
+      else statusText.setText('SYSTEMS READY');
+    });
 
     this.load.image('bg-surface', 'assets/backgrounds/mars-surface-1280.jpg');
+    this.load.image('bg-outpost', 'assets/backgrounds/outpost-interior.jpg');
     this.load.spritesheet('astronaut-walk', 'assets/sprites/astronaut-walk.png', {
       frameWidth: 200,
       frameHeight: 341,

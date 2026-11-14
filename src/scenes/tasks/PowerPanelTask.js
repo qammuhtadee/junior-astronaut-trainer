@@ -15,8 +15,12 @@ export class PowerPanelTask extends Phaser.Scene {
   create(data = {}) {
     this.closing = false;
     this.lightsChangeState = null;
+    this.d2OxOffWarning = false;
+    this.d2SilentDark = false;
     this.pendingAutoLightTimer = null;
+    this.pendingAutoDay2Timer = null;
     this.autoTurnOnLight = !!data?.autoTurnOnLight;
+    this.autoSetDay2Night = !!data?.autoSetDay2Night;
 
     const cx = GAME_WIDTH / 2;
     const cy = GAME_HEIGHT / 2;
@@ -92,9 +96,25 @@ export class PowerPanelTask extends Phaser.Scene {
       ];
     } else if (gameState.day === 2) {
       this.switches = [
-        { id: 'light', label: 'LIGHTS', desc: 'Main habitat illumination', on: true, load: 15, locked: false },
-        { id: 'oxygen', label: 'OXYGEN', desc: 'Life support water splitting', on: true, load: 40, locked: false },
+        {
+          id: 'light',
+          label: 'LIGHTS',
+          desc: 'Main habitat illumination',
+          on: gameState.habLightsOn,
+          load: 15,
+          locked: false,
+        },
       ];
+      if (gameState.d2OxBuilt) {
+        this.switches.push({
+          id: 'oxygen',
+          label: 'OXYGEN',
+          desc: 'Life support water splitting',
+          on: gameState.d2OxSwitchOn,
+          load: 40,
+          locked: false,
+        });
+      }
     } else if (gameState.day === 3) {
       this.switches = [
         { id: 'light', label: 'LIGHTS', desc: 'Main habitat illumination', on: true, load: 15, locked: false },
@@ -277,6 +297,21 @@ export class PowerPanelTask extends Phaser.Scene {
           this.statusText.setText('CHECKPOINT RESTORED: LIGHTS ON — CLICK APPLY').setColor('#34d399');
         }
       });
+    } else if (gameState.day === 2 && this.autoSetDay2Night) {
+      this.pendingAutoDay2Timer = this.time.delayedCall(260, () => {
+        const lightEntry = this.switchViews.find((v) => v.sw.id === 'light');
+        const oxEntry = this.switchViews.find((v) => v.sw.id === 'oxygen');
+        if (lightEntry) {
+          lightEntry.sw.on = false;
+          lightEntry.updateSwitchVisual(false);
+        }
+        if (oxEntry) {
+          oxEntry.sw.on = true;
+          oxEntry.updateSwitchVisual(true);
+        }
+        this.updateLoad();
+        this.statusText.setText('CHECKPOINT RESTORED: NIGHT MODE READY — CLICK APPLY').setColor('#34d399');
+      });
     }
   }
 
@@ -320,6 +355,36 @@ export class PowerPanelTask extends Phaser.Scene {
           this.lightsChangeState = 'off_warning';
         }
       }
+    } else if (gameState.day === 2) {
+      const lightSw = this.switches.find((s) => s.id === 'light');
+      const oxSw = this.switches.find((s) => s.id === 'oxygen');
+      if (this.pendingAutoDay2Timer && this.pendingAutoDay2Timer.getProgress() < 1) {
+        this.pendingAutoDay2Timer.remove(false);
+        if (lightSw) lightSw.on = false;
+        if (oxSw) oxSw.on = true;
+      }
+
+      if (oxSw && !oxSw.on) {
+        gameState.d2OxSwitchOn = false;
+        this.d2OxOffWarning = true;
+      } else if (lightSw) {
+        gameState.d2OxSwitchOn = true;
+        if (!lightSw.on) {
+          if (!gameState.d2OxBuilt) {
+            this.game.events.emit('toast', 'Build the Oxygen Maker before setting night mode!');
+          } else {
+            gameState.habLightsOn = false;
+            gameState.d2NightModeSet = true;
+            gameState.setMeters({ power: 25, oxygen: 100 });
+            this.d2SilentDark = true;
+          }
+        } else {
+          gameState.habLightsOn = true;
+          gameState.d2NightModeSet = false;
+          gameState.setMeters({ power: gameState.d2OxBuilt ? 60 : 100 });
+          this.lightsChangeState = 'turned_on';
+        }
+      }
     }
     this.closeTask();
   }
@@ -328,6 +393,8 @@ export class PowerPanelTask extends Phaser.Scene {
     if (this.closing) return;
     this.closing = true;
     const changeState = this.lightsChangeState;
+    const oxOffWarning = this.d2OxOffWarning;
+    const silentDark = this.d2SilentDark;
 
     this.tweens.add({
       targets: this.modal,
@@ -338,7 +405,16 @@ export class PowerPanelTask extends Phaser.Scene {
         this.scene.stop();
         const activeRoom = gameState.room === 'surface' ? 'Surface' : 'Outpost';
         this.scene.resume(activeRoom);
-        if (changeState === 'turned_on') {
+        if (oxOffWarning) {
+          this.game.events.emit('warning:show', {
+            text: 'Warning: Never switch off the Oxygen Maker! One person needs 0.84 kg of oxygen a day to breathe.',
+            rewindEvent: 'checkpoint:rewind-d2-night',
+          });
+        } else if (silentDark) {
+          this.game.events.emit('warning:hide');
+          this.game.events.emit('lights:turned-off', { silentWarning: true });
+          this.game.events.emit('toast', 'Night mode active (Power: 25%). Rest on the bunks!');
+        } else if (changeState === 'turned_on') {
           this.game.events.emit('warning:hide');
           this.game.events.emit('lights:restored');
         } else if (changeState === 'off_warning') {

@@ -18,12 +18,15 @@ export class OutpostScene extends RoomScene {
   create(data = {}) {
     super.create(data);
 
+    this.oxDottedBox = null;
+    this.oxBuildGuide = null;
     this.dialogueBox = new DialogueBox(this);
 
     // Setup full-screen darkness & vignette around astronauts
     this.initDarkness();
 
     const powerStation = this.stations.find((s) => s.def.id === 'power_panel');
+    const oxStation = this.stations.find((s) => s.def.id === 'oxygen_maker');
     const bedStation = this.stations.find((s) => s.def.id === 'bed');
 
     if (gameState.day === 1) {
@@ -38,26 +41,29 @@ export class OutpostScene extends RoomScene {
         if (bedStation) bedStation.setVisible(gameState.habLightsOn || gameState.lightsIntroDone);
         this.initPowerRestoredVisit();
       }
+    } else if (gameState.day === 2) {
+      if (oxStation && !gameState.d2OxBuilt) oxStation.setVisible(false);
+      this.initDay2Outpost();
     } else {
       this.initStandardOutpost();
     }
 
     this.game.events.on('lights:restored', this.onLightsRestored, this);
     this.game.events.on('lights:turned-off', this.onLightsTurnedOff, this);
+    this.game.events.on('lights:sync', this.syncLightsLayer, this);
+    this.game.events.on('d2:oxygen-built', this.onDay2OxygenBuilt, this);
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.game.events.off('lights:restored', this.onLightsRestored, this);
       this.game.events.off('lights:turned-off', this.onLightsTurnedOff, this);
+      this.game.events.off('lights:sync', this.syncLightsLayer, this);
+      this.game.events.off('d2:oxygen-built', this.onDay2OxygenBuilt, this);
       if (this.drainTimer) this.drainTimer.remove();
     });
   }
 
   drawBackground() {
-    this.add.rectangle(0, 0, GAME_WIDTH, HORIZON_Y, 0x3b3f4a).setOrigin(0).setDepth(DEPTH.BACKGROUND);
-    this.add
-      .rectangle(0, HORIZON_Y, GAME_WIDTH, GAME_HEIGHT - HORIZON_Y, 0x5a5048)
-      .setOrigin(0)
-      .setDepth(DEPTH.BACKGROUND);
+    this.add.image(0, 0, 'bg-outpost').setOrigin(0).setDisplaySize(GAME_WIDTH, GAME_HEIGHT).setDepth(DEPTH.BACKGROUND);
   }
 
   initDarkness() {
@@ -83,9 +89,17 @@ export class OutpostScene extends RoomScene {
       .setOrigin(0, 0)
       .setDepth(800);
 
-    if (gameState.habLightsOn || gameState.day > 1) {
+    if (gameState.habLightsOn || gameState.day > 2) {
       this.darknessLayer.setVisible(false);
     }
+  }
+
+  syncLightsLayer() {
+    if (!this.darknessLayer) return;
+    this.tweens.killTweensOf(this.darknessLayer);
+    this.darknessLayer.setVisible(!gameState.habLightsOn).setAlpha(gameState.habLightsOn ? 0 : 1);
+    this.lastDarkKey = null;
+    if (!gameState.habLightsOn) this.redrawDarkness();
   }
 
   update(time, delta) {
@@ -114,10 +128,14 @@ export class OutpostScene extends RoomScene {
     if (this.companion && this.companion.active) {
       this.darknessLayer.erase(this.spotlightImg, this.companion.x, this.companion.y - 50);
     }
-    if (gameState.solarDeployed) {
+    if (gameState.solarDeployed || gameState.day >= 2) {
       const pp = this.stations.find((s) => s.def.id === 'power_panel');
       if (pp && pp.visible) {
         this.darknessLayer.erase(this.spotlightImg, pp.def.x, pp.def.y - 60);
+      }
+      const bed = this.stations.find((s) => s.def.id === 'bed');
+      if (bed && bed.visible) {
+        this.darknessLayer.erase(this.spotlightImg, bed.def.x, bed.def.y - 40);
       }
     }
   }
@@ -260,7 +278,7 @@ export class OutpostScene extends RoomScene {
       });
     }
 
-    if (!gameState.lightsIntroDone) {
+    if (gameState.day === 1 && !gameState.lightsIntroDone) {
       gameState.lightsIntroDone = true;
       gameState.muntasirResting = true;
       this.transitioning = true;
@@ -355,6 +373,204 @@ export class OutpostScene extends RoomScene {
         },
       });
     });
+  }
+
+  // ==========================================
+  // DAY 2: DUST AND AIR
+  // ==========================================
+  initDay2Outpost() {
+    this.syncLightsLayer();
+
+    // Phase 1: Morning wake-up (dust on solar array)
+    if (!gameState.d2IntroDone) {
+      gameState.d2IntroDone = true;
+      gameState.habLightsOn = true;
+      this.syncLightsLayer();
+      this.game.events.emit('power:start-dust-drain');
+
+      this.player.body_.setFlipX(true);
+      this.companion = new Astronaut(this, 500, LANE.top + 42, {
+        name: 'Maisha',
+        color: COLORS.maisha,
+      });
+      this.companion.body_.setFlipX(false);
+
+      this.transitioning = true;
+      this.time.delayedCall(350, () => {
+        this.dialogueBox.showSequence(
+          [
+            {
+              speaker: 'Maisha',
+              text: "Good morning, Muntasir! Look at our Power meter—it's shaking and dropping slowly!",
+              target: this.companion,
+            },
+            {
+              speaker: 'Muntasir',
+              text: 'An overnight Martian dust storm must have coated our solar array outside!',
+              target: this.player,
+              onStart: () => {
+                this.game.events.emit(
+                  'fact:show',
+                  "Fact: NASA's Mars Exploration Rover Opportunity went silent in the global Martian dust storm of June 2018, and its mission was declared over in February 2019."
+                );
+              },
+            },
+            {
+              speaker: 'Muntasir',
+              text: 'I should go outside through the Airlock and wipe the dust off the solar panel.',
+              target: this.player,
+              isThought: true,
+            },
+          ],
+          () => {
+            this.transitioning = false;
+          }
+        );
+      });
+      return;
+    }
+
+    // Phase 2: Maisha returned with ice core, ready to build Oxygen Maker
+    if (gameState.d2IceDrilled && !gameState.d2OxBuilt) {
+      this.companion = new Astronaut(this, 185, LANE.top + 42, {
+        name: 'Muntasir',
+        color: COLORS.muntasir,
+      });
+      this.companion.body_.setFlipX(false);
+
+      this.createOxygenBuildGuide();
+
+      if (!gameState.d2BuildThoughtDone) {
+        gameState.d2BuildThoughtDone = true;
+        this.transitioning = true;
+        this.time.delayedCall(250, () => {
+          this.dialogueBox.showSequence(
+            [
+              {
+                speaker: 'Maisha',
+                text: 'Muntasir drilled the Martian ice! I can assemble the Oxygen Maker right here and split the water into breathable O2.',
+                target: this.player,
+                isThought: true,
+              },
+            ],
+            () => {
+              this.transitioning = false;
+            }
+          );
+        });
+      }
+      return;
+    }
+
+    // Before ice is drilled (returning briefly): Muntasir still needs to go outside
+    if (!gameState.d2IceDrilled) {
+      this.companion = new Astronaut(this, 500, LANE.top + 42, {
+        name: 'Maisha',
+        color: COLORS.maisha,
+      });
+      this.companion.body_.setFlipX(false);
+    }
+  }
+
+  createOxygenBuildGuide() {
+    const ox = this.stations.find((s) => s.def.id === 'oxygen_maker');
+    if (!ox) return;
+
+    ox.setVisible(false);
+    ox.allowBuildInteract = true;
+    ox.customPromptLabel = 'Build Oxygen Maker';
+
+    const bx = ox.def.x - ox.def.w / 2;
+    const by = ox.def.y - ox.def.h;
+    this.oxDottedBox = this.add.graphics().setDepth(DEPTH.WORLD_MIN + ox.def.y - 1);
+    this.oxDottedBox.fillStyle(0x38bdf8, 0.14);
+    this.oxDottedBox.fillRect(bx, by, ox.def.w, ox.def.h);
+    this.oxDottedBox.lineStyle(2.5, 0x38bdf8, 0.95);
+    this.oxDottedBox.strokeRect(bx, by, ox.def.w, ox.def.h);
+
+    this.oxBuildGuide = this.add.container(ox.def.x, by - 28).setDepth(900);
+    const label = this.add
+      .text(0, -22, 'Build Oxygen Maker', {
+        fontFamily: 'monospace',
+        fontSize: '13px',
+        fontStyle: 'bold',
+        backgroundColor: '#38bdf8',
+        color: '#0f172a',
+        padding: { x: 8, y: 4 },
+      })
+      .setOrigin(0.5);
+    const arrow = this.add
+      .text(0, 2, '▼', {
+        fontFamily: 'monospace',
+        fontSize: '22px',
+        fontStyle: 'bold',
+        color: '#7dd3fc',
+      })
+      .setOrigin(0.5);
+    this.oxBuildGuide.add([label, arrow]);
+
+    this.tweens.add({
+      targets: this.oxBuildGuide,
+      y: by - 42,
+      duration: 550,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+  }
+
+  onDay2OxygenBuilt() {
+    if (this.oxDottedBox) {
+      this.oxDottedBox.destroy();
+      this.oxDottedBox = null;
+    }
+    if (this.oxBuildGuide) {
+      this.oxBuildGuide.destroy();
+      this.oxBuildGuide = null;
+    }
+
+    const ox = this.stations.find((s) => s.def.id === 'oxygen_maker');
+    if (ox) {
+      ox.allowBuildInteract = false;
+      ox.customPromptLabel = null;
+      ox.setVisible(true);
+    }
+
+    if (!gameState.d2NightIntroDone) {
+      gameState.d2NightIntroDone = true;
+      this.transitioning = true;
+      this.time.delayedCall(350, () => {
+        this.dialogueBox.showSequence(
+          [
+            {
+              speaker: 'Maisha',
+              text: 'The Oxygen Maker is running! Oxygen tanks are refilling to 100%, though it uses 40% of our power.',
+              target: this.player,
+              onStart: () => {
+                this.game.events.emit(
+                  'fact:show',
+                  "Fact: On Mars, splitting water with electricity makes O2 just like on the ISS. Perseverance's MOXIE also made ~122g of oxygen from Martian CO2 air. One person needs ~0.84 kg O2/day."
+                );
+              },
+            },
+            {
+              speaker: 'Muntasir',
+              text: 'Night is falling fast, and with 60% spare power left, leaving lights on overnight will drain our battery!',
+              target: this.companion,
+            },
+            {
+              speaker: 'Maisha',
+              text: 'I should open the Power Panel, turn OFF the Lights while keeping Oxygen ON, and then rest on the bunks.',
+              target: this.player,
+              isThought: true,
+            },
+          ],
+          () => {
+            this.muntasirRestAtBunks();
+          }
+        );
+      });
+    }
   }
 
   initStandardOutpost() {

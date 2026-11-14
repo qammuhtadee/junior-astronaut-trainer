@@ -21,6 +21,10 @@ export class SurfaceScene extends RoomScene {
     this.spacecraft = null;
     this.dottedBox = null;
     this.buildGuide = null;
+    this.solarDustOverlay = null;
+    this.solarCleanGuide = null;
+    this.iceDottedBox = null;
+    this.iceDrillGuide = null;
     this.onSolarUnfurlStart = null;
     this.dialogueBox = new DialogueBox(this);
 
@@ -30,15 +34,26 @@ export class SurfaceScene extends RoomScene {
       solarStation.setVisible(false);
     }
 
+    const iceStation = this.stations.find((s) => s.def.id === 'ice_site');
+    if (iceStation && (gameState.day < 2 || !gameState.d2PanelCleaned)) {
+      iceStation.setVisible(false);
+    }
+
     this.game.events.on('solar:aligned', this.runPowerChargeUp, this);
+    this.game.events.on('d2:panel-cleaned', this.onDay2PanelCleaned, this);
+    this.game.events.on('d2:ice-drilled', this.onDay2IceDrilled, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.game.events.off('solar:aligned', this.runPowerChargeUp, this);
+      this.game.events.off('d2:panel-cleaned', this.onDay2PanelCleaned, this);
+      this.game.events.off('d2:ice-drilled', this.onDay2IceDrilled, this);
     });
 
     const isCrashIntro = data.isCrashIntro || (!gameState.hasSeenCrash && gameState.day === 1);
 
     if (isCrashIntro) {
       this.initCrashCutscene();
+    } else if (gameState.day === 2) {
+      this.initDay2Surface();
     } else {
       this.initSurfacePostCrash();
     }
@@ -428,6 +443,249 @@ export class SurfaceScene extends RoomScene {
     // the solar panel while the power meter charges from 0% to 100% in HudScene.
     this.transitioning = false;
     this.game.events.emit('toast', 'Power restored! Walk to the Airlock to go inside.');
+  }
+
+  // ==========================================
+  // DAY 2: DUST AND AIR
+  // ==========================================
+  initDay2Surface() {
+    this.cameras.main.scrollX = 0;
+
+    const solarStation = this.stations.find((s) => s.def.id === 'solar_panel');
+    if (solarStation) solarStation.setVisible(true);
+
+    if (!gameState.d2PanelCleaned) {
+      this.game.events.emit('power:start-dust-drain');
+      this.createSolarCleanGuide();
+    } else if (!gameState.d2IceDrilled) {
+      const iceStation = this.stations.find((s) => s.def.id === 'ice_site');
+      if (iceStation) iceStation.setVisible(true);
+      this.createIceDrillGuide();
+      if (!this.companion) {
+        this.companion = new Astronaut(this, 760, LANE.top + 48, {
+          name: 'Maisha',
+          color: COLORS.maisha,
+        });
+        this.companion.body_.setFlipX(true);
+      }
+    }
+  }
+
+  createSolarCleanGuide() {
+    const solarStation = this.stations.find((s) => s.def.id === 'solar_panel');
+    if (!solarStation) return;
+    solarStation.customPromptLabel = 'Clean Solar Panel';
+
+    if (this.solarDustOverlay) {
+      this.solarDustOverlay.destroy();
+      this.solarDustOverlay = null;
+    }
+    if (this.solarCleanGuide) {
+      this.solarCleanGuide.destroy();
+      this.solarCleanGuide = null;
+    }
+
+    const { x, y, w, h } = solarStation.def;
+    const left = x - w / 2;
+    const top = y - h;
+
+    const dustGfx = this.add.graphics().setDepth(solarStation.depth + 1);
+    dustGfx.fillStyle(0x9a3412, 0.72);
+    dustGfx.fillRect(left + 4, top + 4, w - 8, h - 8);
+    dustGfx.fillStyle(0xc2410c, 0.78);
+    dustGfx.fillCircle(left + w * 0.25, top + h * 0.4, 22);
+    dustGfx.fillCircle(left + w * 0.65, top + h * 0.55, 26);
+    dustGfx.fillCircle(left + w * 0.45, top + h * 0.3, 18);
+    dustGfx.fillStyle(0x7c2d12, 0.7);
+    dustGfx.fillCircle(left + w * 0.8, top + h * 0.32, 16);
+    this.solarDustOverlay = dustGfx;
+
+    const guide = this.add.container(x, top - 34).setDepth(1300);
+    const label = this.add
+      .text(0, -18, 'Clean Solar Panel', {
+        fontFamily: 'monospace',
+        fontSize: '13px',
+        fontStyle: 'bold',
+        color: '#ffd166',
+        backgroundColor: '#000c',
+        padding: { x: 8, y: 3 },
+      })
+      .setOrigin(0.5);
+    const arrow = this.add
+      .text(0, 4, '▼', {
+        fontFamily: 'monospace',
+        fontSize: '20px',
+        color: '#ffd166',
+      })
+      .setOrigin(0.5);
+    guide.add([label, arrow]);
+    this.tweens.add({
+      targets: guide,
+      y: top - 24,
+      duration: 600,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+    this.solarCleanGuide = guide;
+  }
+
+  createIceDrillGuide() {
+    const iceStation = this.stations.find((s) => s.def.id === 'ice_site');
+    if (!iceStation) return;
+    iceStation.allowBuildInteract = true;
+    iceStation.customPromptLabel = 'Drill for Ice';
+
+    if (this.iceDottedBox) {
+      this.iceDottedBox.destroy();
+      this.iceDottedBox = null;
+    }
+    if (this.iceDrillGuide) {
+      this.iceDrillGuide.destroy();
+      this.iceDrillGuide = null;
+    }
+
+    const { x, y, w, h } = iceStation.def;
+    const left = x - w / 2 - 6;
+    const top = y - h - 6;
+    const gfx = this.add.graphics().setDepth(iceStation.depth + 1);
+    this.drawDashedRect(gfx, left, top, w + 12, h + 12, 0x38bdf8, 2, 8, 6);
+    this.iceDottedBox = gfx;
+
+    const guide = this.add.container(x, top - 30).setDepth(1300);
+    const label = this.add
+      .text(0, -18, 'Drill for Ice', {
+        fontFamily: 'monospace',
+        fontSize: '13px',
+        fontStyle: 'bold',
+        color: '#7dd3fc',
+        backgroundColor: '#000c',
+        padding: { x: 8, y: 3 },
+      })
+      .setOrigin(0.5);
+    const arrow = this.add
+      .text(0, 4, '▼', {
+        fontFamily: 'monospace',
+        fontSize: '20px',
+        color: '#7dd3fc',
+      })
+      .setOrigin(0.5);
+    guide.add([label, arrow]);
+    this.tweens.add({
+      targets: guide,
+      y: top - 20,
+      duration: 600,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+    this.iceDrillGuide = guide;
+  }
+
+  onDay2PanelCleaned() {
+    if (this.solarDustOverlay) {
+      this.solarDustOverlay.destroy();
+      this.solarDustOverlay = null;
+    }
+    if (this.solarCleanGuide) {
+      this.solarCleanGuide.destroy();
+      this.solarCleanGuide = null;
+    }
+
+    const solarStation = this.stations.find((s) => s.def.id === 'solar_panel');
+    if (solarStation) solarStation.customPromptLabel = null;
+
+    const iceStation = this.stations.find((s) => s.def.id === 'ice_site');
+    if (iceStation) iceStation.setVisible(true);
+    this.createIceDrillGuide();
+
+    this.nearby = null;
+    this.game.events.emit('prompt', null);
+
+    if (!gameState.d2OxygenIntroDone) {
+      gameState.d2OxygenIntroDone = true;
+      gameState.stepId = 'd2_oxygen_low';
+      gameState.setMeters({ oxygen: 20 });
+
+      if (!this.companion) {
+        this.companion = new Astronaut(this, GAME_WIDTH - 120, LANE.top + 45, {
+          name: 'Maisha',
+          color: COLORS.maisha,
+        });
+      }
+
+      this.transitioning = true;
+      this.walkActorTo(this.companion, 760, LANE.top + 48, 300, () => {
+        this.companion.body_.setFlipX(true);
+        this.player.body_.setFlipX(false);
+
+        const lines = [
+          {
+            speaker: 'Maisha',
+            text: 'Muntasir! I just checked the life support logs—our oxygen tanks are down to 20%!',
+            target: this.companion,
+            exclamation: true,
+          },
+          {
+            speaker: 'Muntasir',
+            text: 'We can melt subsurface Martian ice and split water with electricity to make oxygen, just like the ISS!',
+            target: this.player,
+            onStart: () => {
+              this.game.events.emit(
+                'fact:show',
+                "Fact: Just like the ISS Oxygen Generation System (OGS) splits water into hydrogen and breathable oxygen via electrolysis, NASA's MOXIE experiment on Perseverance proved we can generate oxygen on Mars—producing 122 grams of pure oxygen."
+              );
+            },
+          },
+          {
+            speaker: 'Maisha',
+            text: 'Look over there—the surface scanner found subsurface ice! Drill a core sample while I prepare the outpost.',
+            target: this.companion,
+          },
+        ];
+
+        this.dialogueBox.showSequence(lines, () => {
+          this.transitioning = false;
+        });
+      });
+    } else {
+      this.transitioning = false;
+    }
+  }
+
+  onDay2IceDrilled() {
+    if (this.iceDottedBox) {
+      this.iceDottedBox.destroy();
+      this.iceDottedBox = null;
+    }
+    if (this.iceDrillGuide) {
+      this.iceDrillGuide.destroy();
+      this.iceDrillGuide = null;
+    }
+
+    const iceStation = this.stations.find((s) => s.def.id === 'ice_site');
+    if (iceStation) {
+      iceStation.customPromptLabel = null;
+      iceStation.allowBuildInteract = false;
+    }
+
+    this.nearby = null;
+    this.game.events.emit('prompt', null);
+    this.transitioning = true;
+
+    this.dialogueBox.showSequence(
+      [
+        {
+          speaker: 'Muntasir',
+          isThought: true,
+          target: this.player,
+          text: "Got the Martian ice core! Let's head back inside so Maisha can build the Oxygen Maker.",
+        },
+      ],
+      () => {
+        this.transitioning = false;
+      }
+    );
   }
 
   // ==========================================

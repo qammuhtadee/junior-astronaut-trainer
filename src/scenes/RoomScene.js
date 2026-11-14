@@ -109,11 +109,36 @@ export class RoomScene extends Phaser.Scene {
           }
           return;
         }
+      } else if (gameState.day === 2) {
+        if (this.roomId === 'surface') {
+          if (!gameState.d2PanelCleaned) {
+            this.game.events.emit('toast', 'Clean the solar panel first!');
+            return;
+          }
+          if (!gameState.d2IceDrilled) {
+            this.game.events.emit('toast', 'Drill for subsurface ice before heading back inside!');
+            return;
+          }
+        }
+        if (this.roomId === 'outpost' && gameState.d2IceDrilled && !gameState.d2OxBuilt) {
+          this.game.events.emit('toast', 'Build the Oxygen Maker inside first!');
+          return;
+        }
       }
       return this.goThroughAirlock(def.leadsTo);
     }
 
     if (def.id === 'solar_panel') {
+      if (gameState.day === 2) {
+        if (!gameState.d2PanelCleaned) {
+          this.scene.pause();
+          this.scene.launch('SolarCleanTask');
+        } else {
+          this.game.events.emit('toast', 'Solar array is clean and operating at 100%.');
+        }
+        return;
+      }
+
       if (!gameState.solarUnfurled) {
         this.unfurlAndAlignSolar(this.nearby);
         return;
@@ -127,6 +152,32 @@ export class RoomScene extends Phaser.Scene {
       this.scene.pause();
       this.scene.launch('SolarAlignTask');
       return;
+    }
+
+    if (def.id === 'ice_site') {
+      if (gameState.day === 2) {
+        if (!gameState.d2PanelCleaned) {
+          this.game.events.emit('toast', 'Clean the solar array first!');
+        } else if (!gameState.d2IceDrilled) {
+          this.scene.pause();
+          this.scene.launch('IceDrillTask');
+        } else {
+          this.game.events.emit('toast', 'Ice core already harvested for today.');
+        }
+        return;
+      }
+    }
+
+    if (def.id === 'oxygen_maker') {
+      if (gameState.day === 2) {
+        if (!gameState.d2OxBuilt) {
+          this.scene.pause();
+          this.scene.launch('OxygenBuildTask');
+        } else {
+          this.game.events.emit('toast', 'Oxygen Maker is online and producing breathable air.');
+        }
+        return;
+      }
     }
 
     if (def.id === 'power_panel') {
@@ -188,51 +239,79 @@ export class RoomScene extends Phaser.Scene {
         return;
       }
 
-      this.transitioning = true;
-      this.game.events.emit('prompt', null);
+      this.runSleepTransition(
+        'END OF SOL 1\n\nMuntasir and Maisha rest on their bunks.\nOvernight, a Martian dust storm sweeps across the outpost and coats the solar panels...\n\nSOL 2 BEGINS',
+        () => {
+          // Advance to Day 2
+          gameState.nightDrainActive = false;
+          gameState.habLightsOn = true;
+          gameState.goTo('d2_dust');
+          gameState.activeAstronaut = 'muntasir';
+          this.scene.restart();
+        }
+      );
+    } else if (gameState.day === 2) {
+      if (!gameState.d2OxBuilt) {
+        this.game.events.emit('toast', 'Build the Oxygen Maker first!');
+        return;
+      }
 
-      const cx = GAME_WIDTH / 2;
-      const cy = GAME_HEIGHT / 2;
-      const overlay = this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0).setOrigin(0).setDepth(3000);
-      const sleepText = this.add
-        .text(
-          cx,
-          cy,
-          'END OF SOL 1\n\nMuntasir and Maisha rest on their bunks.\nOvernight, a Martian dust storm sweeps across the outpost and coats the solar panels...\n\nSOL 2 BEGINS',
-          {
-            fontFamily: 'monospace',
-            fontSize: '18px',
-            align: 'center',
-            lineSpacing: 10,
-            color: '#ffd166',
-          }
-        )
-        .setOrigin(0.5)
-        .setAlpha(0)
-        .setDepth(3001);
+      if (gameState.habLightsOn) {
+        gameState.setMeters({ power: 0 });
+        this.game.events.emit('warning:show', {
+          text: 'Leaving the lights on overnight with the Oxygen Maker running drained the battery to 0%! Turn off the lights at the Power Panel before sleeping.',
+          rewindEvent: 'checkpoint:rewind-d2-night',
+        });
+        return;
+      }
 
-      this.tweens.add({
-        targets: overlay,
-        fillAlpha: 1,
-        duration: 800,
-        onComplete: () => {
-          this.tweens.add({
-            targets: sleepText,
-            alpha: 1,
-            duration: 600,
-            hold: 2600,
-            yoyo: true,
-            onComplete: () => {
-              // Advance to Day 2
-              gameState.goTo('d2_dust');
-              gameState.setMeters({ power: 75, oxygen: 20 });
-              gameState.activeAstronaut = 'muntasir';
-              this.scene.restart();
-            },
-          });
-        },
-      });
+      this.runSleepTransition(
+        'END OF SOL 2\n\nWith the lights off and the Oxygen Maker humming softly, the crew rests safely through the night...\n\nSOL 3 BEGINS',
+        () => {
+          gameState.goTo('d3_morning');
+          gameState.habLightsOn = true;
+          gameState.activeAstronaut = 'maisha';
+          this.scene.restart();
+        }
+      );
     }
+  }
+
+  /** Fade to black, show end-of-sol message, then advance to the next Sol. */
+  runSleepTransition(message, onDone) {
+    this.transitioning = true;
+    this.game.events.emit('prompt', null);
+
+    const cx = GAME_WIDTH / 2;
+    const cy = GAME_HEIGHT / 2;
+    const overlay = this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0).setOrigin(0).setDepth(3000);
+    const sleepText = this.add
+      .text(cx, cy, message, {
+        fontFamily: 'monospace',
+        fontSize: '18px',
+        align: 'center',
+        lineSpacing: 10,
+        color: '#ffd166',
+      })
+      .setOrigin(0.5)
+      .setAlpha(0)
+      .setDepth(3001);
+
+    this.tweens.add({
+      targets: overlay,
+      fillAlpha: 1,
+      duration: 800,
+      onComplete: () => {
+        this.tweens.add({
+          targets: sleepText,
+          alpha: 1,
+          duration: 600,
+          hold: 2600,
+          yoyo: true,
+          onComplete: onDone,
+        });
+      },
+    });
   }
 
   goThroughAirlock(targetRoom) {
@@ -247,6 +326,11 @@ export class RoomScene extends Phaser.Scene {
     // hand player control to Maisha inside the Outpost so she can turn on the lights.
     if (gameState.day === 1 && this.roomId === 'surface' && targetRoom === 'outpost' && gameState.solarAligned && !gameState.habLightsOn) {
       gameState.solarDeployed = true;
+      gameState.activeAstronaut = 'maisha';
+    }
+
+    // When Muntasir returns inside with the ice core on Day 2, hand control to Maisha to build the Oxygen Maker.
+    if (gameState.day === 2 && this.roomId === 'surface' && targetRoom === 'outpost' && gameState.d2IceDrilled && !gameState.d2OxBuilt) {
       gameState.activeAstronaut = 'maisha';
     }
 

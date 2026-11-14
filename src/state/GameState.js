@@ -28,6 +28,20 @@ export class GameState {
     this.lightsIntroDone = false;
     this.muntasirResting = false;
     this.nightDrainActive = false;
+
+    // Day 2: Dust and air state flags (preserving progress if closed mid-task)
+    this.d2IntroDone = false;
+    this.d2PanelCleaned = false;
+    this.d2CleanProgress = null;
+    this.d2OxygenIntroDone = false;
+    this.d2IceDrilled = false;
+    this.d2DrillDepth = 0;
+    this.d2BuildThoughtDone = false;
+    this.d2OxPlacedParts = {};
+    this.d2OxBuilt = false;
+    this.d2OxSwitchOn = true;
+    this.d2NightIntroDone = false;
+    this.d2NightModeSet = false;
   }
 
   get step() {

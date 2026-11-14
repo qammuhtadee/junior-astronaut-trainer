@@ -12,6 +12,9 @@ export class PillMeter extends Phaser.GameObjects.Container {
     this.meterColor = color;
     this.meterWidth = width;
     this.meterHeight = height;
+    this.baseX = x;
+    this.baseY = y;
+    this.shakeTween = null;
     this.currentValue = 0;
     this.targetValue = 0;
 
@@ -161,6 +164,27 @@ export class PillMeter extends Phaser.GameObjects.Container {
       for (let x = startX + 4; x < startX + fillW; x += 8) {
         this.fillBar.lineBetween(x, 4, x + 4, this.meterHeight - 4);
       }
+    }
+  }
+
+  /** Toggle subtle jitter tween when meter is dropping due to hazards (e.g. Day 2 dust). */
+  setShaking(isShaking) {
+    if (isShaking) {
+      if (this.shakeTween) return;
+      this.shakeTween = this.scene.tweens.add({
+        targets: this,
+        x: { from: this.baseX - 2, to: this.baseX + 2 },
+        y: { from: this.baseY - 1, to: this.baseY + 1 },
+        duration: 55,
+        yoyo: true,
+        repeat: -1,
+      });
+    } else {
+      if (this.shakeTween) {
+        this.shakeTween.stop();
+        this.shakeTween = null;
+      }
+      this.setPosition(this.baseX, this.baseY);
     }
   }
 }

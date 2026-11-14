@@ -100,8 +100,14 @@ export class HudScene extends Phaser.Scene {
     this.game.events.on('warning:show', this.onShowWarning, this);
     this.game.events.on('warning:hide', this.onHideWarning, this);
     this.game.events.on('checkpoint:rewind-lights', this.onRewindLightsCheckpoint, this);
+    this.game.events.on('checkpoint:rewind-d2-oxygen', this.onRewindD2Oxygen, this);
+    this.game.events.on('checkpoint:rewind-d2-night', this.onRewindD2Night, this);
     this.game.events.on('power:gradual-charge', this.startGradualPowerCharge, this);
+    this.game.events.on('power:gradual-charge-from', this.startGradualPowerFromCurrent, this);
     this.game.events.on('power:start-night-drain', this.startNightDrain, this);
+    this.game.events.on('power:start-dust-drain', this.startDustDrain, this);
+    this.game.events.on('power:stop-dust-drain', this.stopDustDrain, this);
+    this.game.events.on('oxygen:gradual-charge', this.startGradualOxygenCharge, this);
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       unsub.forEach((fn) => fn());
@@ -113,8 +119,14 @@ export class HudScene extends Phaser.Scene {
       this.game.events.off('warning:show', this.onShowWarning, this);
       this.game.events.off('warning:hide', this.onHideWarning, this);
       this.game.events.off('checkpoint:rewind-lights', this.onRewindLightsCheckpoint, this);
+      this.game.events.off('checkpoint:rewind-d2-oxygen', this.onRewindD2Oxygen, this);
+      this.game.events.off('checkpoint:rewind-d2-night', this.onRewindD2Night, this);
       this.game.events.off('power:gradual-charge', this.startGradualPowerCharge, this);
+      this.game.events.off('power:gradual-charge-from', this.startGradualPowerFromCurrent, this);
       this.game.events.off('power:start-night-drain', this.startNightDrain, this);
+      this.game.events.off('power:start-dust-drain', this.startDustDrain, this);
+      this.game.events.off('power:stop-dust-drain', this.stopDustDrain, this);
+      this.game.events.off('oxygen:gradual-charge', this.startGradualOxygenCharge, this);
     });
 
     this.refresh();
@@ -165,8 +177,7 @@ export class HudScene extends Phaser.Scene {
   }
 
   onShowWarning(payload) {
-    const text = typeof payload === 'string' ? payload : payload?.text;
-    this.warningCard.show(text);
+    this.warningCard.show(payload);
   }
 
   onHideWarning() {
@@ -195,6 +206,145 @@ export class HudScene extends Phaser.Scene {
     }
 
     this.scene.launch('PowerPanelTask', { autoTurnOnLight: true });
+  }
+
+  onRewindD2Oxygen() {
+    this.warningCard.hide();
+    if (this.oxygenChargeEvent) {
+      this.oxygenChargeEvent.remove();
+      this.oxygenChargeEvent = null;
+    }
+
+    // Restore d2_ice_drilled checkpoint (Power: 100%, Oxygen: 20%) and keep assembled parts
+    gameState.d2OxBuilt = false;
+    gameState.d2OxSwitchOn = true;
+    gameState.d2OxPlacedParts = { hopper: true, electrolysis: true, valve: true };
+    gameState.goTo('d2_ice_drilled');
+
+    if (this.scene.isActive('OxygenBuildTask')) {
+      this.scene.stop('OxygenBuildTask');
+    }
+    if (this.scene.isActive(SCENES.OUTPOST)) {
+      this.scene.pause(SCENES.OUTPOST);
+    }
+
+    this.scene.launch('OxygenBuildTask');
+  }
+
+  onRewindD2Night() {
+    this.warningCard.hide();
+    if (this.oxygenChargeEvent) {
+      this.oxygenChargeEvent.remove();
+      this.oxygenChargeEvent = null;
+    }
+
+    // Restore d2_oxygen_maker checkpoint (Power: 60%, Oxygen: 100%)
+    gameState.d2OxBuilt = true;
+    gameState.d2OxSwitchOn = true;
+    gameState.habLightsOn = true;
+    gameState.d2NightModeSet = false;
+    gameState.goTo('d2_oxygen_maker');
+    this.game.events.emit('lights:sync');
+
+    if (this.scene.isActive('PowerPanelTask')) {
+      this.scene.stop('PowerPanelTask');
+    }
+    if (this.scene.isActive(SCENES.OUTPOST)) {
+      this.scene.pause(SCENES.OUTPOST);
+    }
+
+    this.scene.launch('PowerPanelTask', { autoSetDay2Night: true });
+  }
+
+  startDustDrain() {
+    this.powerMeter.setShaking(true);
+    if (this.dustDrainEvent) return;
+
+    this.dustDrainEvent = this.time.addEvent({
+      delay: 6000,
+      loop: true,
+      callback: () => {
+        if (gameState.d2PanelCleaned || gameState.day !== 2) {
+          this.stopDustDrain();
+          return;
+        }
+        if (gameState.meters.power !== null && gameState.meters.power > 50) {
+          gameState.setMeters({ power: gameState.meters.power - 1 });
+        }
+      },
+    });
+  }
+
+  stopDustDrain() {
+    if (this.dustDrainEvent) {
+      this.dustDrainEvent.remove();
+      this.dustDrainEvent = null;
+    }
+    this.powerMeter.setShaking(false);
+  }
+
+  startGradualPowerFromCurrent() {
+    this.stopDustDrain();
+    if (this.chargeFromEvent) {
+      this.chargeFromEvent.remove();
+      this.chargeFromEvent = null;
+    }
+
+    let current = gameState.meters.power ?? 75;
+    if (current >= 100) {
+      gameState.setMeters({ power: 100 });
+      return;
+    }
+
+    this.chargeFromEvent = this.time.addEvent({
+      delay: 55,
+      loop: true,
+      callback: () => {
+        if (gameState.day !== 2 || gameState.d2OxBuilt) {
+          this.chargeFromEvent.remove();
+          this.chargeFromEvent = null;
+          return;
+        }
+        current = Math.min(100, current + 1);
+        gameState.setMeters({ power: current });
+        if (current >= 100) {
+          this.chargeFromEvent.remove();
+          this.chargeFromEvent = null;
+        }
+      },
+    });
+  }
+
+  startGradualOxygenCharge() {
+    if (this.chargeFromEvent) {
+      this.chargeFromEvent.remove();
+      this.chargeFromEvent = null;
+    }
+    if (this.oxygenChargeEvent) {
+      this.oxygenChargeEvent.remove();
+      this.oxygenChargeEvent = null;
+    }
+
+    gameState.setMeters({ power: 60 });
+    let current = gameState.meters.oxygen ?? 20;
+
+    this.oxygenChargeEvent = this.time.addEvent({
+      delay: 40,
+      loop: true,
+      callback: () => {
+        if (gameState.day !== 2) {
+          this.oxygenChargeEvent.remove();
+          this.oxygenChargeEvent = null;
+          return;
+        }
+        current = Math.min(100, current + 2);
+        gameState.setMeters({ oxygen: current });
+        if (current >= 100) {
+          this.oxygenChargeEvent.remove();
+          this.oxygenChargeEvent = null;
+        }
+      },
+    });
   }
 
   startGradualPowerCharge() {
