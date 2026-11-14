@@ -70,6 +70,7 @@ export class OutpostScene extends RoomScene {
     this.game.events.on('d3:water-ice-loaded', this.onDay3WaterIceLoaded, this);
     this.game.events.on('d3:ox-ice-loaded', this.onDay3OxIceLoaded, this);
     this.game.events.on('d4:water-turned-off', this.onDay4WaterTurnedOff, this);
+    this.game.events.on('d4:safe-mode-enabled', this.onDay4SafeModeEnabled, this);
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.game.events.off('lights:restored', this.onLightsRestored, this);
@@ -81,6 +82,7 @@ export class OutpostScene extends RoomScene {
       this.game.events.off('d3:water-ice-loaded', this.onDay3WaterIceLoaded, this);
       this.game.events.off('d3:ox-ice-loaded', this.onDay3OxIceLoaded, this);
       this.game.events.off('d4:water-turned-off', this.onDay4WaterTurnedOff, this);
+      this.game.events.off('d4:safe-mode-enabled', this.onDay4SafeModeEnabled, this);
       if (this.drainTimer) this.drainTimer.remove();
     });
   }
@@ -1102,9 +1104,10 @@ export class OutpostScene extends RoomScene {
             text: 'Nighttime is hitting again, and the power is going out faster now with both Water and Oxygen life support active.',
             target: this.player,
             onStart: () => {
-              gameState.setMeters({ power: 40, oxygen: 100, water: 100 });
-              gameState.saveCheckpoint('d3_night_ready');
+              const curWater = gameState.meters.water ?? 100;
+              gameState.setMeters({ power: 40, oxygen: 100, water: curWater });
               this.startNightDrain();
+              gameState.saveCheckpoint('d3_night_ready');
             },
           },
           {
@@ -1203,36 +1206,94 @@ export class OutpostScene extends RoomScene {
       gameState.d3WaterSwitchOn = true;
       this.syncLightsLayer();
 
-      if (!gameState.d4EveningDone) {
-        gameState.d4EveningDone = true;
-        gameState.setMeters({ power: 100, oxygen: 100, water: 100 });
+      // Supply reliable nuclear power without artificially altering Water reserve
+      gameState.setMeters({ power: 100 });
+      this.ensureCommsStation();
 
+      if (!gameState.d4CommsDone) {
         this.companion = new Astronaut(this, 500, LANE.top + 42, {
           name: 'Maisha',
           color: COLORS.maisha,
         });
-        this.companion.body_.setFlipX(false);
+        this.companion.body_.setFlipX(true);
 
+        const commsTarget = { x: 235, y: LANE.top + 8 };
         this.transitioning = true;
         this.time.delayedCall(350, () => {
           this.dialogueBox.showSequence(
             [
               {
                 speaker: 'Muntasir',
-                text: "At least we don't have to worry about turning anything off anymore! Let's keep the lights on and turn the Water Station back ON.",
+                text: 'Kilopower is online and supplying steady power! Both life support systems are running safely.',
                 target: this.player,
               },
               {
                 speaker: 'Maisha',
-                text: 'Every life support meter—Power, Oxygen, and Water—is steady at maximum! Let’s rest up in our bunks.',
+                text: 'Wait—do you hear that chime? Our Deep Space Comms console inside the bunker just locked onto a signal from Earth!',
                 target: this.companion,
+                exclamation: true,
+              },
+              {
+                speaker: 'Comms (NASA DSN)',
+                isRadio: true,
+                target: commsTarget,
+                text: '—SIGNAL LOCKED— NASA Deep Space Network to Ares Outpost: X-class solar flare observed on solar limb. Severe Coronal Mass Ejection and Solar Particle Event forecast to strike Mars tonight at 22:40 MST.',
+              },
+              {
+                speaker: 'Maisha',
+                text: "We finally heard back from Comms—and it's an urgent space-weather alert! A heavy solar storm is going to hit Mars tonight!",
+                target: this.companion,
+                exclamation: true,
+              },
+              {
+                speaker: 'Muntasir',
+                text: "Whoa—what is a solar storm, Maisha? Why did Comms warn us if we're already inside the habitat?",
+                target: this.player,
+              },
+              {
+                speaker: 'Maisha',
+                text: 'In my academy, I learned that massive solar eruptions fire radiation and charged plasma straight into Mars, threatening any exposed or unshielded electronics!',
+                target: this.companion,
+              },
+              {
+                isFactReveal: true,
+                text: 'NASA Fact — Solar Storms on Mars: A solar storm (CME & Solar Energetic Particle event) blasts high-energy radiation and plasma across space. Unlike Earth, Mars has no global magnetic field and just ~1% of Earth’s atmosphere, so particles strike directly—causing radiation spikes and voltage surges in unshielded electronics. Major events like the May 2024 X-class storm triggered global Mars auroras and Curiosity RAD alerts. (Refs: NASA DONKI; NASA MAVEN & Curiosity RAD; NASA OSDR RadLab)',
+              },
+              {
+                speaker: 'Maisha',
+                text: 'We must therefore turn off non-essential electronics around here, or switch the habitat grid into Safe Mode before sleeping!',
+                target: this.companion,
+              },
+              {
+                isFactReveal: true,
+                text: 'NASA Fact — Habitat & Spacecraft Safe Mode: When a solar particle storm hits, NASA flight controllers place rovers and habitats into Safe Mode—isolating vulnerable electronic buses through surge-protection relays so induced currents cannot fry hardware, while preserving vital life-support loops. (Refs: NASA JPL Fault Protection Guide; NASA Goddard Space Weather Center)',
+              },
+              {
+                speaker: 'Muntasir',
+                text: 'Head to the Power Breaker Board and switch on SAFE MODE! Leaving electronics unprotected tonight could fry the entire bunker.',
+                target: this.player,
+                isThought: true,
               },
             ],
             () => {
-              this.muntasirRestAtBunks();
+              gameState.d4CommsDone = true;
+              gameState.d4EveningDone = true;
+              gameState.saveCheckpoint('d4_before_safe_mode');
+              this.transitioning = false;
+              this.createPowerPanelGuide('Enable Safe Mode');
             }
           );
         });
+      } else if (!gameState.d4SafeModeOn) {
+        this.companion = new Astronaut(this, 500, LANE.top + 42, {
+          name: 'Maisha',
+          color: COLORS.maisha,
+        });
+        this.companion.body_.setFlipX(true);
+        this.transitioning = false;
+        this.createPowerPanelGuide('Enable Safe Mode');
+      } else if (!gameState.d4SafeModeDone) {
+        this.onDay4SafeModeEnabled();
       }
       return;
     }
@@ -1268,6 +1329,92 @@ export class OutpostScene extends RoomScene {
         ],
         () => {
           this.transitioning = false;
+        }
+      );
+    });
+  }
+
+  ensureCommsStation() {
+    if (this.commsConsole) return;
+    const x = 235;
+    const y = LANE.top + 10;
+    const c = this.add.container(x, y).setDepth(DEPTH.STATIONS);
+    const panel = this.add.rectangle(0, -45, 76, 86, 0x1e293b).setStrokeStyle(2, 0x64748b);
+    const screen = this.add.rectangle(0, -56, 56, 30, 0x082f49).setStrokeStyle(1, 0x38bdf8);
+    const wave = this.add.graphics().lineStyle(2, 0x38bdf8, 0.9);
+    wave.moveTo(-22, -56).lineTo(-10, -64).lineTo(-2, -48).lineTo(8, -62).lineTo(20, -56);
+    wave.strokePath();
+    const antenna = this.add.rectangle(24, -104, 4, 34, 0x94a3b8);
+    const led = this.add.circle(24, -122, 5, gameState.d4SafeModeOn ? 0x50fa7b : 0xf59e0b);
+    this.commsLed = led;
+    this.tweens.add({
+      targets: led,
+      alpha: 0.25,
+      duration: 500,
+      yoyo: true,
+      repeat: -1,
+    });
+    const label = this.add
+      .text(0, -18, 'COMMS', {
+        fontFamily: 'monospace',
+        fontSize: '10px',
+        color: '#38bdf8',
+      })
+      .setOrigin(0.5);
+    c.add([panel, screen, wave, antenna, led, label]);
+    this.commsConsole = c;
+  }
+
+  onDay4SafeModeEnabled() {
+    if (this.powerGuide) {
+      this.powerGuide.destroy();
+      this.powerGuide = null;
+    }
+    if (this.powerHighlight) {
+      this.powerHighlight.destroy();
+      this.powerHighlight = null;
+    }
+    if (this.commsLed) {
+      this.commsLed.setFillStyle(0x50fa7b);
+    }
+    if (gameState.d4SafeModeDone) return;
+    gameState.d4SafeModeDone = true;
+
+    if (!this.companion) {
+      this.companion = new Astronaut(this, 500, LANE.top + 42, {
+        name: 'Maisha',
+        color: COLORS.maisha,
+      });
+      this.companion.body_.setFlipX(true);
+    }
+
+    this.transitioning = true;
+    this.time.delayedCall(250, () => {
+      this.dialogueBox.showSequence(
+        [
+          {
+            speaker: 'Muntasir',
+            text: 'SAFE MODE is locked in! Look at that shielding halo on our power monitor—the habitat circuits are surge-protected.',
+            target: this.player,
+          },
+          {
+            speaker: 'Maisha',
+            text: 'And with Kilopower running underground, our Oxygen, Water, and thermal loops stay shielded and online all through the solar storm!',
+            target: this.companion,
+          },
+          {
+            speaker: 'Muntasir',
+            text: "Even better—Earth Control knows we're alive and safe on Mars. Let's finally get some rest on the bunks.",
+            target: this.player,
+          },
+          {
+            speaker: 'Maisha',
+            text: 'Right behind you—see you tomorrow morning, Commander!',
+            target: this.companion,
+          },
+        ],
+        () => {
+          this.muntasirRestAtBunks();
         }
       );
     });

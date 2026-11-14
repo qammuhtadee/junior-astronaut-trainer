@@ -18,6 +18,7 @@ export class FactCard extends Phaser.GameObjects.Container {
     this.fullText = '';
     this.autoCloseTimer = null;
     this.fadeTween = null;
+    this.typingSound = null;
     this.setDepth(2000);
 
     // 1. Paper Note Background Graphics
@@ -164,7 +165,8 @@ export class FactCard extends Phaser.GameObjects.Container {
       ease: 'Cubic.easeOut',
     });
 
-    // Typewriter effect onto paper
+    // Typewriter effect onto paper + typing SFX
+    this.startTypingSound();
     let charIdx = 0;
     this.typeTimer = this.scene.time.addEvent({
       delay: 18,
@@ -174,20 +176,39 @@ export class FactCard extends Phaser.GameObjects.Container {
         this.bodyText.setText(text.substring(0, charIdx));
         if (charIdx >= text.length) {
           this.isTyping = false;
+          this.stopTypingSound();
         }
       },
     });
   }
 
+  startTypingSound() {
+    this.stopTypingSound();
+    if (this.scene?.cache?.audio?.exists('sfx-typing')) {
+      if (!this.typingSound) {
+        this.typingSound = this.scene.sound.add('sfx-typing', { loop: true, volume: 0.5 });
+      }
+      this.typingSound.play({ loop: true, volume: 0.5 });
+    }
+  }
+
+  stopTypingSound() {
+    if (this.typingSound?.isPlaying) {
+      this.typingSound.stop();
+    }
+  }
+
   completeTyping() {
     if (!this.isTyping) return false;
     if (this.typeTimer) this.typeTimer.remove();
+    this.stopTypingSound();
     this.bodyText.setText(this.fullText);
     this.isTyping = false;
     return true;
   }
 
   hide(immediate = false) {
+    this.stopTypingSound();
     if (this.typeTimer) {
       this.typeTimer.remove();
       this.typeTimer = null;

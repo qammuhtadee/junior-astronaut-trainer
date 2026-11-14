@@ -25,6 +25,9 @@ export class WaterBuildTask extends Phaser.Scene {
     if (!gameState.d3WaterPlacedParts || typeof gameState.d3WaterPlacedParts !== 'object') {
       gameState.d3WaterPlacedParts = {};
     }
+    if (!gameState.snapshots?.d3_before_water_build) {
+      gameState.saveCheckpoint('d3_before_water_build');
+    }
 
     const cx = GAME_WIDTH / 2;
     const cy = GAME_HEIGHT / 2;

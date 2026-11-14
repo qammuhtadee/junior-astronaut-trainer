@@ -64,7 +64,7 @@ export class GameState {
     this.d3LightsTurnedOffOnce = false;
     this.d3NightModeSet = false;
 
-    // Day 4: 2nd dust storm (clean + align), water pause, nuclear reactor build
+    // Day 4: 2nd dust storm (clean + align), water pause, nuclear reactor build, comms & safe mode
     this.d4IntroDone = false;
     this.d4WaterTurnedOff = false;
     this.d4PanelCleaned = false;
@@ -73,6 +73,9 @@ export class GameState {
     this.d4ReactorIntroDone = false;
     this.d4ReactorBuilt = false;
     this.d4EveningDone = false;
+    this.d4CommsDone = false;
+    this.d4SafeModeOn = false;
+    this.d4SafeModeDone = false;
 
     this.snapshots = {};
 

@@ -23,12 +23,16 @@ export class PowerPanelTask extends Phaser.Scene {
     this.d3WaterTurnedOn = false;
     this.d3LightsReenabledWarning = false;
     this.d4WaterPaused = false;
+    this.d4SafeModeActivated = false;
+    this.d4SafeModeFailed = false;
     this.pendingAutoLightTimer = null;
     this.pendingAutoDay2Timer = null;
     this.pendingAutoDay3Timer = null;
+    this.pendingAutoDay4Timer = null;
     this.autoTurnOnLight = !!data?.autoTurnOnLight;
     this.autoSetDay2Night = !!data?.autoSetDay2Night;
     this.autoSetDay3Night = !!data?.autoSetDay3Night;
+    this.autoSetDay4SafeMode = !!data?.autoSetDay4SafeMode;
 
     const cx = GAME_WIDTH / 2;
     const cy = GAME_HEIGHT / 2;
@@ -152,6 +156,41 @@ export class PowerPanelTask extends Phaser.Scene {
           locked: false,
         });
       }
+    } else if (gameState.day === 4 && gameState.d4CommsDone) {
+      this.switches = [
+        {
+          id: 'light',
+          label: 'LIGHTS',
+          desc: 'Habitat illumination (Locked ON — Kilopower)',
+          on: true,
+          load: 10,
+          locked: true,
+        },
+        {
+          id: 'oxygen',
+          label: 'OXYGEN',
+          desc: 'Life support water splitting (Locked ON — Kilopower)',
+          on: true,
+          load: 40,
+          locked: true,
+        },
+        {
+          id: 'water',
+          label: 'WATER',
+          desc: 'Filtration and melting pumps (Locked ON — Kilopower)',
+          on: true,
+          load: 20,
+          locked: true,
+        },
+        {
+          id: 'safemode',
+          label: 'SAFE MODE',
+          desc: 'Isolate & surge-protect circuits for solar storm',
+          on: !!gameState.d4SafeModeOn,
+          load: -15,
+          locked: false,
+        },
+      ];
     } else if (gameState.day === 4) {
       this.switches = [
         {
@@ -390,6 +429,16 @@ export class PowerPanelTask extends Phaser.Scene {
         this.updateLoad();
         this.statusText.setText('CHECKPOINT RESTORED: LIGHTS OFF — CLICK APPLY').setColor('#34d399');
       });
+    } else if (gameState.day === 4 && gameState.d4CommsDone && this.autoSetDay4SafeMode) {
+      this.pendingAutoDay4Timer = this.time.delayedCall(260, () => {
+        const safeEntry = this.switchViews.find((v) => v.sw.id === 'safemode');
+        if (safeEntry) {
+          safeEntry.sw.on = true;
+          safeEntry.updateSwitchVisual(true);
+        }
+        this.updateLoad();
+        this.statusText.setText('CHECKPOINT RESTORED: SAFE MODE READY — CLICK APPLY').setColor('#34d399');
+      });
     }
   }
 
@@ -569,6 +618,22 @@ export class PowerPanelTask extends Phaser.Scene {
         gameState.d3NightModeSet = false;
         if (!prevLights) this.lightsChangeState = 'turned_on';
       }
+    } else if (gameState.day === 4 && gameState.d4CommsDone) {
+      const safeSw = this.switches.find((s) => s.id === 'safemode');
+      if (this.pendingAutoDay4Timer && this.pendingAutoDay4Timer.getProgress() < 1) {
+        this.pendingAutoDay4Timer.remove(false);
+        if (safeSw) safeSw.on = true;
+      }
+      if (safeSw && safeSw.on) {
+        gameState.d4SafeModeOn = true;
+        gameState.d3WaterSwitchOn = true;
+        gameState.stepId = 'd4_safe_mode';
+        this.d4SafeModeActivated = true;
+      } else {
+        gameState.d4SafeModeOn = false;
+        gameState.setMeters({ power: 0 });
+        this.d4SafeModeFailed = true;
+      }
     } else if (gameState.day === 4) {
       const waterSw = this.switches.find((s) => s.id === 'water');
       if (waterSw && !waterSw.on) {
@@ -601,6 +666,8 @@ export class PowerPanelTask extends Phaser.Scene {
     const d3WaterOn = this.d3WaterTurnedOn;
     const d3LightsRe = this.d3LightsReenabledWarning;
     const d4Paused = this.d4WaterPaused;
+    const d4SafeOn = this.d4SafeModeActivated;
+    const d4SafeFail = this.d4SafeModeFailed;
 
     this.tweens.add({
       targets: this.modal,
@@ -612,6 +679,22 @@ export class PowerPanelTask extends Phaser.Scene {
         const activeRoom = gameState.room === 'surface' ? 'Surface' : 'Outpost';
         this.scene.resume(activeRoom);
         this.game.events.emit('lights:sync');
+
+        if (d4SafeOn) {
+          this.game.events.emit('warning:hide');
+          this.game.events.emit('power:safe-mode-changed', true);
+          this.game.events.emit('d4:safe-mode-enabled');
+          return;
+        }
+
+        if (d4SafeFail) {
+          this.game.events.emit('power:safe-mode-changed', false);
+          this.game.events.emit('warning:show', {
+            text: 'Warning: Leaving electrical systems unprotected during a Martian solar storm will overload and destroy the habitat electronics! Enable SAFE MODE on the Power Panel.',
+            rewindEvent: 'checkpoint:rewind-d4-safemode',
+          });
+          return;
+        }
 
         if (d4Paused) {
           this.game.events.emit('warning:hide');
@@ -655,7 +738,6 @@ export class PowerPanelTask extends Phaser.Scene {
         }
         if (d3WaterOn) {
           this.game.events.emit('water:stop-rapid-drain');
-          if (gameState.d3WaterIceLoaded) this.game.events.emit('water:gradual-charge');
           this.game.events.emit('warning:hide');
         }
 

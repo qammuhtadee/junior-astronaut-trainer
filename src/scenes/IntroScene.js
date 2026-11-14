@@ -83,13 +83,14 @@ export class IntroScene extends Phaser.Scene {
   }
 
   ensureBgmPlaying() {
-    if (!this.cache.audio.exists('bgm-main')) return;
-    const existing = this.sound.get('bgm-main');
+    const key = this.cache.audio.exists('bgm-day1') ? 'bgm-day1' : 'bgm-main';
+    if (!this.cache.audio.exists(key)) return;
+    const existing = this.sound.get(key);
     if (existing) {
       if (!existing.isPlaying) existing.play({ loop: true, volume: 0.35 });
       return;
     }
-    this.sound.add('bgm-main', { loop: true, volume: 0.35 }).play();
+    this.sound.add(key, { loop: true, volume: 0.35 }).play();
   }
 
   showLine(idx) {

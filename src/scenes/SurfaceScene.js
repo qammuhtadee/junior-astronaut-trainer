@@ -63,6 +63,11 @@ export class SurfaceScene extends RoomScene {
       this.game.events.off('d4:panel-cleaned', this.onDay4PanelCleaned, this);
       this.game.events.off('d4:panel-aligned', this.onDay4PanelAligned, this);
       this.game.events.off('d4:reactor-built', this.onDay4ReactorBuilt, this);
+      if (this.landingSound) {
+        this.landingSound.stop();
+        this.landingSound.destroy();
+        this.landingSound = null;
+      }
     });
 
     const isCrashIntro = data.isCrashIntro || (!gameState.hasSeenCrash && gameState.day === 1);
@@ -131,6 +136,12 @@ export class SurfaceScene extends RoomScene {
       .setRotation(Phaser.Math.DegToRad(18))
       .setDepth(DEPTH.WORLD_MIN + 45);
 
+    this.landingSound = null;
+    if (this.cache.audio.exists('sfx-landing')) {
+      this.landingSound = this.sound.add('sfx-landing', { volume: 0.65 });
+      this.landingSound.play({ seek: 4, volume: 0.65 });
+    }
+
     // Diagonal crash into Martian soil, straightening horizontally
     this.tweens.add({
       targets: this.spacecraft,
@@ -140,8 +151,11 @@ export class SurfaceScene extends RoomScene {
       duration: 850,
       ease: 'Quad.easeIn',
       onComplete: () => {
-        // Moderate scene vibration for grittiness
+        // Moderate scene vibration for grittiness + impact boom
         this.cameras.main.shake(650, 0.015);
+        if (this.cache.audio.exists('sfx-crash-boom')) {
+          this.sound.play('sfx-crash-boom', { volume: 0.85 });
+        }
 
         // Dark impact crater shadow beneath the grounded hull
         this.craterShadow = this.add
@@ -160,6 +174,20 @@ export class SurfaceScene extends RoomScene {
           duration: 650,
           ease: 'Cubic.easeOut',
           onComplete: () => {
+            if (this.landingSound && this.landingSound.isPlaying) {
+              this.tweens.add({
+                targets: this.landingSound,
+                volume: 0,
+                duration: 600,
+                onComplete: () => {
+                  if (this.landingSound) {
+                    this.landingSound.stop();
+                    this.landingSound.destroy();
+                    this.landingSound = null;
+                  }
+                },
+              });
+            }
             this.spacecraft.play('anim-spacecraft-smoke');
             this.time.delayedCall(650, () => this.popOutAstronauts());
           },

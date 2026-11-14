@@ -122,6 +122,18 @@ describe('Day 3 & Day 4 GameState flags and checkpoints', () => {
     expect(gameState.d4ReactorIntroDone).toBe(false);
     expect(gameState.d4ReactorBuilt).toBe(false);
     expect(gameState.d4EveningDone).toBe(false);
+    expect(gameState.d4CommsDone).toBe(false);
+    expect(gameState.d4SafeModeOn).toBe(false);
+    expect(gameState.d4SafeModeDone).toBe(false);
+  });
+
+  it('initializes d3_morning with 15% water reserve so refusal drain never jumps to 100%', async () => {
+    const { gameState } = await import('../src/state/GameState.js');
+    gameState.reset();
+    gameState.goTo('d3_morning');
+    expect(gameState.meters.power).toBe(60);
+    expect(gameState.meters.oxygen).toBe(100);
+    expect(gameState.meters.water).toBe(15);
   });
 
   it('saves and restores the d3_night_ready checkpoint without corrupting listeners', async () => {
@@ -151,5 +163,27 @@ describe('Day 3 & Day 4 GameState flags and checkpoints', () => {
     expect(gameState.d3WaterSwitchOn).toBe(true);
     expect(gameState.d3LightsTurnedOffOnce).toBe(false);
     expect(() => gameState.setMeters({ power: 50 })).not.toThrow();
+  });
+
+  it('restores d4_before_safe_mode checkpoint without overwriting existing water reserve', async () => {
+    const { gameState } = await import('../src/state/GameState.js');
+    gameState.reset();
+    gameState.goTo('d4_morning');
+    gameState.d4ReactorBuilt = true;
+    gameState.d4CommsDone = true;
+    gameState.d4SafeModeOn = false;
+    gameState.setMeters({ power: 100, oxygen: 100, water: 64 });
+    gameState.saveCheckpoint('d4_before_safe_mode');
+
+    // Simulate forgetting Safe Mode before solar storm
+    gameState.setMeters({ power: 0 });
+    expect(gameState.meters.power).toBe(0);
+
+    const restored = gameState.restoreCheckpoint('d4_before_safe_mode');
+    expect(restored).toBe(true);
+    expect(gameState.meters.power).toBe(100);
+    expect(gameState.meters.water).toBe(64);
+    expect(gameState.d4CommsDone).toBe(true);
+    expect(gameState.d4SafeModeOn).toBe(false);
   });
 });

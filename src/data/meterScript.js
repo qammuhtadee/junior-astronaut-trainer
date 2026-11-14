@@ -22,7 +22,7 @@ export const METER_SCRIPT = [
   { id: 'd2_night', day: 2, label: 'Night with night mode on', meters: M(25, 100, null, null) },
   { id: 'd2_wrong_lights_on', day: 2, label: 'Lights left on', meters: M(0, 100, null, null), wrong: true },
   // Day 3
-  { id: 'd3_morning', day: 3, label: 'Morning recharge', meters: M(60, 100, null, null) },
+  { id: 'd3_morning', day: 3, label: 'Morning recharge', meters: M(60, 100, 15, null) },
   { id: 'd3_water_low', day: 3, label: 'Water meter appears', meters: M(60, 100, 10, null) },
   { id: 'd3_water_station', day: 3, label: 'Water station built', meters: M(40, 100, 100, null), checkpoint: true },
   { id: 'd3_night', day: 3, label: 'Night: water station off, oxygen on', meters: M(5, 100, 95, null) },

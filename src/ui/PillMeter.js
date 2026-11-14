@@ -15,10 +15,16 @@ export class PillMeter extends Phaser.GameObjects.Container {
     this.baseX = x;
     this.baseY = y;
     this.shakeTween = null;
+    this.safePulseTween = null;
+    this.safeModeActive = false;
     this.currentValue = 0;
     this.targetValue = 0;
 
     const r = height / 2;
+
+    // 0. Glowing Safe Mode protective shield halo (behind pill, visible in Safe Mode)
+    this.safeGlowGfx = scene.add.graphics().setVisible(false);
+    this.add(this.safeGlowGfx);
 
     // 1. Capsule Background
     this.bg = scene.add.graphics();
@@ -55,6 +61,20 @@ export class PillMeter extends Phaser.GameObjects.Container {
       })
       .setOrigin(0, 0.5);
     this.add(this.valueText);
+
+    // 6. Safe Mode shield tag on upper-right edge of pill
+    this.safeBadge = scene.add
+      .text(width - 2, -10, '🛡 SAFE', {
+        fontFamily: 'monospace',
+        fontSize: '10px',
+        fontStyle: 'bold',
+        color: '#00f5d4',
+        backgroundColor: '#052e2bcc',
+        padding: { x: 4, y: 1 },
+      })
+      .setOrigin(1, 0.5)
+      .setVisible(false);
+    this.add(this.safeBadge);
 
     scene.add.existing(this);
   }
@@ -186,5 +206,41 @@ export class PillMeter extends Phaser.GameObjects.Container {
       }
       this.setPosition(this.baseX, this.baseY);
     }
+  }
+
+  /** Toggle glowing cyan/emerald Safe Mode surge-shield halo around the pill meter. */
+  setSafeModeGlow(active) {
+    const next = !!active;
+    if (this.safeModeActive === next) return;
+    this.safeModeActive = next;
+
+    if (!next) {
+      if (this.safePulseTween) {
+        this.safePulseTween.stop();
+        this.safePulseTween = null;
+      }
+      this.safeGlowGfx.clear().setVisible(false);
+      this.safeBadge.setVisible(false);
+      return;
+    }
+
+    const r = this.meterHeight / 2;
+    this.safeGlowGfx.clear();
+    this.safeGlowGfx.lineStyle(6, 0x00f5d4, 0.28);
+    this.safeGlowGfx.strokeRoundedRect(-5, -5, this.meterWidth + 10, this.meterHeight + 10, r + 5);
+    this.safeGlowGfx.lineStyle(2.5, 0x38bdf8, 0.95);
+    this.safeGlowGfx.strokeRoundedRect(-2, -2, this.meterWidth + 4, this.meterHeight + 4, r + 2);
+    this.safeGlowGfx.setVisible(true).setAlpha(1);
+    this.safeBadge.setVisible(true);
+
+    if (this.safePulseTween) this.safePulseTween.stop();
+    this.safePulseTween = this.scene.tweens.add({
+      targets: this.safeGlowGfx,
+      alpha: { from: 0.45, to: 1.0 },
+      duration: 700,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
   }
 }

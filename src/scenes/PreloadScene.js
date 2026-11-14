@@ -129,11 +129,21 @@ export class PreloadScene extends Phaser.Scene {
       frameWidth: 129,
       frameHeight: 129,
     });
+    this.load.image('station-oxygen', 'assets/sprites/oxygen-maker.png');
 
     this.load.audio('bgm-main', 'assets/audio/bgm/main-theme.mp3');
+    this.load.audio('bgm-day1', 'assets/audio/bgm/day1.mp3');
+    this.load.audio('bgm-day2', 'assets/audio/bgm/day2.mp3');
+    this.load.audio('bgm-day3', 'assets/audio/bgm/day3.mp3');
+    this.load.audio('bgm-day4', 'assets/audio/bgm/day4.mp3');
     this.load.audio('sfx-airlock', 'assets/audio/sfx/airlock.wav');
     this.load.audio('sfx-footstep', 'assets/audio/sfx/footstep.wav');
     this.load.audio('sfx-radio', 'assets/audio/sfx/radio.ogg');
+    this.load.audio('sfx-crash-boom', 'assets/audio/sfx/crash-boom.mp3');
+    this.load.audio('sfx-landing', 'assets/audio/sfx/airplane-landing.mp3');
+    this.load.audio('sfx-mars-wind', 'assets/audio/sfx/mars-wind.mp3');
+    this.load.audio('sfx-typing', 'assets/audio/sfx/typing.mp3');
+    this.load.audio('sfx-storm', 'assets/audio/sfx/dust-storm.mp3');
     this.load.audio('voice-talk', 'assets/audio/voice/talking.mp3');
   }
 

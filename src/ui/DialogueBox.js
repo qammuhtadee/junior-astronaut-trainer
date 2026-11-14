@@ -365,7 +365,7 @@ export class DialogueBox extends Phaser.GameObjects.Container {
     this.dialogueText.setText('');
     this.isTyping = true;
     this.nextIndicator.setVisible(false);
-    this.startLineAudio(isRadio, isThought);
+    this.startLineAudio(isRadio, isThought, speaker);
 
     let charIdx = 0;
     const fullText = line.text;
@@ -395,7 +395,7 @@ export class DialogueBox extends Phaser.GameObjects.Container {
     });
   }
 
-  startLineAudio(isRadio, isThought) {
+  startLineAudio(isRadio, isThought, speaker = '') {
     this.stopLineAudio();
     if (isRadio) {
       if (this.scene.cache.audio.exists('sfx-radio')) {
@@ -404,13 +404,20 @@ export class DialogueBox extends Phaser.GameObjects.Container {
         }
         this.radioSound.play({ loop: true, volume: 0.55, seek: 22 });
       }
-    } else if (!isThought) {
-      if (this.scene.cache.audio.exists('voice-talk')) {
-        if (!this.talkSound) {
-          this.talkSound = this.scene.sound.add('voice-talk', { loop: true, volume: 0.45 });
-        }
-        this.talkSound.play({ loop: true, volume: 0.45 });
+      return;
+    }
+
+    if (this.scene.cache.audio.exists('voice-talk')) {
+      if (!this.talkSound) {
+        this.talkSound = this.scene.sound.add('voice-talk', { loop: true, volume: 0.5 });
       }
+      this.talkTurnCount = (this.talkTurnCount ?? 0) + 1;
+      const isMaisha = speaker.toLowerCase().includes('maisha');
+      const maleOffsets = [0.2, 5.2, 10.5, 19.0, 26.5, 37.0, 54.0];
+      const femaleOffsets = [73.2, 79.5, 86.0, 94.5, 104.0, 115.0, 127.0];
+      const pool = isMaisha ? femaleOffsets : maleOffsets;
+      const seek = pool[this.talkTurnCount % pool.length];
+      this.talkSound.play({ loop: true, volume: isThought ? 0.38 : 0.52, seek });
     }
   }
 

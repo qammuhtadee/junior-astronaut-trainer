@@ -113,9 +113,12 @@ export class HudScene extends Phaser.Scene {
     this.game.events.on('checkpoint:rewind-d2-night', this.onRewindD2Night, this);
     this.game.events.on('checkpoint:rewind-d3-water', this.onRewindD3Water, this);
     this.game.events.on('checkpoint:rewind-d3-night', this.onRewindD3Night, this);
+    this.game.events.on('checkpoint:rewind-d4-safemode', this.onRewindD4SafeMode, this);
     this.game.events.on('power:gradual-charge', this.startGradualPowerCharge, this);
     this.game.events.on('power:gradual-charge-from', this.startGradualPowerFromCurrent, this);
     this.game.events.on('power:start-night-drain', this.startNightDrain, this);
+    this.game.events.on('power:stop-night-drain', this.stopNightDrain, this);
+    this.game.events.on('power:safe-mode-changed', this.onSafeModeChanged, this);
     this.game.events.on('power:start-dust-drain', this.startDustDrain, this);
     this.game.events.on('power:stop-dust-drain', this.stopDustDrain, this);
     this.game.events.on('oxygen:gradual-charge', this.startGradualOxygenCharge, this);
@@ -146,9 +149,12 @@ export class HudScene extends Phaser.Scene {
       this.game.events.off('checkpoint:rewind-d2-night', this.onRewindD2Night, this);
       this.game.events.off('checkpoint:rewind-d3-water', this.onRewindD3Water, this);
       this.game.events.off('checkpoint:rewind-d3-night', this.onRewindD3Night, this);
+      this.game.events.off('checkpoint:rewind-d4-safemode', this.onRewindD4SafeMode, this);
       this.game.events.off('power:gradual-charge', this.startGradualPowerCharge, this);
       this.game.events.off('power:gradual-charge-from', this.startGradualPowerFromCurrent, this);
       this.game.events.off('power:start-night-drain', this.startNightDrain, this);
+      this.game.events.off('power:stop-night-drain', this.stopNightDrain, this);
+      this.game.events.off('power:safe-mode-changed', this.onSafeModeChanged, this);
       this.game.events.off('power:start-dust-drain', this.startDustDrain, this);
       this.game.events.off('power:stop-dust-drain', this.stopDustDrain, this);
       this.game.events.off('oxygen:gradual-charge', this.startGradualOxygenCharge, this);
@@ -161,26 +167,53 @@ export class HudScene extends Phaser.Scene {
       this.game.events.off('water:start-day4-decay', this.startDay4WaterDecay, this);
       this.game.events.off('water:stop-day4-decay', this.stopDay4WaterDecay, this);
       this.game.events.off('lights:restored', this.stopInitialPowerCharge, this);
+      this.stopNightDrain();
+      this.stopDustDrain();
+      this.stopRapidOxygenDrain();
+      this.stopDay3OxygenDeplete();
+      this.stopRapidWaterDrain();
+      this.stopDay4WaterDecay();
+      this.stopInitialPowerCharge();
+      this.factCard?.stopTypingSound();
     });
 
     this.refresh();
+  }
 
-    if (this.cache.audio.exists('bgm-main')) {
-      const bgm = this.sound.get('bgm-main');
-      if (!bgm) {
-        this.sound.add('bgm-main', { loop: true, volume: 0.35 }).play();
-      } else if (!bgm.isPlaying) {
-        bgm.play({ loop: true, volume: 0.35 });
-      }
+  syncDayBgm() {
+    const dayKey = `bgm-day${gameState.day}`;
+    const targetKey = this.cache.audio.exists(dayKey) ? dayKey : 'bgm-main';
+    if (!this.cache.audio.exists(targetKey)) return;
+
+    const curSound = this.sound.get(targetKey);
+    if (this.currentBgmKey === targetKey && curSound?.isPlaying) return;
+
+    ['bgm-main', 'bgm-day1', 'bgm-day2', 'bgm-day3', 'bgm-day4'].forEach((k) => {
+      if (k === targetKey) return;
+      const s = this.sound.get(k);
+      if (s?.isPlaying) s.stop();
+    });
+
+    if (curSound) {
+      if (!curSound.isPlaying) curSound.play({ loop: true, volume: 0.35 });
+    } else {
+      this.sound.add(targetKey, { loop: true, volume: 0.35 }).play();
     }
+    this.currentBgmKey = targetKey;
   }
 
   refresh() {
+    this.syncDayBgm();
     this.dayText.setText(`Day ${gameState.day}`);
     this.powerMeter.setValue(gameState.meters.power);
+    this.powerMeter.setSafeModeGlow(!!gameState.d4SafeModeOn);
     this.oxygenMeter.setValue(gameState.meters.oxygen);
     this.waterMeter.setValue(gameState.meters.water);
     this.radiationMeter.setValue(gameState.meters.radiation);
+  }
+
+  onSafeModeChanged(active) {
+    this.powerMeter?.setSafeModeGlow(!!active);
   }
 
   showPrompt(label) {
@@ -316,6 +349,10 @@ export class HudScene extends Phaser.Scene {
       this.waterChargeEvent = null;
     }
 
+    const restored = gameState.restoreCheckpoint('d3_before_water_build');
+    if (!restored) {
+      gameState.setMeters({ power: 60, oxygen: 100, water: 15 });
+    }
     gameState.d3WaterBuilt = false;
     gameState.d3WaterSwitchOn = false;
     gameState.d3WaterPlacedParts = {
@@ -325,7 +362,6 @@ export class HudScene extends Phaser.Scene {
       charcoal_bed: true,
       clean_spigot: true,
     };
-    gameState.setMeters({ power: 60, oxygen: 100, water: 10 });
 
     if (this.scene.isActive('WaterBuildTask')) {
       this.scene.stop('WaterBuildTask');
@@ -359,6 +395,7 @@ export class HudScene extends Phaser.Scene {
       gameState.d3NightModeSet = false;
       gameState.setMeters({ power: 40, oxygen: 100, water: 100 });
     }
+    this.startNightDrain();
     this.game.events.emit('lights:sync');
 
     if (this.scene.isActive('PowerPanelTask')) {
@@ -369,6 +406,31 @@ export class HudScene extends Phaser.Scene {
     }
 
     this.scene.launch('PowerPanelTask', { autoSetDay3Night: true });
+  }
+
+  onRewindD4SafeMode() {
+    this.warningCard.hide();
+    const restored = gameState.restoreCheckpoint('d4_before_safe_mode');
+    if (!restored) {
+      gameState.d4SafeModeOn = false;
+      gameState.d4SafeModeDone = false;
+      gameState.d4CommsDone = true;
+      gameState.d3WaterSwitchOn = true;
+      gameState.d2OxSwitchOn = true;
+      gameState.habLightsOn = true;
+      gameState.setMeters({ power: 100 });
+    }
+    this.game.events.emit('power:safe-mode-changed', false);
+    this.game.events.emit('lights:sync');
+
+    if (this.scene.isActive('PowerPanelTask')) {
+      this.scene.stop('PowerPanelTask');
+    }
+    if (this.scene.isActive(SCENES.OUTPOST)) {
+      this.scene.pause(SCENES.OUTPOST);
+    }
+
+    this.scene.launch('PowerPanelTask', { autoSetDay4SafeMode: true });
   }
 
   startDustDrain() {
@@ -581,14 +643,14 @@ export class HudScene extends Phaser.Scene {
           this.stopRapidWaterDrain();
           return;
         }
-        const cur = gameState.meters.water ?? 100;
+        const cur = gameState.meters.water ?? 15;
         const next = Math.max(0, cur - 2);
         gameState.setMeters({ water: next });
         if (next <= 0) {
           this.stopRapidWaterDrain();
           this.warningCard.show({
-            text: 'CRITICAL: Habitat Water hit 0%! Turn WATER STATION back ON or rewind!',
-            rewindEvent: 'checkpoint:rewind-d3-night',
+            text: 'CRITICAL: Habitat Water hit 0%! Rewind to allocate power or turn WATER STATION back ON!',
+            rewindEvent: gameState.d3WaterBuilt ? 'checkpoint:rewind-d3-night' : 'checkpoint:rewind-d3-water',
           });
         }
       },
@@ -660,20 +722,33 @@ export class HudScene extends Phaser.Scene {
 
   startNightDrain() {
     gameState.nightDrainActive = true;
-    if (this.nightDrainEvent) return;
+    if (this.nightDrainEvent) {
+      this.nightDrainEvent.remove();
+      this.nightDrainEvent = null;
+    }
 
     // Drain power periodically while night drain is active (Days 1-3 until nuclear reactor)
     this.nightDrainEvent = this.time.addEvent({
-      delay: 5000,
+      delay: 4000,
       loop: true,
       callback: () => {
-        if (!gameState.nightDrainActive || gameState.day > 3 || gameState.d4ReactorBuilt) return;
+        if (!gameState.nightDrainActive || gameState.day > 3 || gameState.d4ReactorBuilt) {
+          this.stopNightDrain();
+          return;
+        }
         const step = gameState.day === 3 ? 2 : 1;
         if (gameState.meters.power !== null && gameState.meters.power > 10) {
           gameState.setMeters({ power: Math.max(10, gameState.meters.power - step) });
         }
       },
     });
+  }
+
+  stopNightDrain() {
+    if (this.nightDrainEvent) {
+      this.nightDrainEvent.remove();
+      this.nightDrainEvent = null;
+    }
   }
 
   createTitleBanner() {

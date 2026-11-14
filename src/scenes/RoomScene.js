@@ -153,6 +153,10 @@ export class RoomScene extends Phaser.Scene {
           this.game.events.emit('toast', 'Turn off the Water Station at the Power Panel first to save power!');
           return;
         }
+        if (this.roomId === 'outpost' && gameState.d4CommsDone && !gameState.d4SafeModeOn) {
+          this.game.events.emit('toast', 'Solar storm inbound! Switch on SAFE MODE at the Power Panel before leaving!');
+          return;
+        }
         if (this.roomId === 'surface') {
           if (!gameState.d4PanelCleaned) {
             this.game.events.emit('toast', 'Clean the dust off the solar panel first!');
@@ -319,10 +323,15 @@ export class RoomScene extends Phaser.Scene {
 
     if (def.id === 'power_panel') {
       if (gameState.day === 4 && gameState.d4WaterTurnedOff) {
+        if (gameState.d4CommsDone && !gameState.d4SafeModeOn) {
+          this.scene.pause();
+          this.scene.launch('PowerPanelTask');
+          return;
+        }
         this.game.events.emit(
           'toast',
-          gameState.d4ReactorBuilt
-            ? 'Power Breaker Board locked: Kilopower Reactor automatically supplies all systems.'
+          gameState.d4SafeModeOn
+            ? 'Safe Mode is active and shielding all habitat circuits through tonight’s solar storm!'
             : 'Power Breaker Board locked during emergency repair—head outside to fix the solar array!'
         );
         return;
@@ -394,7 +403,8 @@ export class RoomScene extends Phaser.Scene {
           gameState.goTo('d2_dust');
           gameState.activeAstronaut = 'muntasir';
           this.scene.restart();
-        }
+        },
+        true
       );
     } else if (gameState.day === 2) {
       if (!gameState.d2OxBuilt) {
@@ -479,7 +489,8 @@ export class RoomScene extends Phaser.Scene {
           gameState.d3WaterSwitchOn = true;
           gameState.activeAstronaut = 'maisha';
           this.scene.restart();
-        }
+        },
+        true
       );
     } else if (gameState.day === 4) {
       if (!gameState.d4WaterTurnedOff) {
@@ -494,24 +505,38 @@ export class RoomScene extends Phaser.Scene {
         this.game.events.emit('toast', 'Build and activate the Kilopower Nuclear Reactor outside before sleeping!');
         return;
       }
+      if (!gameState.d4CommsDone) {
+        this.game.events.emit('toast', 'Listen to the incoming Comms alert first!');
+        return;
+      }
+      if (!gameState.d4SafeModeOn) {
+        gameState.setMeters({ power: 0 });
+        this.game.events.emit('power:safe-mode-changed', false);
+        this.game.events.emit('warning:show', {
+          text: 'Warning: Sleeping without SAFE MODE during a Martian solar storm will overload and destroy the habitat electronics! Enable SAFE MODE on the Power Panel.',
+          rewindEvent: 'checkpoint:rewind-d4-safemode',
+        });
+        return;
+      }
 
       this.runSleepTransition(
-        'END OF SOL 4\n\nPowered by clean, continuous Kilopower nuclear energy, lights, water, and oxygen stay at 100% all night long!\n\nMISSION PHASE COMPLETE',
+        'END OF SOL 4\n\nOvernight, the severe solar storm sweeps across Mars—but SAFE MODE shields every circuit while Kilopower keeps oxygen, water, and thermal systems alive!\n\nMISSION PHASE COMPLETE',
         () => {
           gameState.nightDrainActive = false;
           gameState.habLightsOn = true;
           gameState.d2OxSwitchOn = true;
           gameState.d3WaterSwitchOn = true;
-          gameState.setMeters({ power: 100, oxygen: 100, water: 100 });
+          gameState.setMeters({ power: 100, oxygen: 100 });
           this.transitioning = false;
           this.scene.restart();
-        }
+        },
+        true
       );
     }
   }
 
   /** Fade to black, show end-of-sol message, then advance to the next Sol. */
-  runSleepTransition(message, onDone) {
+  runSleepTransition(message, onDone, playStorm = false) {
     this.transitioning = true;
     this.game.events.emit('prompt', null);
 
@@ -530,18 +555,36 @@ export class RoomScene extends Phaser.Scene {
       .setAlpha(0)
       .setDepth(3001);
 
+    let stormSound = null;
+    const stopStorm = () => {
+      if (stormSound) {
+        stormSound.stop();
+        stormSound.destroy();
+        stormSound = null;
+      }
+    };
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, stopStorm);
+
     this.tweens.add({
       targets: overlay,
       fillAlpha: 1,
       duration: 800,
       onComplete: () => {
+        if (playStorm && this.cache.audio.exists('sfx-storm')) {
+          stormSound = this.sound.add('sfx-storm', { loop: true, volume: 0.5 });
+          stormSound.play();
+        }
         this.tweens.add({
           targets: sleepText,
           alpha: 1,
           duration: 600,
           hold: 2600,
           yoyo: true,
-          onComplete: onDone,
+          onComplete: () => {
+            this.events.off(Phaser.Scenes.Events.SHUTDOWN, stopStorm);
+            stopStorm();
+            onDone();
+          },
         });
       },
     });
