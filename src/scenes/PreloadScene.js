@@ -17,12 +17,53 @@ export class PreloadScene extends Phaser.Scene {
       frameWidth: 200,
       frameHeight: 341,
     });
+    this.load.spritesheet('spacecraft-damaged', 'assets/sprites/spacecraft-damaged.png', {
+      frameWidth: 170,
+      frameHeight: 80,
+    });
+    this.load.spritesheet('explosion', 'assets/sprites/explosion.png', {
+      frameWidth: 100,
+      frameHeight: 100,
+    });
+    this.load.spritesheet('radio', 'assets/sprites/radio.png', {
+      frameWidth: 129,
+      frameHeight: 129,
+    });
   }
 
   create() {
     this.makePlaceholderTextures();
-    this.scene.start(SCENES.OUTPOST);
-    this.scene.launch(SCENES.HUD);
+    this.createCutsceneAnimations();
+    this.scene.start(SCENES.INTRO);
+  }
+
+  createCutsceneAnimations() {
+    if (!this.anims.exists('anim-spacecraft-smoke')) {
+      this.anims.create({
+        key: 'anim-spacecraft-smoke',
+        frames: this.anims.generateFrameNumbers('spacecraft-damaged', { start: 0, end: 5 }),
+        frameRate: 6,
+        repeat: -1,
+      });
+    }
+
+    if (!this.anims.exists('anim-explosion')) {
+      this.anims.create({
+        key: 'anim-explosion',
+        frames: this.anims.generateFrameNumbers('explosion', { start: 0, end: 47 }),
+        frameRate: 24,
+        repeat: 0,
+      });
+    }
+
+    if (!this.anims.exists('anim-radio')) {
+      this.anims.create({
+        key: 'anim-radio',
+        frames: this.anims.generateFrameNumbers('radio', { start: 0, end: 15 }),
+        frameRate: 8,
+        repeat: -1,
+      });
+    }
   }
 
   /** White astronaut silhouette; tinted per character. Replace with the real sprite sheet. */

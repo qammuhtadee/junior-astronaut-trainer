@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { SCENES, GAME_WIDTH, GAME_HEIGHT } from '../config/constants.js';
 import { gameState } from '../state/GameState.js';
 import { PillMeter } from '../ui/PillMeter.js';
+import { FactCard } from '../ui/FactCard.js';
 
 /**
  * Always-on overlay scene: capsule pill meters, "Press SPACE" prompt, day badge.
@@ -23,8 +24,9 @@ export class HudScene extends Phaser.Scene {
       color: '#ffd166',
     });
 
-    // 4 Pill Meters (stacked neatly in top-left)
-    this.powerMeter = new PillMeter(this, 24, 54, {
+    // 4 Pill Meters (2x2 grid in top-left)
+    // Row 1: Power & Oxygen
+    this.powerMeter = new PillMeter(this, 24, 52, {
       type: 'power',
       label: 'Power',
       color: 0xffd166,
@@ -32,7 +34,7 @@ export class HudScene extends Phaser.Scene {
       height: 30,
     });
 
-    this.oxygenMeter = new PillMeter(this, 24, 92, {
+    this.oxygenMeter = new PillMeter(this, 206, 52, {
       type: 'oxygen',
       label: 'Oxygen',
       color: 0x6fc3df,
@@ -40,7 +42,8 @@ export class HudScene extends Phaser.Scene {
       height: 30,
     });
 
-    this.waterMeter = new PillMeter(this, 24, 130, {
+    // Row 2: Water & Radiation
+    this.waterMeter = new PillMeter(this, 24, 88, {
       type: 'water',
       label: 'Water',
       color: 0x4a90e2,
@@ -48,7 +51,7 @@ export class HudScene extends Phaser.Scene {
       height: 30,
     });
 
-    this.radiationMeter = new PillMeter(this, 24, 168, {
+    this.radiationMeter = new PillMeter(this, 206, 88, {
       type: 'radiation',
       label: 'Radiation',
       color: 0x50fa7b,
@@ -61,6 +64,9 @@ export class HudScene extends Phaser.Scene {
     this.createLogbookButton();
     this.createPauseButton();
     this.createPauseOverlay();
+
+    // Floating NASA Fact Card
+    this.factCard = new FactCard(this, GAME_WIDTH - 330, 70);
 
     // Floating interaction prompt
     this.prompt = this.add
@@ -78,11 +84,15 @@ export class HudScene extends Phaser.Scene {
     ];
     this.game.events.on('prompt', this.showPrompt, this);
     this.game.events.on('station:interact', this.onInteract, this);
+    this.game.events.on('fact:show', this.onShowFact, this);
+    this.game.events.on('fact:hide', this.onHideFact, this);
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       unsub.forEach((fn) => fn());
       this.game.events.off('prompt', this.showPrompt, this);
       this.game.events.off('station:interact', this.onInteract, this);
+      this.game.events.off('fact:show', this.onShowFact, this);
+      this.game.events.off('fact:hide', this.onHideFact, this);
     });
 
     this.refresh();
@@ -90,11 +100,10 @@ export class HudScene extends Phaser.Scene {
 
   refresh() {
     this.dayText.setText(`Day ${gameState.day}`);
-    // Temporarily display all 4 meters for slide screenshot
-    this.powerMeter.setValue(gameState.meters.power ?? 100);
-    this.oxygenMeter.setValue(gameState.meters.oxygen ?? 85);
-    this.waterMeter.setValue(gameState.meters.water ?? 70);
-    this.radiationMeter.setValue(gameState.meters.radiation ?? 95);
+    this.powerMeter.setValue(gameState.meters.power);
+    this.oxygenMeter.setValue(gameState.meters.oxygen);
+    this.waterMeter.setValue(gameState.meters.water);
+    this.radiationMeter.setValue(gameState.meters.radiation);
   }
 
   showPrompt(label) {
@@ -105,6 +114,16 @@ export class HudScene extends Phaser.Scene {
   onInteract({ station }) {
     this.toast.setText(`[${station}] mini-game not built yet`);
     this.time.delayedCall(1500, () => this.toast.setText(''));
+  }
+
+  onShowFact(payload) {
+    const text = typeof payload === 'string' ? payload : payload.text;
+    const duration = typeof payload === 'object' && payload.duration !== undefined ? payload.duration : 14000;
+    this.factCard.show(text, { duration });
+  }
+
+  onHideFact() {
+    this.factCard.hide();
   }
 
   createTitleBanner() {

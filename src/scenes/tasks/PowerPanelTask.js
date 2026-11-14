@@ -72,13 +72,50 @@ export class PowerPanelTask extends Phaser.Scene {
     closeBtn.on('pointerdown', () => this.closeTask());
     this.modal.add(closeBtn);
 
-    // Default switch states (Battery switch removed per request)
-    this.switches = [
-      { id: 'light', label: 'HAB LIGHTING', desc: 'Main habitat illumination', on: true, load: 15 },
-      { id: 'oxygen', label: 'O2 GENERATOR', desc: 'Life support water splitting', on: true, load: 40 },
-      { id: 'water', label: 'WATER PURIFIER', desc: 'Filtration and melting pumps', on: false, load: 20 },
-      { id: 'safemode', label: 'SAFE MODE', desc: 'Cut non-essential auxiliary draw', on: false, load: -20 },
-    ];
+    // Configure switch list per day / narrative progression
+    if (gameState.day === 1) {
+      this.switches = [
+        {
+          id: 'light',
+          label: 'HAB LIGHTING',
+          desc: 'Main habitat illumination array',
+          on: gameState.habLightsOn || false,
+          load: 10,
+          locked: false,
+        },
+        {
+          id: 'oxygen',
+          label: 'O2 GENERATOR',
+          desc: 'Life support water splitting (Sol 2)',
+          on: false,
+          load: 40,
+          locked: true,
+        },
+        {
+          id: 'water',
+          label: 'WATER PURIFIER',
+          desc: 'Filtration and melting pumps (Sol 3)',
+          on: false,
+          load: 20,
+          locked: true,
+        },
+        {
+          id: 'safemode',
+          label: 'SAFE MODE',
+          desc: 'Cut non-essential auxiliary draw (Sol 4)',
+          on: false,
+          load: -20,
+          locked: true,
+        },
+      ];
+    } else {
+      this.switches = [
+        { id: 'light', label: 'HAB LIGHTING', desc: 'Main habitat illumination', on: true, load: 15, locked: false },
+        { id: 'oxygen', label: 'O2 GENERATOR', desc: 'Life support water splitting', on: true, load: 40, locked: false },
+        { id: 'water', label: 'WATER PURIFIER', desc: 'Filtration and melting pumps', on: false, load: 20, locked: gameState.day < 3 },
+        { id: 'safemode', label: 'SAFE MODE', desc: 'Cut non-essential auxiliary draw', on: false, load: -20, locked: gameState.day < 4 },
+      ];
+    }
 
     // Render 4 switch rows with spacious tactile layout
     const startY = -panelH / 2 + 120;
@@ -166,22 +203,33 @@ export class PowerPanelTask extends Phaser.Scene {
         knob.fillStyle(isOn ? 0x10b981 : 0xef4444, 1);
         knob.fillCircle(knobX, 0, 3);
 
-        statusPill.setText(isOn ? '[ONLINE]' : '[OFFLINE]');
-        statusPill.setColor(isOn ? '#06b6d4' : '#64748b');
+        if (sw.locked) {
+          statusPill.setText('[OFFLINE]');
+          statusPill.setColor('#475569');
+        } else {
+          statusPill.setText(isOn ? '[ONLINE]' : '[OFFLINE]');
+          statusPill.setColor(isOn ? '#06b6d4' : '#64748b');
+        }
       };
+
+      if (sw.locked) {
+        rowContainer.setAlpha(0.45);
+      }
 
       updateSwitchVisual(sw.on);
 
       // Interactive hit area on the toggle
-      const hitArea = this.add
-        .rectangle(trackX, 0, 110, 48, 0x000000, 0)
-        .setInteractive({ useHandCursor: true });
-      hitArea.on('pointerdown', () => {
-        sw.on = !sw.on;
-        updateSwitchVisual(sw.on);
-        this.updateLoad();
-      });
-      rowContainer.add(hitArea);
+      if (!sw.locked) {
+        const hitArea = this.add
+          .rectangle(trackX, 0, 110, 48, 0x000000, 0)
+          .setInteractive({ useHandCursor: true });
+        hitArea.on('pointerdown', () => {
+          sw.on = !sw.on;
+          updateSwitchVisual(sw.on);
+          this.updateLoad();
+        });
+        rowContainer.add(hitArea);
+      }
 
       this.modal.add(rowContainer);
       this.switchViews.push({ sw, updateSwitchVisual });
@@ -238,7 +286,17 @@ export class PowerPanelTask extends Phaser.Scene {
   }
 
   applyAndClose() {
-    // If Day 1 night or Day 2 night choices
+    if (gameState.day === 1) {
+      const lightSw = this.switches.find((s) => s.id === 'light');
+      if (lightSw && lightSw.on) {
+        const wasOff = !gameState.habLightsOn;
+        gameState.habLightsOn = true;
+        gameState.setMeters({ power: 90 });
+        if (wasOff) {
+          this.game.events.emit('lights:restored');
+        }
+      }
+    }
     this.closeTask();
   }
 

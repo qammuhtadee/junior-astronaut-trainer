@@ -16,8 +16,12 @@ export class GameState {
     this.stepId = 'd1_start';
     this.meters = { ...stepById.d1_start.meters };
     this.checkpointId = 'd1_start';
-    this.room = 'outpost';
+    this.room = 'surface';
     this.activeAstronaut = 'muntasir';
+    this.hasSeenCrash = false;
+    this.solarDeployed = false;
+    this.solarAligned = false;
+    this.habLightsOn = false;
   }
 
   get step() {

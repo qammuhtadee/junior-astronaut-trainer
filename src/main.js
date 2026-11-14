@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from './config/constants.js';
 import { PreloadScene } from './scenes/PreloadScene.js';
+import { IntroScene } from './scenes/IntroScene.js';
 import { OutpostScene } from './scenes/OutpostScene.js';
 import { SurfaceScene } from './scenes/SurfaceScene.js';
 import { HudScene } from './scenes/HudScene.js';
@@ -18,7 +19,7 @@ const game = new Phaser.Game({
     width: GAME_WIDTH,
     height: GAME_HEIGHT,
   },
-  scene: [PreloadScene, OutpostScene, SurfaceScene, HudScene, SolarAlignTask, PowerPanelTask],
+  scene: [PreloadScene, IntroScene, OutpostScene, SurfaceScene, HudScene, SolarAlignTask, PowerPanelTask],
 });
 
 // Handy for debugging in the browser console only.

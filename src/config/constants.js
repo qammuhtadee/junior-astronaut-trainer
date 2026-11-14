@@ -30,6 +30,7 @@ export const FADE_MS = 400;
 
 export const SCENES = Object.freeze({
   PRELOAD: 'Preload',
+  INTRO: 'Intro',
   OUTPOST: 'Outpost',
   SURFACE: 'Surface',
   HUD: 'Hud',

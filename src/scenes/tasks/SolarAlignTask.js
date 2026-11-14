@@ -225,14 +225,15 @@ export class SolarAlignTask extends Phaser.Scene {
       duration: 350,
     });
 
-    this.statusText.setText('ALIGNMENT LOCKED! (100% POWER)').setColor('#00ff88');
-    this.hintText.setText('Solar array locked! Return inside to the bunks to rest.').setColor('#88ffbb');
+    this.statusText.setText('ALIGNMENT LOCKED! (HARVESTING SUNLIGHT)').setColor('#00ff88');
+    this.hintText.setText('Photovoltaic array aligned! Transmitting charge to habitat...').setColor('#88ffbb');
 
     // Update game state
-    gameState.goTo('d1_panel_built');
+    gameState.solarAligned = true;
+    gameState.setMeters({ power: 0 }); // start at 0 so it charges up gradually on surface
 
     // Close after celebration
-    this.time.delayedCall(2000, () => {
+    this.time.delayedCall(1200, () => {
       this.closeTask();
     });
   }
