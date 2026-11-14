@@ -32,25 +32,22 @@ export class OutpostScene extends RoomScene {
         if (powerStation) powerStation.setVisible(false);
         if (bedStation) bedStation.setVisible(false);
         this.initFirstDarkVisit();
-      } else if (!gameState.habLightsOn) {
-        // Visit 2: Still dark, Maisha in control, power panel highlighted, bunks hidden until lit
-        if (powerStation) powerStation.setVisible(true);
-        if (bedStation) bedStation.setVisible(false);
-        this.initPowerRestoredDarkVisit();
       } else {
-        // Lit outpost
+        // Visit 2+: Power restored outside; allow toggling lights freely inside
         if (powerStation) powerStation.setVisible(true);
-        if (bedStation) bedStation.setVisible(true);
-        this.initLitOutpost();
+        if (bedStation) bedStation.setVisible(gameState.habLightsOn || gameState.lightsIntroDone);
+        this.initPowerRestoredVisit();
       }
     } else {
       this.initStandardOutpost();
     }
 
     this.game.events.on('lights:restored', this.onLightsRestored, this);
+    this.game.events.on('lights:turned-off', this.onLightsTurnedOff, this);
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.game.events.off('lights:restored', this.onLightsRestored, this);
+      this.game.events.off('lights:turned-off', this.onLightsTurnedOff, this);
       if (this.drainTimer) this.drainTimer.remove();
     });
   }
@@ -102,21 +99,25 @@ export class OutpostScene extends RoomScene {
       const darkKey = `${px},${py},${cx},${cy},${gameState.solarDeployed}`;
       if (this.lastDarkKey === darkKey) return;
       this.lastDarkKey = darkKey;
+      this.redrawDarkness();
+    }
+  }
 
-      this.darknessLayer.clear();
-      this.darknessLayer.fill(0x03050a, 0.96);
+  redrawDarkness() {
+    if (!this.darknessLayer) return;
+    this.darknessLayer.clear();
+    this.darknessLayer.fill(0x03050a, 0.96);
 
-      if (this.player && this.player.active) {
-        this.darknessLayer.erase(this.spotlightImg, this.player.x, this.player.y - 50);
-      }
-      if (this.companion && this.companion.active) {
-        this.darknessLayer.erase(this.spotlightImg, this.companion.x, this.companion.y - 50);
-      }
-      if (gameState.solarDeployed) {
-        const pp = this.stations.find((s) => s.def.id === 'power_panel');
-        if (pp && pp.visible) {
-          this.darknessLayer.erase(this.spotlightImg, pp.def.x, pp.def.y - 60);
-        }
+    if (this.player && this.player.active) {
+      this.darknessLayer.erase(this.spotlightImg, this.player.x, this.player.y - 50);
+    }
+    if (this.companion && this.companion.active) {
+      this.darknessLayer.erase(this.spotlightImg, this.companion.x, this.companion.y - 50);
+    }
+    if (gameState.solarDeployed) {
+      const pp = this.stations.find((s) => s.def.id === 'power_panel');
+      if (pp && pp.visible) {
+        this.darknessLayer.erase(this.spotlightImg, pp.def.x, pp.def.y - 60);
       }
     }
   }
@@ -155,17 +156,31 @@ export class OutpostScene extends RoomScene {
   }
 
   // ==========================================
-  // VISIT 2: Power Restored Outside, Still Dark Inside
+  // VISIT 2+: Power Restored Outside, Independent Lights
   // ==========================================
-  initPowerRestoredDarkVisit() {
-    // Maisha has player control now; Muntasir stands on standby near airlock
-    this.companion = new Astronaut(this, 175, LANE.top + 42, {
-      name: 'Muntasir',
-      color: COLORS.muntasir,
-    });
-    this.companion.body_.setFlipX(false);
+  initPowerRestoredVisit() {
+    // Only spawn Muntasir near the airlock if he hasn't walked to rest on the bunks yet
+    if (!gameState.muntasirResting) {
+      this.companion = new Astronaut(this, 175, LANE.top + 42, {
+        name: 'Muntasir',
+        color: COLORS.muntasir,
+      });
+      this.companion.body_.setFlipX(false);
+    }
 
-    this.createPowerPanelGuide();
+    if (!gameState.lightsIntroDone && !gameState.habLightsOn) {
+      this.createPowerPanelGuide();
+    }
+
+    if (this.darknessLayer) {
+      this.darknessLayer.setVisible(!gameState.habLightsOn);
+      this.darknessLayer.setAlpha(gameState.habLightsOn ? 0 : 1);
+      this.lastDarkKey = null;
+    }
+
+    if (gameState.lightsIntroDone) {
+      this.startNightDrain();
+    }
   }
 
   createPowerPanelGuide() {
@@ -233,6 +248,7 @@ export class OutpostScene extends RoomScene {
     // Outpost lights up!
     this.cameras.main.flash(350, 255, 245, 210);
     if (this.darknessLayer) {
+      this.tweens.killTweensOf(this.darknessLayer);
       this.tweens.add({
         targets: this.darknessLayer,
         alpha: 0,
@@ -244,47 +260,70 @@ export class OutpostScene extends RoomScene {
       });
     }
 
-    this.transitioning = true;
-    this.game.events.emit('prompt', null);
+    if (!gameState.lightsIntroDone) {
+      gameState.lightsIntroDone = true;
+      gameState.muntasirResting = true;
+      this.transitioning = true;
+      this.game.events.emit('prompt', null);
 
-    this.time.delayedCall(500, () => {
-      this.dialogueBox.showSequence(
-        [
-          {
-            speaker: 'Muntasir',
-            text: 'Hurray. We can finally see.',
-            target: this.companion,
-          },
-          {
-            speaker: 'Maisha',
-            text: "It's night-time, and seems like the battery isn't charging.",
-            target: this.player,
-            onStart: () => {
-              this.startNightDrain();
+      this.time.delayedCall(500, () => {
+        this.dialogueBox.showSequence(
+          [
+            {
+              speaker: 'Muntasir',
+              text: 'Hurray. We can finally see.',
+              target: this.companion,
             },
-          },
-          {
-            speaker: 'Muntasir',
-            text: 'At night there is no sun, so there is no natural light for the solar panels to be powered up, we have to be careful about energy consumption soon.',
-            target: this.companion,
-            onStart: () => {
-              this.game.events.emit(
-                'fact:show',
-                'Fact: Mars surface has about 43% light level of earth, so its also harder for solar panels to recharge there'
-              );
+            {
+              speaker: 'Maisha',
+              text: "It's night-time, and seems like the battery isn't charging.",
+              target: this.player,
+              onStart: () => {
+                this.startNightDrain();
+              },
             },
-          },
-          {
-            speaker: 'Muntasir',
-            text: "Seems like we are both tired. Let's have some rest on our bunks.",
-            target: this.companion,
-          },
-        ],
-        () => {
-          this.muntasirRestAtBunks();
-        }
+            {
+              speaker: 'Muntasir',
+              text: 'At night there is no sun, so there is no natural light for the solar panels to be powered up, we have to be careful about energy consumption soon.',
+              target: this.companion,
+              onStart: () => {
+                this.game.events.emit(
+                  'fact:show',
+                  'Fact: Mars surface has about 43% light level of earth, so its also harder for solar panels to recharge there'
+                );
+              },
+            },
+            {
+              speaker: 'Muntasir',
+              text: "Seems like we are both tired. Let's have some rest on our bunks.",
+              target: this.companion,
+            },
+          ],
+          () => {
+            this.muntasirRestAtBunks();
+          }
+        );
+      });
+    } else {
+      this.transitioning = false;
+      this.game.events.emit('toast', 'Habitat lights online.');
+    }
+  }
+
+  onLightsTurnedOff(payload = {}) {
+    if (this.darknessLayer) {
+      this.tweens.killTweensOf(this.darknessLayer);
+      this.darknessLayer.setVisible(true).setAlpha(1);
+      this.lastDarkKey = null;
+      this.redrawDarkness();
+    }
+
+    if (!payload?.silentWarning) {
+      this.game.events.emit(
+        'warning:show',
+        "You can't navigate around without lights! Turn on the lights at the Power Panel or rewind to the checkpoint."
       );
-    });
+    }
   }
 
   startNightDrain() {
@@ -316,11 +355,6 @@ export class OutpostScene extends RoomScene {
         },
       });
     });
-  }
-
-  initLitOutpost() {
-    if (this.darknessLayer) this.darknessLayer.setVisible(false);
-    this.startNightDrain();
   }
 
   initStandardOutpost() {

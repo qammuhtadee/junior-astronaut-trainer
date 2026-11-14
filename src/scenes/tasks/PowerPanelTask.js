@@ -12,9 +12,11 @@ export class PowerPanelTask extends Phaser.Scene {
     super('PowerPanelTask');
   }
 
-  create() {
+  create(data = {}) {
     this.closing = false;
-    this.lightsJustRestored = false;
+    this.lightsChangeState = null;
+    this.pendingAutoLightTimer = null;
+    this.autoTurnOnLight = !!data?.autoTurnOnLight;
 
     const cx = GAME_WIDTH / 2;
     const cy = GAME_HEIGHT / 2;
@@ -264,6 +266,18 @@ export class PowerPanelTask extends Phaser.Scene {
       if (this.input?.keyboard) this.input.keyboard.off('keydown-ESC', onEsc);
     });
     this.updateLoad();
+
+    if (gameState.day === 1 && this.autoTurnOnLight) {
+      this.pendingAutoLightTimer = this.time.delayedCall(260, () => {
+        const lightEntry = this.switchViews.find((v) => v.sw.id === 'light');
+        if (lightEntry) {
+          lightEntry.sw.on = true;
+          lightEntry.updateSwitchVisual(true);
+          this.updateLoad();
+          this.statusText.setText('CHECKPOINT RESTORED: LIGHTS ON — CLICK APPLY').setColor('#34d399');
+        }
+      });
+    }
   }
 
   updateLoad() {
@@ -283,11 +297,26 @@ export class PowerPanelTask extends Phaser.Scene {
   applyAndClose() {
     if (gameState.day === 1) {
       const lightSw = this.switches.find((s) => s.id === 'light');
-      if (lightSw && lightSw.on && !gameState.habLightsOn) {
-        gameState.habLightsOn = true;
-        const cur = gameState.meters.power ?? 100;
-        gameState.setMeters({ power: Math.max(10, cur > 90 ? 90 : cur - 10) });
-        this.lightsJustRestored = true;
+      if (lightSw) {
+        if (this.pendingAutoLightTimer && this.pendingAutoLightTimer.getProgress() < 1) {
+          this.pendingAutoLightTimer.remove(false);
+          lightSw.on = true;
+        }
+        if (lightSw.on) {
+          if (!gameState.habLightsOn) {
+            gameState.habLightsOn = true;
+            const cur = gameState.meters.power ?? 100;
+            gameState.setMeters({ power: Math.max(10, cur > 90 ? 90 : cur - 10) });
+          }
+          this.lightsChangeState = 'turned_on';
+        } else {
+          if (gameState.habLightsOn) {
+            gameState.habLightsOn = false;
+            const cur = gameState.meters.power ?? 90;
+            gameState.setMeters({ power: Math.min(100, cur + 10) });
+          }
+          this.lightsChangeState = 'off_warning';
+        }
       }
     }
     this.closeTask();
@@ -296,7 +325,7 @@ export class PowerPanelTask extends Phaser.Scene {
   closeTask() {
     if (this.closing) return;
     this.closing = true;
-    const restored = this.lightsJustRestored;
+    const changeState = this.lightsChangeState;
 
     this.tweens.add({
       targets: this.modal,
@@ -307,8 +336,11 @@ export class PowerPanelTask extends Phaser.Scene {
         this.scene.stop();
         const activeRoom = gameState.room === 'surface' ? 'Surface' : 'Outpost';
         this.scene.resume(activeRoom);
-        if (restored) {
+        if (changeState === 'turned_on') {
+          this.game.events.emit('warning:hide');
           this.game.events.emit('lights:restored');
+        } else if (changeState === 'off_warning') {
+          this.game.events.emit('lights:turned-off', { silentWarning: false });
         }
       },
     });

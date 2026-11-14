@@ -25,6 +25,8 @@ export class GameState {
     this.solarDeployed = false;
     this.solarAligned = false;
     this.habLightsOn = false;
+    this.lightsIntroDone = false;
+    this.muntasirResting = false;
     this.nightDrainActive = false;
   }
 

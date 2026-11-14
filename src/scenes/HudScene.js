@@ -3,6 +3,7 @@ import { SCENES, GAME_WIDTH, GAME_HEIGHT } from '../config/constants.js';
 import { gameState } from '../state/GameState.js';
 import { PillMeter } from '../ui/PillMeter.js';
 import { FactCard } from '../ui/FactCard.js';
+import { WarningCard } from '../ui/WarningCard.js';
 
 /**
  * Always-on overlay scene: capsule pill meters, "Press SPACE" prompt, day badge.
@@ -68,6 +69,9 @@ export class HudScene extends Phaser.Scene {
     // Floating NASA Fact Card (stays visible until manually closed by the user)
     this.factCard = new FactCard(this, GAME_WIDTH - 360, 62);
 
+    // Floating Side Warning Card (shows wrong decisions with Rewind to Checkpoint)
+    this.warningCard = new WarningCard(this, 24, 136);
+
     // Floating interaction prompt
     this.prompt = this.add
       .text(GAME_WIDTH / 2, 120, '', { ...font, fontSize: '20px', backgroundColor: '#000c', padding: { x: 14, y: 7 } })
@@ -93,6 +97,9 @@ export class HudScene extends Phaser.Scene {
     this.game.events.on('station:interact', this.onInteract, this);
     this.game.events.on('fact:show', this.onShowFact, this);
     this.game.events.on('fact:hide', this.onHideFact, this);
+    this.game.events.on('warning:show', this.onShowWarning, this);
+    this.game.events.on('warning:hide', this.onHideWarning, this);
+    this.game.events.on('checkpoint:rewind-lights', this.onRewindLightsCheckpoint, this);
     this.game.events.on('power:gradual-charge', this.startGradualPowerCharge, this);
     this.game.events.on('power:start-night-drain', this.startNightDrain, this);
 
@@ -103,6 +110,9 @@ export class HudScene extends Phaser.Scene {
       this.game.events.off('station:interact', this.onInteract, this);
       this.game.events.off('fact:show', this.onShowFact, this);
       this.game.events.off('fact:hide', this.onHideFact, this);
+      this.game.events.off('warning:show', this.onShowWarning, this);
+      this.game.events.off('warning:hide', this.onHideWarning, this);
+      this.game.events.off('checkpoint:rewind-lights', this.onRewindLightsCheckpoint, this);
       this.game.events.off('power:gradual-charge', this.startGradualPowerCharge, this);
       this.game.events.off('power:start-night-drain', this.startNightDrain, this);
     });
@@ -143,6 +153,39 @@ export class HudScene extends Phaser.Scene {
 
   onHideFact() {
     this.factCard.hide();
+  }
+
+  onShowWarning(payload) {
+    const text = typeof payload === 'string' ? payload : payload?.text;
+    this.warningCard.show(text);
+  }
+
+  onHideWarning() {
+    this.warningCard.hide();
+  }
+
+  onRewindLightsCheckpoint() {
+    this.warningCard.hide();
+    if (this.chargeEvent) {
+      this.chargeEvent.remove();
+      this.chargeEvent = null;
+    }
+
+    // Restore first checkpoint state (d1_panel_built: Power 100%, lights about to turn on at Power Panel)
+    gameState.habLightsOn = false;
+    gameState.setMeters({ power: 100 });
+
+    if (this.scene.isActive('PowerPanelTask')) {
+      this.scene.stop('PowerPanelTask');
+    }
+
+    this.game.events.emit('lights:turned-off', { silentWarning: true });
+
+    if (this.scene.isActive(SCENES.OUTPOST)) {
+      this.scene.pause(SCENES.OUTPOST);
+    }
+
+    this.scene.launch('PowerPanelTask', { autoTurnOnLight: true });
   }
 
   startGradualPowerCharge() {
