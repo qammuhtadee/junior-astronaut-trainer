@@ -97,3 +97,59 @@ describe('GameState', () => {
     expect(gs.restoreCheckpoint('missing_key')).toBe(false);
   });
 });
+
+
+describe('Day 3 & Day 4 GameState flags and checkpoints', () => {
+  it('initializes all Day 3 and Day 4 flags to safe defaults on reset', async () => {
+    const { gameState } = await import('../src/state/GameState.js');
+    gameState.reset();
+    expect(gameState.d3IntroDone).toBe(false);
+    expect(gameState.d3IceDrilled).toBe(false);
+    expect(gameState.d3DrillDepth).toBe(0);
+    expect(gameState.d3WaterBuilt).toBe(false);
+    expect(gameState.d3WaterSwitchOn).toBe(false);
+    expect(gameState.d3WaterIceCount).toBe(0);
+    expect(gameState.d3WaterIceLoaded).toBe(false);
+    expect(gameState.d3OxIceCount).toBe(0);
+    expect(gameState.d3OxIceLoaded).toBe(false);
+    expect(gameState.d3LightsTurnedOffOnce).toBe(false);
+    expect(gameState.d3NightModeSet).toBe(false);
+
+    expect(gameState.d4IntroDone).toBe(false);
+    expect(gameState.d4WaterTurnedOff).toBe(false);
+    expect(gameState.d4PanelCleaned).toBe(false);
+    expect(gameState.d4PanelAligned).toBe(false);
+    expect(gameState.d4ReactorIntroDone).toBe(false);
+    expect(gameState.d4ReactorBuilt).toBe(false);
+    expect(gameState.d4EveningDone).toBe(false);
+  });
+
+  it('saves and restores the d3_night_ready checkpoint without corrupting listeners', async () => {
+    const { gameState } = await import('../src/state/GameState.js');
+    gameState.reset();
+    gameState.goTo('d3_morning');
+    gameState.d3OxIceLoaded = true;
+    gameState.habLightsOn = true;
+    gameState.d2OxSwitchOn = true;
+    gameState.d3WaterSwitchOn = true;
+    gameState.d3LightsTurnedOffOnce = false;
+    gameState.setMeters({ power: 40, oxygen: 100, water: 100 });
+    gameState.saveCheckpoint('d3_night_ready');
+
+    // Simulate non-canon red-zone mistake on Day 3 night
+    gameState.habLightsOn = true;
+    gameState.d3LightsTurnedOffOnce = true;
+    gameState.d3WaterSwitchOn = false;
+    gameState.setMeters({ power: 30, water: 20 });
+
+    const restored = gameState.restoreCheckpoint('d3_night_ready');
+    expect(restored).toBe(true);
+    expect(gameState.meters.power).toBe(40);
+    expect(gameState.meters.oxygen).toBe(100);
+    expect(gameState.meters.water).toBe(100);
+    expect(gameState.habLightsOn).toBe(true);
+    expect(gameState.d3WaterSwitchOn).toBe(true);
+    expect(gameState.d3LightsTurnedOffOnce).toBe(false);
+    expect(() => gameState.setMeters({ power: 50 })).not.toThrow();
+  });
+});

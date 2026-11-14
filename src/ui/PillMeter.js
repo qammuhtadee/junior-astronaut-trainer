@@ -151,9 +151,9 @@ export class PillMeter extends Phaser.GameObjects.Container {
     const maxFillWidth = this.meterWidth - startX - 4;
     const fillW = (maxFillWidth * pct) / 100;
 
-    // Fill color (turns warning red if <= 20%)
+    // Fill color (turns warning red if <= 30%)
     let fillCol = this.meterColor;
-    if (pct <= 20) fillCol = 0xff3b30;
+    if (pct <= 30) fillCol = 0xff3b30;
 
     this.fillBar.fillStyle(fillCol, 0.85);
     this.fillBar.fillRoundedRect(startX, 4, fillW, this.meterHeight - 8, (this.meterHeight - 8) / 2);

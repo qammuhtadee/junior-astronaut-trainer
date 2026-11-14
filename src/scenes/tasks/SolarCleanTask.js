@@ -11,13 +11,23 @@ export class SolarCleanTask extends Phaser.Scene {
     super('SolarCleanTask');
   }
 
-  create() {
-    this.completed = false;
-    this.closing = false;
-
+  getProgressArray() {
+    if (gameState.day === 4) {
+      if (!Array.isArray(gameState.d4CleanProgress) || gameState.d4CleanProgress.length !== 16) {
+        gameState.d4CleanProgress = new Array(16).fill(false);
+      }
+      return gameState.d4CleanProgress;
+    }
     if (!Array.isArray(gameState.d2CleanProgress) || gameState.d2CleanProgress.length !== 16) {
       gameState.d2CleanProgress = new Array(16).fill(false);
     }
+    return gameState.d2CleanProgress;
+  }
+
+  create() {
+    this.completed = false;
+    this.closing = false;
+    this.getProgressArray();
 
     const cx = GAME_WIDTH / 2;
     const cy = GAME_HEIGHT / 2;
@@ -131,7 +141,7 @@ export class SolarCleanTask extends Phaser.Scene {
     });
 
     // Check if already all clean (edge case)
-    if (gameState.d2CleanProgress.every(Boolean)) {
+    if (this.getProgressArray().every(Boolean)) {
       this.onAllCleaned();
     }
 
@@ -146,7 +156,7 @@ export class SolarCleanTask extends Phaser.Scene {
 
   drawCell(idx) {
     const cell = this.cells[idx];
-    const isClean = !!gameState.d2CleanProgress[idx];
+    const isClean = !!this.getProgressArray()[idx];
     const g = cell.gfx;
     g.clear();
 
@@ -185,8 +195,9 @@ export class SolarCleanTask extends Phaser.Scene {
   }
 
   cleanCell(idx) {
-    if (this.completed || gameState.d2CleanProgress[idx]) return;
-    gameState.d2CleanProgress[idx] = true;
+    const prog = this.getProgressArray();
+    if (this.completed || prog[idx]) return;
+    prog[idx] = true;
     this.drawCell(idx);
     this.updateStatus();
 
@@ -208,13 +219,13 @@ export class SolarCleanTask extends Phaser.Scene {
       onComplete: () => spark.destroy(),
     });
 
-    if (gameState.d2CleanProgress.every(Boolean)) {
+    if (prog.every(Boolean)) {
       this.onAllCleaned();
     }
   }
 
   updateStatus() {
-    const cleaned = gameState.d2CleanProgress.filter(Boolean).length;
+    const cleaned = this.getProgressArray().filter(Boolean).length;
     this.statusText.setText(`DUST WIPED: ${cleaned} / 16 PANELS CLEAN`);
   }
 
@@ -222,14 +233,20 @@ export class SolarCleanTask extends Phaser.Scene {
     if (this.completed) return;
     this.completed = true;
 
-    this.statusText.setText('SOLAR ARRAY CLEANED! RECHARGING BATTERY...').setColor('#34d399');
-    this.hintText.setText('Sunlight harvesting restored to 100%!').setColor('#86efac');
+    if (gameState.day === 4) {
+      this.statusText.setText('DUST WIPED! NOW REALIGN THE ARRAY WITH THE SUN...').setColor('#34d399');
+      this.hintText.setText('Opening solar array alignment controls...').setColor('#86efac');
+      gameState.d4PanelCleaned = true;
+    } else {
+      this.statusText.setText('SOLAR ARRAY CLEANED! RECHARGING BATTERY...').setColor('#34d399');
+      this.hintText.setText('Sunlight harvesting restored to 100%!').setColor('#86efac');
 
-    gameState.d2PanelCleaned = true;
-    gameState.stepId = 'd2_panel_cleaned';
-    gameState.checkpointId = 'd2_panel_cleaned';
-    this.game.events.emit('power:stop-dust-drain');
-    this.game.events.emit('power:gradual-charge-from');
+      gameState.d2PanelCleaned = true;
+      gameState.stepId = 'd2_panel_cleaned';
+      gameState.checkpointId = 'd2_panel_cleaned';
+      this.game.events.emit('power:stop-dust-drain');
+      this.game.events.emit('power:gradual-charge-from');
+    }
 
     this.time.delayedCall(750, () => this.closeTask());
   }
@@ -249,7 +266,7 @@ export class SolarCleanTask extends Phaser.Scene {
         const activeRoom = gameState.room === 'surface' ? 'Surface' : 'Outpost';
         this.scene.resume(activeRoom);
         if (wasCompleted) {
-          this.game.events.emit('d2:panel-cleaned');
+          this.game.events.emit(gameState.day === 4 ? 'd4:panel-cleaned' : 'd2:panel-cleaned');
         }
       },
     });

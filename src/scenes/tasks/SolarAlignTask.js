@@ -335,10 +335,16 @@ export class SolarAlignTask extends Phaser.Scene {
     this.hintText.setText('Photovoltaic array aligned! Transmitting charge to habitat...').setColor('#88ffbb');
 
     // Update game state
-    const firstTimeAligned = !gameState.solarAligned;
-    gameState.solarAligned = true;
-    if (firstTimeAligned) {
-      this.game.events.emit('power:gradual-charge');
+    if (gameState.day === 4) {
+      gameState.d4PanelAligned = true;
+      this.game.events.emit('power:stop-dust-drain');
+      gameState.setMeters({ power: 60 });
+    } else {
+      const firstTimeAligned = !gameState.solarAligned;
+      gameState.solarAligned = true;
+      if (firstTimeAligned) {
+        this.game.events.emit('power:gradual-charge');
+      }
     }
 
     // Close after celebration
@@ -362,7 +368,7 @@ export class SolarAlignTask extends Phaser.Scene {
         const activeRoom = gameState.room === 'surface' ? 'Surface' : 'Outpost';
         this.scene.resume(activeRoom);
         if (wasAligned) {
-          this.game.events.emit('solar:aligned');
+          this.game.events.emit(gameState.day === 4 ? 'd4:panel-aligned' : 'solar:aligned');
         }
       },
     });

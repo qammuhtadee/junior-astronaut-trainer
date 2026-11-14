@@ -46,6 +46,34 @@ export class GameState {
     // Day 2 hopper ice loading & time-travel checkpoint snapshots
     this.d2IceLoadedCount = 0;
     this.d2OxLoaded = false;
+
+    // Day 3: Water station, ice drilling, pipe build, and night switches
+    this.d3IntroDone = false;
+    this.d3IceDrilled = false;
+    this.d3DrillDepth = 0;
+    this.d3BuildThoughtDone = false;
+    this.d3WaterPlacedParts = {};
+    this.d3WaterBuilt = false;
+    this.d3WaterSwitchOn = false;
+    this.d3WaterIceCount = 0;
+    this.d3WaterIceLoaded = false;
+    this.d3OxDepleteStarted = false;
+    this.d3OxIceCount = 0;
+    this.d3OxIceLoaded = false;
+    this.d3NightIntroDone = false;
+    this.d3LightsTurnedOffOnce = false;
+    this.d3NightModeSet = false;
+
+    // Day 4: 2nd dust storm (clean + align), water pause, nuclear reactor build
+    this.d4IntroDone = false;
+    this.d4WaterTurnedOff = false;
+    this.d4PanelCleaned = false;
+    this.d4CleanProgress = null;
+    this.d4PanelAligned = false;
+    this.d4ReactorIntroDone = false;
+    this.d4ReactorBuilt = false;
+    this.d4EveningDone = false;
+
     this.snapshots = {};
 
     // Logbook & one-time tutorial flags

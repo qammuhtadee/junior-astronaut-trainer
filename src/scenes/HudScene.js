@@ -37,7 +37,7 @@ export class HudScene extends Phaser.Scene {
       height: 30,
     });
 
-    this.oxygenMeter = new PillMeter(this, 206, 52, {
+    this.oxygenMeter = new PillMeter(this, 268, 52, {
       type: 'oxygen',
       label: 'Oxygen',
       color: 0x6fc3df,
@@ -54,7 +54,7 @@ export class HudScene extends Phaser.Scene {
       height: 30,
     });
 
-    this.radiationMeter = new PillMeter(this, 206, 88, {
+    this.radiationMeter = new PillMeter(this, 268, 88, {
       type: 'radiation',
       label: 'Radiation',
       color: 0x50fa7b,
@@ -111,6 +111,8 @@ export class HudScene extends Phaser.Scene {
     this.game.events.on('checkpoint:rewind-lights', this.onRewindLightsCheckpoint, this);
     this.game.events.on('checkpoint:rewind-d2-oxygen', this.onRewindD2Oxygen, this);
     this.game.events.on('checkpoint:rewind-d2-night', this.onRewindD2Night, this);
+    this.game.events.on('checkpoint:rewind-d3-water', this.onRewindD3Water, this);
+    this.game.events.on('checkpoint:rewind-d3-night', this.onRewindD3Night, this);
     this.game.events.on('power:gradual-charge', this.startGradualPowerCharge, this);
     this.game.events.on('power:gradual-charge-from', this.startGradualPowerFromCurrent, this);
     this.game.events.on('power:start-night-drain', this.startNightDrain, this);
@@ -119,6 +121,12 @@ export class HudScene extends Phaser.Scene {
     this.game.events.on('oxygen:gradual-charge', this.startGradualOxygenCharge, this);
     this.game.events.on('oxygen:start-rapid-drain', this.startRapidOxygenDrain, this);
     this.game.events.on('oxygen:stop-rapid-drain', this.stopRapidOxygenDrain, this);
+    this.game.events.on('oxygen:start-day3-deplete', this.startDay3OxygenDeplete, this);
+    this.game.events.on('water:gradual-charge', this.startGradualWaterCharge, this);
+    this.game.events.on('water:start-rapid-drain', this.startRapidWaterDrain, this);
+    this.game.events.on('water:stop-rapid-drain', this.stopRapidWaterDrain, this);
+    this.game.events.on('water:start-day4-decay', this.startDay4WaterDecay, this);
+    this.game.events.on('water:stop-day4-decay', this.stopDay4WaterDecay, this);
     this.game.events.on('lights:restored', this.stopInitialPowerCharge, this);
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -136,14 +144,22 @@ export class HudScene extends Phaser.Scene {
       this.game.events.off('checkpoint:rewind-lights', this.onRewindLightsCheckpoint, this);
       this.game.events.off('checkpoint:rewind-d2-oxygen', this.onRewindD2Oxygen, this);
       this.game.events.off('checkpoint:rewind-d2-night', this.onRewindD2Night, this);
+      this.game.events.off('checkpoint:rewind-d3-water', this.onRewindD3Water, this);
+      this.game.events.off('checkpoint:rewind-d3-night', this.onRewindD3Night, this);
       this.game.events.off('power:gradual-charge', this.startGradualPowerCharge, this);
       this.game.events.off('power:gradual-charge-from', this.startGradualPowerFromCurrent, this);
       this.game.events.off('power:start-night-drain', this.startNightDrain, this);
       this.game.events.off('power:start-dust-drain', this.startDustDrain, this);
       this.game.events.off('power:stop-dust-drain', this.stopDustDrain, this);
       this.game.events.off('oxygen:gradual-charge', this.startGradualOxygenCharge, this);
-    this.game.events.off('oxygen:start-rapid-drain', this.startRapidOxygenDrain, this);
-    this.game.events.off('oxygen:stop-rapid-drain', this.stopRapidOxygenDrain, this);
+      this.game.events.off('oxygen:start-rapid-drain', this.startRapidOxygenDrain, this);
+      this.game.events.off('oxygen:stop-rapid-drain', this.stopRapidOxygenDrain, this);
+      this.game.events.off('oxygen:start-day3-deplete', this.startDay3OxygenDeplete, this);
+      this.game.events.off('water:gradual-charge', this.startGradualWaterCharge, this);
+      this.game.events.off('water:start-rapid-drain', this.startRapidWaterDrain, this);
+      this.game.events.off('water:stop-rapid-drain', this.stopRapidWaterDrain, this);
+      this.game.events.off('water:start-day4-decay', this.startDay4WaterDecay, this);
+      this.game.events.off('water:stop-day4-decay', this.stopDay4WaterDecay, this);
       this.game.events.off('lights:restored', this.stopInitialPowerCharge, this);
     });
 
@@ -292,6 +308,69 @@ export class HudScene extends Phaser.Scene {
     this.scene.launch('PowerPanelTask', { autoSetDay2Night: true });
   }
 
+  onRewindD3Water() {
+    this.stopRapidWaterDrain();
+    this.warningCard.hide();
+    if (this.waterChargeEvent) {
+      this.waterChargeEvent.remove();
+      this.waterChargeEvent = null;
+    }
+
+    gameState.d3WaterBuilt = false;
+    gameState.d3WaterSwitchOn = false;
+    gameState.d3WaterPlacedParts = {
+      inlet_hopper: true,
+      heater_coil: true,
+      sediment_trap: true,
+      charcoal_bed: true,
+      clean_spigot: true,
+    };
+    gameState.setMeters({ power: 60, oxygen: 100, water: 10 });
+
+    if (this.scene.isActive('WaterBuildTask')) {
+      this.scene.stop('WaterBuildTask');
+    }
+    if (this.scene.isActive(SCENES.OUTPOST)) {
+      this.scene.pause(SCENES.OUTPOST);
+    }
+
+    this.scene.launch('WaterBuildTask');
+  }
+
+  onRewindD3Night() {
+    this.stopRapidOxygenDrain();
+    this.stopRapidWaterDrain();
+    this.warningCard.hide();
+    if (this.oxygenChargeEvent) {
+      this.oxygenChargeEvent.remove();
+      this.oxygenChargeEvent = null;
+    }
+    if (this.waterChargeEvent) {
+      this.waterChargeEvent.remove();
+      this.waterChargeEvent = null;
+    }
+
+    const restored = gameState.restoreCheckpoint('d3_night_ready');
+    if (!restored) {
+      gameState.habLightsOn = true;
+      gameState.d2OxSwitchOn = true;
+      gameState.d3WaterSwitchOn = true;
+      gameState.d3LightsTurnedOffOnce = false;
+      gameState.d3NightModeSet = false;
+      gameState.setMeters({ power: 40, oxygen: 100, water: 100 });
+    }
+    this.game.events.emit('lights:sync');
+
+    if (this.scene.isActive('PowerPanelTask')) {
+      this.scene.stop('PowerPanelTask');
+    }
+    if (this.scene.isActive(SCENES.OUTPOST)) {
+      this.scene.pause(SCENES.OUTPOST);
+    }
+
+    this.scene.launch('PowerPanelTask', { autoSetDay3Night: true });
+  }
+
   startDustDrain() {
     this.powerMeter.setShaking(true);
     if (this.dustDrainEvent) return;
@@ -300,11 +379,16 @@ export class HudScene extends Phaser.Scene {
       delay: 6000,
       loop: true,
       callback: () => {
-        if (gameState.d2PanelCleaned || gameState.day !== 2) {
+        const done =
+          (gameState.day === 2 && gameState.d2PanelCleaned) ||
+          (gameState.day === 4 && gameState.d4PanelCleaned && gameState.d4PanelAligned) ||
+          (gameState.day !== 2 && gameState.day !== 4);
+        if (done) {
           this.stopDustDrain();
           return;
         }
-        if (gameState.meters.power !== null && gameState.meters.power > 50) {
+        const minPower = gameState.day === 4 ? 10 : 50;
+        if (gameState.meters.power !== null && gameState.meters.power > minPower) {
           gameState.setMeters({ power: gameState.meters.power - 1 });
         }
       },
@@ -364,7 +448,7 @@ export class HudScene extends Phaser.Scene {
       delay: 350,
       loop: true,
       callback: () => {
-        if (gameState.day !== 2 || gameState.d2OxSwitchOn) {
+        if ((gameState.day !== 2 && gameState.day !== 3) || gameState.d2OxSwitchOn) {
           this.stopRapidOxygenDrain();
           return;
         }
@@ -375,7 +459,7 @@ export class HudScene extends Phaser.Scene {
           this.stopRapidOxygenDrain();
           this.warningCard.show({
             text: 'CRITICAL: Habitat Oxygen hit 0%! Turn OXYGEN MAKER back ON or rewind!',
-            rewindEvent: 'checkpoint:rewind-d2-night',
+            rewindEvent: gameState.day === 3 ? 'checkpoint:rewind-d3-night' : 'checkpoint:rewind-d2-night',
           });
         }
       },
@@ -390,8 +474,37 @@ export class HudScene extends Phaser.Scene {
     this.oxygenMeter?.setShaking(false);
   }
 
+  startDay3OxygenDeplete() {
+    this.oxygenMeter?.setShaking(true);
+    if (this.day3OxDepleteEvent) return;
+
+    this.day3OxDepleteEvent = this.time.addEvent({
+      delay: 2500,
+      loop: true,
+      callback: () => {
+        if (gameState.day !== 3 || gameState.d3OxIceLoaded) {
+          this.stopDay3OxygenDeplete();
+          return;
+        }
+        const cur = gameState.meters.oxygen ?? 55;
+        if (cur > 25) {
+          gameState.setMeters({ oxygen: Math.max(25, cur - 1) });
+        }
+      },
+    });
+  }
+
+  stopDay3OxygenDeplete() {
+    if (this.day3OxDepleteEvent) {
+      this.day3OxDepleteEvent.remove();
+      this.day3OxDepleteEvent = null;
+    }
+    this.oxygenMeter?.setShaking(false);
+  }
+
   startGradualOxygenCharge() {
     this.stopRapidOxygenDrain();
+    this.stopDay3OxygenDeplete();
     gameState.unlockFact('human_o2_consumption');
     if (this.chargeFromEvent) {
       this.chargeFromEvent.remove();
@@ -408,7 +521,7 @@ export class HudScene extends Phaser.Scene {
       delay: 40,
       loop: true,
       callback: () => {
-        if (gameState.day !== 2 || !gameState.d2OxSwitchOn) {
+        if ((gameState.day !== 2 && gameState.day !== 3 && gameState.day !== 4) || !gameState.d2OxSwitchOn) {
           this.oxygenChargeEvent.remove();
           this.oxygenChargeEvent = null;
           return;
@@ -421,6 +534,99 @@ export class HudScene extends Phaser.Scene {
         }
       },
     });
+  }
+
+  startGradualWaterCharge() {
+    this.stopRapidWaterDrain();
+    this.stopDay4WaterDecay();
+    if (this.waterChargeEvent) {
+      this.waterChargeEvent.remove();
+      this.waterChargeEvent = null;
+    }
+
+    let current = gameState.meters.water ?? 10;
+
+    this.waterChargeEvent = this.time.addEvent({
+      delay: 40,
+      loop: true,
+      callback: () => {
+        if ((gameState.day !== 3 && gameState.day !== 4) || !gameState.d3WaterSwitchOn) {
+          this.waterChargeEvent.remove();
+          this.waterChargeEvent = null;
+          return;
+        }
+        current = Math.min(100, current + 2);
+        gameState.setMeters({ water: current });
+        if (current >= 100) {
+          this.waterChargeEvent.remove();
+          this.waterChargeEvent = null;
+        }
+      },
+    });
+  }
+
+  startRapidWaterDrain() {
+    this.waterMeter?.setShaking(true);
+    if (this.waterChargeEvent) {
+      this.waterChargeEvent.remove();
+      this.waterChargeEvent = null;
+    }
+    if (this.rapidWaterDrainEvent) return;
+
+    this.rapidWaterDrainEvent = this.time.addEvent({
+      delay: 350,
+      loop: true,
+      callback: () => {
+        if (gameState.day !== 3 || gameState.d3WaterSwitchOn) {
+          this.stopRapidWaterDrain();
+          return;
+        }
+        const cur = gameState.meters.water ?? 100;
+        const next = Math.max(0, cur - 2);
+        gameState.setMeters({ water: next });
+        if (next <= 0) {
+          this.stopRapidWaterDrain();
+          this.warningCard.show({
+            text: 'CRITICAL: Habitat Water hit 0%! Turn WATER STATION back ON or rewind!',
+            rewindEvent: 'checkpoint:rewind-d3-night',
+          });
+        }
+      },
+    });
+  }
+
+  stopRapidWaterDrain() {
+    if (this.rapidWaterDrainEvent) {
+      this.rapidWaterDrainEvent.remove();
+      this.rapidWaterDrainEvent = null;
+    }
+    this.waterMeter?.setShaking(false);
+  }
+
+  startDay4WaterDecay() {
+    if (this.day4WaterDecayEvent) return;
+
+    this.day4WaterDecayEvent = this.time.addEvent({
+      delay: 5000,
+      loop: true,
+      callback: () => {
+        if (gameState.day !== 4 || gameState.d3WaterSwitchOn || gameState.d4ReactorBuilt) {
+          this.stopDay4WaterDecay();
+          return;
+        }
+        const cur = gameState.meters.water ?? 100;
+        if (cur > 40) {
+          gameState.setMeters({ water: cur - 1 });
+        }
+      },
+    });
+  }
+
+  stopDay4WaterDecay() {
+    if (this.day4WaterDecayEvent) {
+      this.day4WaterDecayEvent.remove();
+      this.day4WaterDecayEvent = null;
+    }
   }
 
   stopInitialPowerCharge() {
@@ -456,14 +662,15 @@ export class HudScene extends Phaser.Scene {
     gameState.nightDrainActive = true;
     if (this.nightDrainEvent) return;
 
-    // Drain 1% every 5 seconds while night drain is active on Day 1
+    // Drain power periodically while night drain is active (Days 1-3 until nuclear reactor)
     this.nightDrainEvent = this.time.addEvent({
       delay: 5000,
       loop: true,
       callback: () => {
-        if (!gameState.nightDrainActive || gameState.day > 2) return;
+        if (!gameState.nightDrainActive || gameState.day > 3 || gameState.d4ReactorBuilt) return;
+        const step = gameState.day === 3 ? 2 : 1;
         if (gameState.meters.power !== null && gameState.meters.power > 10) {
-          gameState.setMeters({ power: gameState.meters.power - 1 });
+          gameState.setMeters({ power: Math.max(10, gameState.meters.power - step) });
         }
       },
     });

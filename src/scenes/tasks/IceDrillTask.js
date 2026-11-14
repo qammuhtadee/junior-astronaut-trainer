@@ -191,6 +191,18 @@ export class IceDrillTask extends Phaser.Scene {
     this.drillBtnBg.strokeRoundedRect(-150, -23, 300, 46, 10);
   }
 
+  getDepth() {
+    return (gameState.day === 3 ? gameState.d3DrillDepth : gameState.d2DrillDepth) || 0;
+  }
+
+  setDepthValue(v) {
+    if (gameState.day === 3) {
+      gameState.d3DrillDepth = v;
+    } else {
+      gameState.d2DrillDepth = v;
+    }
+  }
+
   update(_time, delta) {
     if (this.completed || this.closing) return;
 
@@ -199,7 +211,7 @@ export class IceDrillTask extends Phaser.Scene {
     this.isHolding = (this.pointerHolding || keyHold) && !this.overheated;
 
     if (this.isHolding) {
-      gameState.d2DrillDepth = Math.min(100, (gameState.d2DrillDepth || 0) + 23 * dt);
+      this.setDepthValue(Math.min(100, this.getDepth() + 23 * dt));
       this.heat = Math.min(100, this.heat + 38 * dt);
 
       if (this.heat >= 100) {
@@ -218,13 +230,13 @@ export class IceDrillTask extends Phaser.Scene {
 
     this.renderDrill();
 
-    if (gameState.d2DrillDepth >= 100) {
+    if (this.getDepth() >= 100) {
       this.onReachedIce();
     }
   }
 
   renderDrill() {
-    const depth = gameState.d2DrillDepth || 0;
+    const depth = this.getDepth();
     const { x, y, w, h } = this.shaftRect;
     const drillX = x + w / 2 + (this.isHolding ? Phaser.Math.Between(-2, 2) : 0);
     const tipY = y + 24 + (depth / 100) * (h - 46);
@@ -272,10 +284,15 @@ export class IceDrillTask extends Phaser.Scene {
   onReachedIce() {
     if (this.completed) return;
     this.completed = true;
-    gameState.d2DrillDepth = 100;
-    gameState.d2IceDrilled = true;
-    gameState.stepId = 'd2_ice_drilled';
-    gameState.checkpointId = 'd2_ice_drilled';
+    if (gameState.day === 3) {
+      gameState.d3DrillDepth = 100;
+      gameState.d3IceDrilled = true;
+    } else {
+      gameState.d2DrillDepth = 100;
+      gameState.d2IceDrilled = true;
+      gameState.stepId = 'd2_ice_drilled';
+      gameState.checkpointId = 'd2_ice_drilled';
+    }
 
     this.cameras.main.flash(300, 125, 211, 252);
     this.statusText.setText('SUBSURFACE ICE CORE HARVESTED!').setColor('#34d399');
@@ -298,7 +315,7 @@ export class IceDrillTask extends Phaser.Scene {
         const activeRoom = gameState.room === 'surface' ? 'Surface' : 'Outpost';
         this.scene.resume(activeRoom);
         if (wasCompleted) {
-          this.game.events.emit('d2:ice-drilled');
+          this.game.events.emit(gameState.day === 3 ? 'd3:ice-drilled' : 'd2:ice-drilled');
         }
       },
     });

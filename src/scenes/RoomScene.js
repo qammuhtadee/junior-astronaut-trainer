@@ -129,6 +129,44 @@ export class RoomScene extends Phaser.Scene {
           );
           return;
         }
+      } else if (gameState.day === 3) {
+        if (this.roomId === 'surface' && !gameState.d3IceDrilled) {
+          this.game.events.emit('toast', 'Drill for subsurface ice before heading back inside!');
+          return;
+        }
+        if (this.roomId === 'outpost' && gameState.d3IceDrilled) {
+          if (!gameState.d3WaterBuilt) {
+            this.game.events.emit('toast', 'Build the Water Station inside first!');
+            return;
+          }
+          if (!gameState.d3WaterIceLoaded) {
+            this.game.events.emit('toast', 'Load Martian ice into the Water Station first!');
+            return;
+          }
+          if (!gameState.d3OxIceLoaded) {
+            this.game.events.emit('toast', 'Load the remaining ice into the Oxygen Maker first!');
+            return;
+          }
+        }
+      } else if (gameState.day === 4) {
+        if (this.roomId === 'outpost' && !gameState.d4WaterTurnedOff) {
+          this.game.events.emit('toast', 'Turn off the Water Station at the Power Panel first to save power!');
+          return;
+        }
+        if (this.roomId === 'surface') {
+          if (!gameState.d4PanelCleaned) {
+            this.game.events.emit('toast', 'Clean the dust off the solar panel first!');
+            return;
+          }
+          if (!gameState.d4PanelAligned) {
+            this.game.events.emit('toast', 'Realign the solar panel toward the sun first!');
+            return;
+          }
+          if (!gameState.d4ReactorBuilt) {
+            this.game.events.emit('toast', 'Build and activate the Kilopower Nuclear Reactor before heading inside!');
+            return;
+          }
+        }
       }
       return this.goThroughAirlock(def.leadsTo);
     }
@@ -140,6 +178,24 @@ export class RoomScene extends Phaser.Scene {
           this.scene.launch('SolarCleanTask');
         } else {
           this.game.events.emit('toast', 'Solar array is clean and operating at 100%.');
+        }
+        return;
+      }
+
+      if (gameState.day === 3) {
+        this.game.events.emit('toast', 'Solar array is clear today—focus on water and ice!');
+        return;
+      }
+
+      if (gameState.day === 4) {
+        if (!gameState.d4PanelCleaned) {
+          this.scene.pause();
+          this.scene.launch('SolarCleanTask');
+        } else if (!gameState.d4PanelAligned) {
+          this.scene.pause();
+          this.scene.launch('SolarAlignTask');
+        } else {
+          this.game.events.emit('toast', 'Solar array repaired, though Martian sunlight alone remains weak.');
         }
         return;
       }
@@ -171,6 +227,62 @@ export class RoomScene extends Phaser.Scene {
         }
         return;
       }
+
+      if (gameState.day === 3) {
+        if (!gameState.d3IceDrilled) {
+          this.scene.pause();
+          this.scene.launch('IceDrillTask');
+        } else {
+          this.game.events.emit('toast', 'Ice core already harvested for today.');
+        }
+        return;
+      }
+
+      if (gameState.day >= 4) {
+        this.game.events.emit('toast', 'No ice harvesting needed today.');
+        return;
+      }
+    }
+
+    if (def.id === 'water_station') {
+      if (gameState.day === 3) {
+        if (!gameState.d3IceDrilled) {
+          this.game.events.emit('toast', 'Drill Martian ice outside first!');
+        } else if (!gameState.d3WaterBuilt) {
+          this.scene.pause();
+          this.scene.launch('WaterBuildTask');
+        } else if (!gameState.d3WaterIceLoaded) {
+          this.scene.pause();
+          this.scene.launch('IceLoadTask', { mode: 'water' });
+        } else {
+          this.game.events.emit('toast', 'Water Station is online and purifying Martian water.');
+        }
+        return;
+      }
+
+      if (gameState.day >= 4) {
+        this.game.events.emit(
+          'toast',
+          !gameState.d3WaterSwitchOn
+            ? 'Water Station paused temporarily to conserve emergency power.'
+            : 'Water Station running continuously on nuclear power!'
+        );
+        return;
+      }
+    }
+
+    if (def.id === 'reactor') {
+      if (gameState.day === 4) {
+        if (!gameState.d4PanelCleaned || !gameState.d4PanelAligned) {
+          this.game.events.emit('toast', 'Clean and realign the solar panels first!');
+        } else if (!gameState.d4ReactorBuilt) {
+          this.scene.pause();
+          this.scene.launch('ReactorBuildTask');
+        } else {
+          this.game.events.emit('toast', 'Kilopower Reactor online—delivering continuous nuclear power!');
+        }
+        return;
+      }
     }
 
     if (def.id === 'oxygen_maker') {
@@ -186,9 +298,35 @@ export class RoomScene extends Phaser.Scene {
         }
         return;
       }
+
+      if (gameState.day === 3) {
+        if (!gameState.d3WaterIceLoaded) {
+          this.game.events.emit('toast', 'Build and supply the Water Station with ice first!');
+        } else if (!gameState.d3OxIceLoaded) {
+          this.scene.pause();
+          this.scene.launch('IceLoadTask', { mode: 'd3_oxygen' });
+        } else {
+          this.game.events.emit('toast', 'Oxygen Maker is online and producing breathable air.');
+        }
+        return;
+      }
+
+      if (gameState.day >= 4) {
+        this.game.events.emit('toast', 'Oxygen Maker is operating continuously.');
+        return;
+      }
     }
 
     if (def.id === 'power_panel') {
+      if (gameState.day === 4 && gameState.d4WaterTurnedOff) {
+        this.game.events.emit(
+          'toast',
+          gameState.d4ReactorBuilt
+            ? 'Power Breaker Board locked: Kilopower Reactor automatically supplies all systems.'
+            : 'Power Breaker Board locked during emergency repair—head outside to fix the solar array!'
+        );
+        return;
+      }
       this.scene.pause();
       this.scene.launch('PowerPanelTask');
       return;
@@ -296,6 +434,79 @@ export class RoomScene extends Phaser.Scene {
           this.scene.restart();
         }
       );
+    } else if (gameState.day === 3) {
+      if (!gameState.d3IceDrilled) {
+        this.game.events.emit('toast', 'Drill subsurface Martian ice outside first!');
+        return;
+      }
+      if (!gameState.d3WaterBuilt) {
+        this.game.events.emit('toast', 'Build the Water Station first!');
+        return;
+      }
+      if (!gameState.d3WaterIceLoaded) {
+        this.game.events.emit('toast', 'Load ice into the Water Station first!');
+        return;
+      }
+      if (!gameState.d3OxIceLoaded) {
+        this.game.events.emit('toast', 'Load the remaining ice into the Oxygen Maker before sleeping!');
+        return;
+      }
+
+      if (!gameState.d2OxSwitchOn || !gameState.d3WaterSwitchOn) {
+        this.game.events.emit('warning:show', {
+          text: 'Life support systems (Oxygen & Water) must remain active overnight! Rewind and keep both life support switches ON.',
+          rewindEvent: 'checkpoint:rewind-d3-night',
+        });
+        return;
+      }
+
+      if (gameState.habLightsOn) {
+        gameState.setMeters({ power: 30 });
+        this.game.events.emit('warning:show', {
+          text: 'Leaving the lights on overnight with Oxygen and Water running drops battery power into the danger zone (30%)! Turn off only the lights at the Power Panel before sleeping.',
+          rewindEvent: 'checkpoint:rewind-d3-night',
+        });
+        return;
+      }
+
+      this.runSleepTransition(
+        'END OF SOL 3\n\nWith the habitat lights off, water purified, and oxygen flowing, the crew rests safely through the night...\n\nSOL 4 BEGINS',
+        () => {
+          gameState.nightDrainActive = false;
+          gameState.goTo('d4_morning');
+          gameState.habLightsOn = true;
+          gameState.d2OxSwitchOn = true;
+          gameState.d3WaterSwitchOn = true;
+          gameState.activeAstronaut = 'maisha';
+          this.scene.restart();
+        }
+      );
+    } else if (gameState.day === 4) {
+      if (!gameState.d4WaterTurnedOff) {
+        this.game.events.emit('toast', 'Pause the Water Station at the Power Panel first!');
+        return;
+      }
+      if (!gameState.d4PanelCleaned || !gameState.d4PanelAligned) {
+        this.game.events.emit('toast', 'Clean and realign the solar panels outside first!');
+        return;
+      }
+      if (!gameState.d4ReactorBuilt) {
+        this.game.events.emit('toast', 'Build and activate the Kilopower Nuclear Reactor outside before sleeping!');
+        return;
+      }
+
+      this.runSleepTransition(
+        'END OF SOL 4\n\nPowered by clean, continuous Kilopower nuclear energy, lights, water, and oxygen stay at 100% all night long!\n\nMISSION PHASE COMPLETE',
+        () => {
+          gameState.nightDrainActive = false;
+          gameState.habLightsOn = true;
+          gameState.d2OxSwitchOn = true;
+          gameState.d3WaterSwitchOn = true;
+          gameState.setMeters({ power: 100, oxygen: 100, water: 100 });
+          this.transitioning = false;
+          this.scene.restart();
+        }
+      );
     }
   }
 
@@ -354,6 +565,11 @@ export class RoomScene extends Phaser.Scene {
     // When Muntasir returns inside with the ice core on Day 2, hand control to Maisha to build the Oxygen Maker.
     if (gameState.day === 2 && this.roomId === 'surface' && targetRoom === 'outpost' && gameState.d2IceDrilled && !gameState.d2OxBuilt) {
       gameState.activeAstronaut = 'maisha';
+    }
+
+    // On Day 4 after Maisha pauses Water inside, hand control to Muntasir going outside to repair panels & build Reactor.
+    if (gameState.day === 4 && this.roomId === 'outpost' && targetRoom === 'surface' && gameState.d4WaterTurnedOff && !gameState.d4ReactorBuilt) {
+      gameState.activeAstronaut = 'muntasir';
     }
 
     this.cameras.main.fadeOut(FADE_MS, 0, 0, 0);

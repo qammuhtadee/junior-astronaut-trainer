@@ -20,6 +20,9 @@ export class OutpostScene extends RoomScene {
 
     this.oxDottedBox = null;
     this.oxBuildGuide = null;
+    this.waterDottedBox = null;
+    this.waterBuildGuide = null;
+    this.waterHopperGuide = null;
     this.dialogueBox = new DialogueBox(this);
 
     // Setup full-screen darkness & vignette around astronauts
@@ -27,6 +30,7 @@ export class OutpostScene extends RoomScene {
 
     const powerStation = this.stations.find((s) => s.def.id === 'power_panel');
     const oxStation = this.stations.find((s) => s.def.id === 'oxygen_maker');
+    const waterStation = this.stations.find((s) => s.def.id === 'water_station');
     const bedStation = this.stations.find((s) => s.def.id === 'bed');
 
     if (gameState.day === 1) {
@@ -48,6 +52,11 @@ export class OutpostScene extends RoomScene {
         if (oxStation) oxStation.setVisible(true);
         this.createIceHopperGuide();
       }
+    } else if (gameState.day === 3) {
+      if (waterStation && !gameState.d3WaterBuilt) waterStation.setVisible(false);
+      this.initDay3Outpost();
+    } else if (gameState.day === 4) {
+      this.initDay4Outpost();
     } else {
       this.initStandardOutpost();
     }
@@ -57,6 +66,10 @@ export class OutpostScene extends RoomScene {
     this.game.events.on('lights:sync', this.syncLightsLayer, this);
     this.game.events.on('d2:oxygen-built', this.onDay2OxygenBuilt, this);
     this.game.events.on('d2:ice-loaded', this.onDay2IceLoaded, this);
+    this.game.events.on('d3:water-built', this.onDay3WaterBuilt, this);
+    this.game.events.on('d3:water-ice-loaded', this.onDay3WaterIceLoaded, this);
+    this.game.events.on('d3:ox-ice-loaded', this.onDay3OxIceLoaded, this);
+    this.game.events.on('d4:water-turned-off', this.onDay4WaterTurnedOff, this);
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.game.events.off('lights:restored', this.onLightsRestored, this);
@@ -64,6 +77,10 @@ export class OutpostScene extends RoomScene {
       this.game.events.off('lights:sync', this.syncLightsLayer, this);
       this.game.events.off('d2:oxygen-built', this.onDay2OxygenBuilt, this);
       this.game.events.off('d2:ice-loaded', this.onDay2IceLoaded, this);
+      this.game.events.off('d3:water-built', this.onDay3WaterBuilt, this);
+      this.game.events.off('d3:water-ice-loaded', this.onDay3WaterIceLoaded, this);
+      this.game.events.off('d3:ox-ice-loaded', this.onDay3OxIceLoaded, this);
+      this.game.events.off('d4:water-turned-off', this.onDay4WaterTurnedOff, this);
       if (this.drainTimer) this.drainTimer.remove();
     });
   }
@@ -226,9 +243,18 @@ export class OutpostScene extends RoomScene {
     }
   }
 
-  createPowerPanelGuide() {
+  createPowerPanelGuide(labelText = 'Turn on lights') {
     const pp = this.stations.find((s) => s.def.id === 'power_panel');
     if (!pp) return;
+
+    if (this.powerHighlight) {
+      this.powerHighlight.destroy();
+      this.powerHighlight = null;
+    }
+    if (this.powerGuide) {
+      this.powerGuide.destroy();
+      this.powerGuide = null;
+    }
 
     // Highlight box around the power panel
     this.powerHighlight = this.add.graphics().setDepth(850);
@@ -240,10 +266,10 @@ export class OutpostScene extends RoomScene {
       pp.def.h + 12
     );
 
-    // Indication arrow of turning on the lights
+    // Indication arrow on the Power Panel
     this.powerGuide = this.add.container(pp.def.x, pp.def.y - pp.def.h - 32).setDepth(900);
     const label = this.add
-      .text(0, -22, 'Turn on lights', {
+      .text(0, -22, labelText, {
         fontFamily: 'monospace',
         fontSize: '13px',
         fontStyle: 'bold',
@@ -352,6 +378,15 @@ export class OutpostScene extends RoomScene {
   }
 
   onLightsTurnedOff(payload = {}) {
+    if (this.powerGuide) {
+      this.powerGuide.destroy();
+      this.powerGuide = null;
+    }
+    if (this.powerHighlight) {
+      this.powerHighlight.destroy();
+      this.powerHighlight = null;
+    }
+
     if (this.darknessLayer) {
       this.tweens.killTweensOf(this.darknessLayer);
       this.darknessLayer.setVisible(true).setAlpha(1);
@@ -679,6 +714,563 @@ export class OutpostScene extends RoomScene {
         );
       });
     }
+  }
+
+  // ==========================================
+  // DAY 3: WATER RECOVERY & ICE PIPELINE
+  // ==========================================
+  initDay3Outpost() {
+    this.syncLightsLayer();
+
+    // Phase 1: Morning wake-up (thirst & water station salvage)
+    if (!gameState.d3IntroDone) {
+      gameState.d3IntroDone = true;
+      gameState.habLightsOn = true;
+      this.syncLightsLayer();
+
+      this.player.body_.setFlipX(true);
+      this.companion = new Astronaut(this, 500, LANE.top + 42, {
+        name: 'Muntasir',
+        color: COLORS.muntasir,
+      });
+      this.companion.body_.setFlipX(false);
+
+      this.transitioning = true;
+      this.time.delayedCall(350, () => {
+        this.dialogueBox.showSequence(
+          [
+            {
+              speaker: 'Muntasir',
+              text: "For the past 2 days, we didn't have water. I only had a little bit of food. I'm really hungry and dehydrated.",
+              target: this.companion,
+            },
+            {
+              speaker: 'Maisha',
+              text: 'I think we have enough dried foods to last a few days.',
+              target: this.player,
+            },
+            {
+              speaker: 'Muntasir',
+              text: 'But water is scarce out here on Mars, and we only have the ice which we can drill again, and use it to get water.',
+              target: this.companion,
+            },
+            {
+              speaker: 'Maisha',
+              text: 'I think we can salvage the water station from our spacecraft and use it to melt and purify the ice. Let’s go get some ice from the pile outside!',
+              target: this.player,
+            },
+          ],
+          () => {
+            this.transitioning = false;
+            this.game.events.emit(
+              'fact:show',
+              "Fact: Liquid water cannot stay on Mars's low-pressure surface, so astronauts must drill buried water ice—mapped globally by NASA's Mars Reconnaissance Orbiter."
+            );
+          }
+        );
+      });
+      return;
+    }
+
+    // Before outside ice is drilled
+    if (!gameState.d3IceDrilled) {
+      this.companion = new Astronaut(this, 500, LANE.top + 42, {
+        name: 'Muntasir',
+        color: COLORS.muntasir,
+      });
+      this.companion.body_.setFlipX(false);
+      return;
+    }
+
+    // Phase 2: Ice drilled -> build 5-part connect-the-pipes Water Station
+    if (!gameState.d3WaterBuilt) {
+      this.companion = new Astronaut(this, 185, LANE.top + 42, {
+        name: 'Muntasir',
+        color: COLORS.muntasir,
+      });
+      this.companion.body_.setFlipX(false);
+
+      this.createWaterBuildGuide();
+
+      if (!gameState.d3BuildThoughtDone) {
+        gameState.d3BuildThoughtDone = true;
+        this.transitioning = true;
+        this.time.delayedCall(250, () => {
+          this.dialogueBox.showSequence(
+            [
+              {
+                speaker: 'Maisha',
+                text: 'Got the ice core! I salvaged the Water Station parts from our spacecraft—let’s connect the pipes and build it.',
+                target: this.player,
+                isThought: true,
+              },
+            ],
+            () => {
+              this.transitioning = false;
+            }
+          );
+        });
+      }
+      return;
+    }
+
+    // Phase 3: Water Station built -> load ice into Water Station hopper
+    if (!gameState.d3WaterIceLoaded) {
+      this.companion = new Astronaut(this, 185, LANE.top + 42, {
+        name: 'Muntasir',
+        color: COLORS.muntasir,
+      });
+      this.companion.body_.setFlipX(false);
+      this.createWaterHopperGuide();
+      return;
+    }
+
+    // Phase 4: Water loaded -> Oxygen depleting -> load remaining ice into Oxygen Maker
+    if (!gameState.d3OxIceLoaded) {
+      this.companion = new Astronaut(this, 185, LANE.top + 42, {
+        name: 'Muntasir',
+        color: COLORS.muntasir,
+      });
+      this.companion.body_.setFlipX(false);
+      this.createDay3OxHopperGuide();
+      return;
+    }
+
+    // Phase 5: Nighttime checks (after rewind or re-entry)
+    this.startNightDrain();
+    if (gameState.habLightsOn) {
+      this.createPowerPanelGuide('Turn off lights');
+    }
+  }
+
+  createWaterBuildGuide() {
+    const ws = this.stations.find((s) => s.def.id === 'water_station');
+    if (!ws) return;
+
+    ws.setVisible(false);
+    ws.allowBuildInteract = true;
+    ws.customPromptLabel = 'Build Water Station';
+
+    if (this.waterDottedBox) {
+      this.waterDottedBox.destroy();
+      this.waterDottedBox = null;
+    }
+    if (this.waterBuildGuide) {
+      this.waterBuildGuide.destroy();
+      this.waterBuildGuide = null;
+    }
+
+    const bx = ws.def.x - ws.def.w / 2;
+    const by = ws.def.y - ws.def.h;
+    this.waterDottedBox = this.add.graphics().setDepth(DEPTH.WORLD_MIN + ws.def.y - 1);
+    this.waterDottedBox.fillStyle(0x38bdf8, 0.14);
+    this.waterDottedBox.fillRect(bx, by, ws.def.w, ws.def.h);
+    this.waterDottedBox.lineStyle(2.5, 0x38bdf8, 0.95);
+    this.waterDottedBox.strokeRect(bx, by, ws.def.w, ws.def.h);
+
+    this.waterBuildGuide = this.add.container(ws.def.x, by - 28).setDepth(900);
+    const label = this.add
+      .text(0, -22, 'Build Water Station', {
+        fontFamily: 'monospace',
+        fontSize: '13px',
+        fontStyle: 'bold',
+        backgroundColor: '#38bdf8',
+        color: '#0f172a',
+        padding: { x: 8, y: 4 },
+      })
+      .setOrigin(0.5);
+    const arrow = this.add
+      .text(0, 2, '▼', {
+        fontFamily: 'monospace',
+        fontSize: '22px',
+        fontStyle: 'bold',
+        color: '#7dd3fc',
+      })
+      .setOrigin(0.5);
+    this.waterBuildGuide.add([label, arrow]);
+
+    this.tweens.add({
+      targets: this.waterBuildGuide,
+      y: by - 42,
+      duration: 550,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+  }
+
+  createWaterHopperGuide() {
+    const ws = this.stations.find((s) => s.def.id === 'water_station');
+    if (!ws) return;
+
+    ws.setVisible(true);
+    ws.allowBuildInteract = true;
+    ws.customPromptLabel = 'Load Ice into Water Station';
+
+    if (this.waterHopperGuide) {
+      this.waterHopperGuide.destroy();
+      this.waterHopperGuide = null;
+    }
+
+    const by = ws.def.y - ws.def.h;
+    this.waterHopperGuide = this.add.container(ws.def.x, by - 28).setDepth(900);
+    const label = this.add
+      .text(0, -22, 'Load Ice into Water Station', {
+        fontFamily: 'monospace',
+        fontSize: '13px',
+        fontStyle: 'bold',
+        backgroundColor: '#38bdf8',
+        color: '#0f172a',
+        padding: { x: 8, y: 4 },
+      })
+      .setOrigin(0.5);
+    const arrow = this.add
+      .text(0, 2, '▼', {
+        fontFamily: 'monospace',
+        fontSize: '22px',
+        fontStyle: 'bold',
+        color: '#7dd3fc',
+      })
+      .setOrigin(0.5);
+    this.waterHopperGuide.add([label, arrow]);
+
+    this.tweens.add({
+      targets: this.waterHopperGuide,
+      y: by - 42,
+      duration: 550,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+  }
+
+  createDay3OxHopperGuide() {
+    const ox = this.stations.find((s) => s.def.id === 'oxygen_maker');
+    if (!ox) return;
+
+    ox.setVisible(true);
+    ox.allowBuildInteract = true;
+    ox.customPromptLabel = 'Load Ice into Oxygen Maker';
+
+    if (this.hopperGuide) {
+      this.hopperGuide.destroy();
+      this.hopperGuide = null;
+    }
+
+    const by = ox.def.y - ox.def.h;
+    this.hopperGuide = this.add.container(ox.def.x, by - 28).setDepth(900);
+    const label = this.add
+      .text(0, -22, 'Refill O2 with Ice', {
+        fontFamily: 'monospace',
+        fontSize: '13px',
+        fontStyle: 'bold',
+        backgroundColor: '#38bdf8',
+        color: '#0f172a',
+        padding: { x: 8, y: 4 },
+      })
+      .setOrigin(0.5);
+    const arrow = this.add
+      .text(0, 2, '▼', {
+        fontFamily: 'monospace',
+        fontSize: '22px',
+        fontStyle: 'bold',
+        color: '#7dd3fc',
+      })
+      .setOrigin(0.5);
+    this.hopperGuide.add([label, arrow]);
+
+    this.tweens.add({
+      targets: this.hopperGuide,
+      y: by - 42,
+      duration: 550,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+  }
+
+  onDay3WaterBuilt() {
+    if (this.waterDottedBox) {
+      this.waterDottedBox.destroy();
+      this.waterDottedBox = null;
+    }
+    if (this.waterBuildGuide) {
+      this.waterBuildGuide.destroy();
+      this.waterBuildGuide = null;
+    }
+
+    this.createWaterHopperGuide();
+
+    this.transitioning = true;
+    this.time.delayedCall(300, () => {
+      this.dialogueBox.showSequence(
+        [
+          {
+            speaker: 'Maisha',
+            text: 'Now we can get fresh water here! Running the heater and filter draws extra power from our grid, though—a fair trade to stay hydrated.',
+            target: this.player,
+          },
+          {
+            speaker: 'Maisha',
+            text: 'Let’s drop the Martian ice blocks into the Water Station hopper to melt and purify it!',
+            target: this.player,
+            isThought: true,
+          },
+        ],
+        () => {
+          this.transitioning = false;
+        }
+      );
+    });
+  }
+
+  onDay3WaterIceLoaded() {
+    if (this.waterHopperGuide) {
+      this.waterHopperGuide.destroy();
+      this.waterHopperGuide = null;
+    }
+
+    const ws = this.stations.find((s) => s.def.id === 'water_station');
+    if (ws) {
+      ws.allowBuildInteract = false;
+      ws.customPromptLabel = null;
+    }
+
+    this.nearby = null;
+    this.game.events.emit('prompt', null);
+    this.game.events.emit('water:gradual-charge');
+
+    this.createDay3OxHopperGuide();
+
+    this.transitioning = true;
+    this.time.delayedCall(400, () => {
+      this.dialogueBox.showSequence(
+        [
+          {
+            speaker: 'Maisha',
+            text: 'Fresh purified water is filling our outpost storage tank! Wait—hear that alert chime?',
+            target: this.player,
+          },
+          {
+            speaker: 'Muntasir',
+            text: 'Our oxygen meter is also depleting! Let’s put the rest of the ice on the Oxygen Maker production and call it a day.',
+            target: this.companion,
+            onStart: () => {
+              this.game.events.emit('oxygen:start-day3-deplete');
+            },
+          },
+          {
+            speaker: 'Maisha',
+            text: 'Walk over to the Oxygen Maker and load the rest of our harvested ice!',
+            target: this.player,
+            isThought: true,
+          },
+        ],
+        () => {
+          this.transitioning = false;
+          this.game.events.emit(
+            'fact:show',
+            'Fact: On the International Space Station, NASA recycles ~98% of all water using heat, distillation, and filtration beds so crews never run dry!'
+          );
+        }
+      );
+    });
+  }
+
+  onDay3OxIceLoaded() {
+    if (this.hopperGuide) {
+      this.hopperGuide.destroy();
+      this.hopperGuide = null;
+    }
+
+    const ox = this.stations.find((s) => s.def.id === 'oxygen_maker');
+    if (ox) {
+      ox.allowBuildInteract = false;
+      ox.customPromptLabel = null;
+    }
+
+    this.nearby = null;
+    this.game.events.emit('prompt', null);
+    this.game.events.emit('oxygen:gradual-charge');
+
+    this.transitioning = true;
+    this.time.delayedCall(400, () => {
+      this.dialogueBox.showSequence(
+        [
+          {
+            speaker: 'Maisha',
+            text: 'Nighttime is hitting again, and the power is going out faster now with both Water and Oxygen life support active.',
+            target: this.player,
+            onStart: () => {
+              gameState.setMeters({ power: 40, oxygen: 100, water: 100 });
+              gameState.saveCheckpoint('d3_night_ready');
+              this.startNightDrain();
+            },
+          },
+          {
+            speaker: 'Muntasir',
+            text: 'It is more important we keep the habitat lights OFF before sleeping—while leaving Oxygen and Water production running!',
+            target: this.companion,
+          },
+          {
+            speaker: 'Maisha',
+            text: 'Switch off ONLY the lights at the Power Breaker Board, then get some rest in the Bunks.',
+            target: this.player,
+            isThought: true,
+          },
+        ],
+        () => {
+          this.createPowerPanelGuide('Turn off lights');
+          this.muntasirRestAtBunks();
+        }
+      );
+    });
+  }
+
+  // ==========================================
+  // DAY 4: SECOND DUST STORM & KILOPOWER
+  // ==========================================
+  initDay4Outpost() {
+    this.syncLightsLayer();
+
+    // Phase 1: Morning 2nd dust storm crisis -> pause Water Station to save power
+    if (!gameState.d4IntroDone) {
+      gameState.d4IntroDone = true;
+      gameState.habLightsOn = true;
+      this.syncLightsLayer();
+      gameState.setMeters({ power: 20 });
+      this.game.events.emit('power:start-dust-drain');
+
+      this.player.body_.setFlipX(true);
+      this.companion = new Astronaut(this, 500, LANE.top + 42, {
+        name: 'Muntasir',
+        color: COLORS.muntasir,
+      });
+      this.companion.body_.setFlipX(false);
+
+      this.transitioning = true;
+      this.time.delayedCall(350, () => {
+        this.dialogueBox.showSequence(
+          [
+            {
+              speaker: 'Muntasir',
+              text: 'Seems like a second dust storm hit the solar panels overnight! Our power has gone down to dangerous levels.',
+              target: this.companion,
+              exclamation: true,
+            },
+            {
+              speaker: 'Maisha',
+              text: 'We can turn off the Water Station for now since we have enough stored to last a while, and save up on emergency power!',
+              target: this.player,
+            },
+            {
+              speaker: 'Muntasir',
+              text: "I'm gonna go outside and fix the panels up once you pause the water pump.",
+              target: this.companion,
+            },
+            {
+              speaker: 'Maisha',
+              text: 'Use the Power Breaker Board to switch OFF only the Water Station for now.',
+              target: this.player,
+              isThought: true,
+            },
+          ],
+          () => {
+            this.transitioning = false;
+            this.createPowerPanelGuide('Turn off Water');
+          }
+        );
+      });
+      return;
+    }
+
+    if (!gameState.d4WaterTurnedOff) {
+      this.companion = new Astronaut(this, 500, LANE.top + 42, {
+        name: 'Muntasir',
+        color: COLORS.muntasir,
+      });
+      this.companion.body_.setFlipX(false);
+      this.createPowerPanelGuide('Turn off Water');
+      return;
+    }
+
+    // Returning inside after Kilopower Nuclear Reactor is online outside
+    if (gameState.d4ReactorBuilt) {
+      this.game.events.emit('power:stop-dust-drain');
+      this.game.events.emit('water:stop-day4-decay');
+      gameState.habLightsOn = true;
+      gameState.d2OxSwitchOn = true;
+      gameState.d3WaterSwitchOn = true;
+      this.syncLightsLayer();
+
+      if (!gameState.d4EveningDone) {
+        gameState.d4EveningDone = true;
+        gameState.setMeters({ power: 100, oxygen: 100, water: 100 });
+
+        this.companion = new Astronaut(this, 500, LANE.top + 42, {
+          name: 'Maisha',
+          color: COLORS.maisha,
+        });
+        this.companion.body_.setFlipX(false);
+
+        this.transitioning = true;
+        this.time.delayedCall(350, () => {
+          this.dialogueBox.showSequence(
+            [
+              {
+                speaker: 'Muntasir',
+                text: "At least we don't have to worry about turning anything off anymore! Let's keep the lights on and turn the Water Station back ON.",
+                target: this.player,
+              },
+              {
+                speaker: 'Maisha',
+                text: 'Every life support meter—Power, Oxygen, and Water—is steady at maximum! Let’s rest up in our bunks.',
+                target: this.companion,
+              },
+            ],
+            () => {
+              this.muntasirRestAtBunks();
+            }
+          );
+        });
+      }
+      return;
+    }
+
+    // Brief stay inside before going out on Sol 4
+    this.companion = new Astronaut(this, 500, LANE.top + 42, {
+      name: 'Muntasir',
+      color: COLORS.muntasir,
+    });
+    this.companion.body_.setFlipX(false);
+  }
+
+  onDay4WaterTurnedOff() {
+    if (this.powerGuide) {
+      this.powerGuide.destroy();
+      this.powerGuide = null;
+    }
+    if (this.powerHighlight) {
+      this.powerHighlight.destroy();
+      this.powerHighlight = null;
+    }
+
+    this.transitioning = true;
+    this.time.delayedCall(250, () => {
+      this.dialogueBox.showSequence(
+        [
+          {
+            speaker: 'Maisha',
+            text: 'Water Station paused and emergency power boosted! Now Muntasir can head outside through the Airlock to fix the solar panels.',
+            target: this.player,
+            isThought: true,
+          },
+        ],
+        () => {
+          this.transitioning = false;
+        }
+      );
+    });
   }
 
   initStandardOutpost() {

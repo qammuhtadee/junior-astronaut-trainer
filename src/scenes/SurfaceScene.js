@@ -24,8 +24,11 @@ export class SurfaceScene extends RoomScene {
     this.buildGuide = null;
     this.solarDustOverlay = null;
     this.solarCleanGuide = null;
+    this.solarAlignGuide = null;
     this.iceDottedBox = null;
     this.iceDrillGuide = null;
+    this.reactorDottedBox = null;
+    this.reactorBuildGuide = null;
     this.onSolarUnfurlStart = null;
     this.dialogueBox = new DialogueBox(this);
 
@@ -36,17 +39,30 @@ export class SurfaceScene extends RoomScene {
     }
 
     const iceStation = this.stations.find((s) => s.def.id === 'ice_site');
-    if (iceStation && (gameState.day < 2 || !gameState.d2PanelCleaned)) {
+    if (iceStation && (gameState.day < 2 || gameState.day >= 4 || (gameState.day === 2 && !gameState.d2PanelCleaned))) {
       iceStation.setVisible(false);
+    }
+
+    const reactorStation = this.stations.find((s) => s.def.id === 'reactor');
+    if (reactorStation && (gameState.day < 4 || !gameState.d4ReactorBuilt)) {
+      reactorStation.setVisible(false);
     }
 
     this.game.events.on('solar:aligned', this.runPowerChargeUp, this);
     this.game.events.on('d2:panel-cleaned', this.onDay2PanelCleaned, this);
     this.game.events.on('d2:ice-drilled', this.onDay2IceDrilled, this);
+    this.game.events.on('d3:ice-drilled', this.onDay3IceDrilled, this);
+    this.game.events.on('d4:panel-cleaned', this.onDay4PanelCleaned, this);
+    this.game.events.on('d4:panel-aligned', this.onDay4PanelAligned, this);
+    this.game.events.on('d4:reactor-built', this.onDay4ReactorBuilt, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.game.events.off('solar:aligned', this.runPowerChargeUp, this);
       this.game.events.off('d2:panel-cleaned', this.onDay2PanelCleaned, this);
       this.game.events.off('d2:ice-drilled', this.onDay2IceDrilled, this);
+      this.game.events.off('d3:ice-drilled', this.onDay3IceDrilled, this);
+      this.game.events.off('d4:panel-cleaned', this.onDay4PanelCleaned, this);
+      this.game.events.off('d4:panel-aligned', this.onDay4PanelAligned, this);
+      this.game.events.off('d4:reactor-built', this.onDay4ReactorBuilt, this);
     });
 
     const isCrashIntro = data.isCrashIntro || (!gameState.hasSeenCrash && gameState.day === 1);
@@ -55,6 +71,10 @@ export class SurfaceScene extends RoomScene {
       this.initCrashCutscene();
     } else if (gameState.day === 2) {
       this.initDay2Surface();
+    } else if (gameState.day === 3) {
+      this.initDay3Surface();
+    } else if (gameState.day === 4) {
+      this.initDay4Surface();
     } else {
       this.initSurfacePostCrash();
     }
@@ -733,6 +753,357 @@ export class SurfaceScene extends RoomScene {
         this.transitioning = false;
       }
     );
+  }
+
+  // ==========================================
+  // DAY 3: SUBSURFACE ICE DRILLING
+  // ==========================================
+  initDay3Surface() {
+    this.cameras.main.scrollX = 0;
+
+    const solarStation = this.stations.find((s) => s.def.id === 'solar_panel');
+    if (solarStation) {
+      solarStation.setVisible(true);
+      solarStation.customPromptLabel = null;
+    }
+
+    const iceStation = this.stations.find((s) => s.def.id === 'ice_site');
+    if (iceStation) {
+      iceStation.setVisible(true);
+      if (!gameState.d3IceDrilled) {
+        this.createIceDrillGuide();
+      } else {
+        iceStation.customPromptLabel = null;
+        iceStation.allowBuildInteract = false;
+      }
+    }
+  }
+
+  onDay3IceDrilled() {
+    if (this.iceDottedBox) {
+      this.iceDottedBox.destroy();
+      this.iceDottedBox = null;
+    }
+    if (this.iceDrillGuide) {
+      this.iceDrillGuide.destroy();
+      this.iceDrillGuide = null;
+    }
+
+    const iceStation = this.stations.find((s) => s.def.id === 'ice_site');
+    if (iceStation) {
+      iceStation.customPromptLabel = null;
+      iceStation.allowBuildInteract = false;
+    }
+
+    this.nearby = null;
+    this.game.events.emit('prompt', null);
+
+    this.transitioning = true;
+    this.time.delayedCall(250, () => {
+      this.dialogueBox.showSequence(
+        [
+          {
+            speaker: 'Maisha',
+            text: 'Harvested plenty of subsurface Martian ice! Let’s head back inside through the Airlock and salvage our Water Station.',
+            target: this.player,
+            isThought: true,
+          },
+        ],
+        () => {
+          this.transitioning = false;
+          this.game.events.emit(
+            'fact:show',
+            "Fact: NASA's Phoenix lander uncovered bright subsurface water ice just centimeters beneath Martian soil in 2008—confirming astronauts can harvest local ice!"
+          );
+        }
+      );
+    });
+  }
+
+  // ==========================================
+  // DAY 4: SOLAR CRISIS & KILOPOWER REACTOR
+  // ==========================================
+  initDay4Surface() {
+    this.cameras.main.scrollX = 0;
+
+    const solarStation = this.stations.find((s) => s.def.id === 'solar_panel');
+    if (solarStation) solarStation.setVisible(true);
+
+    const iceStation = this.stations.find((s) => s.def.id === 'ice_site');
+    if (iceStation) iceStation.setVisible(false);
+
+    const reactorStation = this.stations.find((s) => s.def.id === 'reactor');
+
+    if (!gameState.d4PanelCleaned) {
+      this.game.events.emit('power:start-dust-drain');
+      this.createSolarCleanGuide();
+    } else if (!gameState.d4PanelAligned) {
+      this.createDay4SolarAlignGuide();
+    } else if (!gameState.d4ReactorBuilt) {
+      if (!this.companion) {
+        this.companion = new Astronaut(this, 690, LANE.top + 48, {
+          name: 'Maisha',
+          color: COLORS.maisha,
+        });
+        this.companion.body_.setFlipX(false);
+      }
+      this.createReactorBuildGuide();
+    } else if (reactorStation) {
+      reactorStation.setVisible(true);
+      reactorStation.allowBuildInteract = false;
+      reactorStation.customPromptLabel = 'Kilopower Reactor (Online)';
+    }
+  }
+
+  createDay4SolarAlignGuide() {
+    const solarStation = this.stations.find((s) => s.def.id === 'solar_panel');
+    if (!solarStation) return;
+    solarStation.customPromptLabel = 'Realign Solar Panel';
+
+    if (this.solarAlignGuide) {
+      this.solarAlignGuide.destroy();
+      this.solarAlignGuide = null;
+    }
+
+    const { x, y, h } = solarStation.def;
+    const top = y - h;
+    const guide = this.add.container(x, top - 34).setDepth(1300);
+    const label = this.add
+      .text(0, -18, 'Realign Solar Panel', {
+        fontFamily: 'monospace',
+        fontSize: '13px',
+        fontStyle: 'bold',
+        color: '#ffd166',
+        backgroundColor: '#000c',
+        padding: { x: 8, y: 3 },
+      })
+      .setOrigin(0.5);
+    const arrow = this.add
+      .text(0, 4, '▼', {
+        fontFamily: 'monospace',
+        fontSize: '20px',
+        color: '#ffd166',
+      })
+      .setOrigin(0.5);
+    guide.add([label, arrow]);
+    this.tweens.add({
+      targets: guide,
+      y: top - 24,
+      duration: 600,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+    this.solarAlignGuide = guide;
+  }
+
+  createReactorBuildGuide() {
+    const rs = this.stations.find((s) => s.def.id === 'reactor');
+    if (!rs) return;
+
+    rs.setVisible(false);
+    rs.allowBuildInteract = true;
+    rs.customPromptLabel = 'Build Kilopower Reactor';
+
+    if (this.reactorDottedBox) {
+      this.reactorDottedBox.destroy();
+      this.reactorDottedBox = null;
+    }
+    if (this.reactorBuildGuide) {
+      this.reactorBuildGuide.destroy();
+      this.reactorBuildGuide = null;
+    }
+
+    const bx = rs.def.x - rs.def.w / 2;
+    const by = rs.def.y - rs.def.h;
+    this.reactorDottedBox = this.add.graphics().setDepth(DEPTH.WORLD_MIN + rs.def.y - 1);
+    this.reactorDottedBox.fillStyle(0x22d3ee, 0.14);
+    this.reactorDottedBox.fillRect(bx, by, rs.def.w, rs.def.h);
+    this.drawDashedRect(this.reactorDottedBox, bx, by, rs.def.w, rs.def.h, 0x22d3ee, 3, 8, 6);
+
+    this.reactorBuildGuide = this.add.container(rs.def.x, by - 28).setDepth(900);
+    const label = this.add
+      .text(0, -22, 'Build Nuclear Reactor', {
+        fontFamily: 'monospace',
+        fontSize: '13px',
+        fontStyle: 'bold',
+        backgroundColor: '#06b6d4',
+        color: '#0f172a',
+        padding: { x: 8, y: 4 },
+      })
+      .setOrigin(0.5);
+    const arrow = this.add
+      .text(0, 2, '▼', {
+        fontFamily: 'monospace',
+        fontSize: '22px',
+        fontStyle: 'bold',
+        color: '#67e8f9',
+      })
+      .setOrigin(0.5);
+    this.reactorBuildGuide.add([label, arrow]);
+
+    this.tweens.add({
+      targets: this.reactorBuildGuide,
+      y: by - 42,
+      duration: 550,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+  }
+
+  onDay4PanelCleaned() {
+    if (this.solarDustOverlay) {
+      this.solarDustOverlay.destroy();
+      this.solarDustOverlay = null;
+    }
+    if (this.solarCleanGuide) {
+      this.solarCleanGuide.destroy();
+      this.solarCleanGuide = null;
+    }
+
+    const solarStation = this.stations.find((s) => s.def.id === 'solar_panel');
+    if (solarStation) solarStation.customPromptLabel = 'Realign Solar Panel';
+
+    this.createDay4SolarAlignGuide();
+    this.nearby = null;
+    this.game.events.emit('prompt', null);
+
+    // Storm also knocked the panel off-angle: auto-launch alignment mini-game once resumed
+    this.time.delayedCall(220, () => {
+      if (!gameState.d4PanelAligned) {
+        this.scene.pause();
+        this.scene.launch('SolarAlignTask');
+      }
+    });
+  }
+
+  onDay4PanelAligned() {
+    if (this.solarAlignGuide) {
+      this.solarAlignGuide.destroy();
+      this.solarAlignGuide = null;
+    }
+
+    const solarStation = this.stations.find((s) => s.def.id === 'solar_panel');
+    if (solarStation) solarStation.customPromptLabel = null;
+
+    this.nearby = null;
+    this.game.events.emit('prompt', null);
+
+    if (!gameState.d4ReactorIntroDone) {
+      gameState.d4ReactorIntroDone = true;
+      gameState.stepId = 'd4_reactor';
+
+      if (!this.companion) {
+        this.companion = new Astronaut(this, GAME_WIDTH - 120, LANE.top + 46, {
+          name: 'Maisha',
+          color: COLORS.maisha,
+        });
+      }
+
+      this.transitioning = true;
+      this.walkActorTo(this.companion, 690, LANE.top + 48, 300, () => {
+        this.companion.body_.setFlipX(false);
+        this.player.body_.setFlipX(true);
+
+        this.dialogueBox.showSequence(
+          [
+            {
+              speaker: 'Muntasir',
+              text: 'This is frustrating and dangerous for us to have such limited power options that do not work at night and get knocked out by frequent dust storms!',
+              target: this.player,
+            },
+            {
+              speaker: 'Muntasir',
+              text: 'Also, sunlight on Mars is much weaker than on Earth, so solar panels alone cannot generate enough steady electricity.',
+              target: this.player,
+            },
+            {
+              speaker: 'Maisha',
+              text: 'We must find a better, reliable, safe, always-on alternative power source. Do you have any idea?',
+              target: this.companion,
+            },
+            {
+              speaker: 'Muntasir',
+              text: 'We have very limited options out here for continuous power—I suggest nuclear fission power!',
+              target: this.player,
+            },
+            {
+              speaker: 'Maisha',
+              text: 'Yes! We can build a compact nuclear power station right outside here so storms and darkness never stop us.',
+              target: this.companion,
+            },
+            {
+              speaker: 'Muntasir',
+              text: 'Let’s build it! Walk up to the reactor plot beside us to assemble and stabilize the Kilopower core.',
+              target: this.player,
+            },
+          ],
+          () => {
+            this.transitioning = false;
+            this.createReactorBuildGuide();
+            this.game.events.emit(
+              'fact:show',
+              "Fact: At ~43% of Earth's sunlight, Martian solar power delivers under 1 kW on dusty days and 0 kW at night. NASA's Kilopower nuclear reactor produces 10–40 kW non-stop—40 kW powers ~33 average American homes (U.S. EIA avg ~1.2 kW/home)!"
+            );
+          }
+        );
+      });
+    } else {
+      this.createReactorBuildGuide();
+      this.transitioning = false;
+    }
+  }
+
+  onDay4ReactorBuilt() {
+    if (this.reactorDottedBox) {
+      this.reactorDottedBox.destroy();
+      this.reactorDottedBox = null;
+    }
+    if (this.reactorBuildGuide) {
+      this.reactorBuildGuide.destroy();
+      this.reactorBuildGuide = null;
+    }
+
+    const rs = this.stations.find((s) => s.def.id === 'reactor');
+    if (rs) {
+      rs.setVisible(true);
+      rs.allowBuildInteract = false;
+      rs.customPromptLabel = 'Kilopower Reactor (Online)';
+    }
+
+    this.nearby = null;
+    this.game.events.emit('prompt', null);
+
+    if (!this.companion) {
+      this.companion = new Astronaut(this, 690, LANE.top + 48, {
+        name: 'Maisha',
+        color: COLORS.maisha,
+      });
+      this.companion.body_.setFlipX(false);
+    }
+
+    this.transitioning = true;
+    this.time.delayedCall(350, () => {
+      this.dialogueBox.showSequence(
+        [
+          {
+            speaker: 'Muntasir',
+            text: 'We now have continuous power all the time—without worrying about dust storms, nighttime darkness, or growing equipment demands as our survival needs expand!',
+            target: this.player,
+          },
+          {
+            speaker: 'Maisha',
+            text: "I'm pretty tired after today. Let's head back inside to our bunks!",
+            target: this.companion,
+          },
+        ],
+        () => {
+          this.transitioning = false;
+          this.game.events.emit('toast', 'Kilopower Reactor online! Return inside through the Airlock.');
+        }
+      );
+    });
   }
 
   // ==========================================

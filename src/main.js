@@ -11,6 +11,8 @@ import { SolarCleanTask } from './scenes/tasks/SolarCleanTask.js';
 import { IceDrillTask } from './scenes/tasks/IceDrillTask.js';
 import { OxygenBuildTask } from './scenes/tasks/OxygenBuildTask.js';
 import { IceLoadTask } from './scenes/tasks/IceLoadTask.js';
+import { WaterBuildTask } from './scenes/tasks/WaterBuildTask.js';
+import { ReactorBuildTask } from './scenes/tasks/ReactorBuildTask.js';
 
 const game = new Phaser.Game({
   type: Phaser.AUTO,
@@ -35,6 +37,8 @@ const game = new Phaser.Game({
     IceDrillTask,
     OxygenBuildTask,
     IceLoadTask,
+    WaterBuildTask,
+    ReactorBuildTask,
   ],
 });
 

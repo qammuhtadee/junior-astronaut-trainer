@@ -13,10 +13,17 @@ export class IceLoadTask extends Phaser.Scene {
     super('IceLoadTask');
   }
 
-  create() {
+  create(data = {}) {
     this.completed = false;
     this.closing = false;
-    this.loadedCount = Phaser.Math.Clamp(gameState.d2IceLoadedCount || 0, 0, TOTAL_ICE_BLOCKS);
+    this.mode = data?.mode || 'd2_oxygen';
+    const initialCount =
+      this.mode === 'water'
+        ? gameState.d3WaterIceCount || 0
+        : this.mode === 'd3_oxygen'
+          ? gameState.d3OxIceCount || 0
+          : gameState.d2IceLoadedCount || 0;
+    this.loadedCount = Phaser.Math.Clamp(initialCount, 0, TOTAL_ICE_BLOCKS);
     this.bubbles = [];
 
     const cx = GAME_WIDTH / 2;
@@ -44,12 +51,17 @@ export class IceLoadTask extends Phaser.Scene {
 
     this.modal.add(
       this.add
-        .text(0, -panelH / 2 + 27, 'ICE HOPPER & ELECTROLYSIS LOADER', {
-          fontFamily: 'monospace',
-          fontSize: '16px',
-          fontStyle: 'bold',
-          color: '#ffffff',
-        })
+        .text(
+          0,
+          -panelH / 2 + 27,
+          this.mode === 'water' ? 'WATER STATION ICE MELT & PURIFIER' : 'ICE HOPPER & ELECTROLYSIS LOADER',
+          {
+            fontFamily: 'monospace',
+            fontSize: '16px',
+            fontStyle: 'bold',
+            color: '#ffffff',
+          }
+        )
         .setOrigin(0.5)
     );
 
@@ -187,7 +199,7 @@ export class IceLoadTask extends Phaser.Scene {
     this.modal.add(tankFrame);
 
     this.tankLabel = this.add
-      .text(this.tankX, this.tankY - 58, 'H2O → O2 TANK', {
+      .text(this.tankX, this.tankY - 58, this.mode === 'water' ? 'ICE → PURE H2O' : 'H2O → O2 TANK', {
         fontFamily: 'monospace',
         fontSize: '10px',
         fontStyle: 'bold',
@@ -197,7 +209,7 @@ export class IceLoadTask extends Phaser.Scene {
     this.modal.add(this.tankLabel);
 
     this.o2Badge = this.add
-      .text(this.tankX, this.tankY + 42, 'O2 OUTPUT: 0%', {
+      .text(this.tankX, this.tankY + 42, this.mode === 'water' ? 'H2O OUTPUT: 0%' : 'O2 OUTPUT: 0%', {
         fontFamily: 'monospace',
         fontSize: '11px',
         fontStyle: 'bold',
@@ -220,13 +232,20 @@ export class IceLoadTask extends Phaser.Scene {
 
     this.modal.add(
       this.add
-        .text(0, panelH / 2 - 30, 'Melted Martian water ice splits into pure Oxygen (O2) & Hydrogen (H2)!', {
-          fontFamily: 'sans-serif',
-          fontSize: '12px',
-          color: '#cbd5e1',
-          backgroundColor: '#0f172a',
-          padding: { x: 10, y: 5 },
-        })
+        .text(
+          0,
+          panelH / 2 - 30,
+          this.mode === 'water'
+            ? 'Subsurface Martian ice is heated and filtered into clean drinking water!'
+            : 'Melted Martian water ice splits into pure Oxygen (O2) & Hydrogen (H2)!',
+          {
+            fontFamily: 'sans-serif',
+            fontSize: '12px',
+            color: '#cbd5e1',
+            backgroundColor: '#0f172a',
+            padding: { x: 10, y: 5 },
+          }
+        )
         .setOrigin(0.5)
     );
 
@@ -389,7 +408,13 @@ export class IceLoadTask extends Phaser.Scene {
       onComplete: () => {
         chunk.destroy();
         this.loadedCount = Math.min(TOTAL_ICE_BLOCKS, this.loadedCount + 1);
-        gameState.d2IceLoadedCount = this.loadedCount;
+        if (this.mode === 'water') {
+          gameState.d3WaterIceCount = this.loadedCount;
+        } else if (this.mode === 'd3_oxygen') {
+          gameState.d3OxIceCount = this.loadedCount;
+        } else {
+          gameState.d2IceLoadedCount = this.loadedCount;
+        }
         this.refreshTankVisuals();
 
         if (this.loadedCount >= TOTAL_ICE_BLOCKS) {
@@ -407,7 +432,7 @@ export class IceLoadTask extends Phaser.Scene {
   refreshTankVisuals() {
     const pct = Math.round((this.loadedCount / TOTAL_ICE_BLOCKS) * 100);
     this.counterText.setText(`ICE LOADED: ${this.loadedCount} / ${TOTAL_ICE_BLOCKS}`);
-    this.o2Badge.setText(`O2 OUTPUT: ${pct}%`);
+    this.o2Badge.setText(this.mode === 'water' ? `H2O OUTPUT: ${pct}%` : `O2 OUTPUT: ${pct}%`);
     this.drawTankContents();
   }
 
@@ -477,18 +502,36 @@ export class IceLoadTask extends Phaser.Scene {
   completeLoading() {
     if (this.completed) return;
     this.completed = true;
-    gameState.d2IceLoadedCount = TOTAL_ICE_BLOCKS;
-    gameState.d2OxLoaded = true;
-    gameState.d2OxSwitchOn = true;
-    gameState.stepId = 'd2_oxygen_maker';
-    gameState.checkpointId = 'd2_oxygen_maker';
 
     this.cameras.main.flash(300, 52, 211, 153);
-    this.statusText
-      .setText('HOPPER FULL! ELECTROLYSIS PRODUCING BREATHABLE OXYGEN!')
-      .setColor('#34d399');
+    if (this.mode === 'water') {
+      gameState.d3WaterIceCount = TOTAL_ICE_BLOCKS;
+      gameState.d3WaterIceLoaded = true;
+      gameState.d3WaterSwitchOn = true;
+      this.statusText
+        .setText('HOPPER FULL! MELTING & FILTERING CLEAN WATER!')
+        .setColor('#34d399');
+      this.game.events.emit('water:gradual-charge');
+    } else if (this.mode === 'd3_oxygen') {
+      gameState.d3OxIceCount = TOTAL_ICE_BLOCKS;
+      gameState.d3OxIceLoaded = true;
+      gameState.d2OxSwitchOn = true;
+      this.statusText
+        .setText('HOPPER FULL! ELECTROLYSIS RESTORING OXYGEN!')
+        .setColor('#34d399');
+      this.game.events.emit('oxygen:gradual-charge');
+    } else {
+      gameState.d2IceLoadedCount = TOTAL_ICE_BLOCKS;
+      gameState.d2OxLoaded = true;
+      gameState.d2OxSwitchOn = true;
+      gameState.stepId = 'd2_oxygen_maker';
+      gameState.checkpointId = 'd2_oxygen_maker';
+      this.statusText
+        .setText('HOPPER FULL! ELECTROLYSIS PRODUCING BREATHABLE OXYGEN!')
+        .setColor('#34d399');
+      this.game.events.emit('oxygen:gradual-charge');
+    }
 
-    this.game.events.emit('oxygen:gradual-charge');
     this.time.delayedCall(900, () => this.closeTask());
   }
 
@@ -511,7 +554,13 @@ export class IceLoadTask extends Phaser.Scene {
         this.scene.stop();
         this.scene.resume('Outpost');
         if (wasCompleted) {
-          this.game.events.emit('d2:ice-loaded');
+          const ev =
+            this.mode === 'water'
+              ? 'd3:water-ice-loaded'
+              : this.mode === 'd3_oxygen'
+                ? 'd3:ox-ice-loaded'
+                : 'd2:ice-loaded';
+          this.game.events.emit(ev);
         }
       },
     });
