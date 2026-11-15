@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { LANE, PLAYER, DEPTH } from '../config/constants.js';
+import { gameState } from '../state/GameState.js';
 
 /**
  * The walking astronaut. Origin is at the FEET (0.5, 1) so Y-sorting and lane clamping
@@ -28,11 +29,15 @@ export class Astronaut extends Phaser.GameObjects.Container {
     this.body_.on('animationupdate', (_anim, frame) => {
       if (_anim.key === 'walk' && (frame.index === 2 || frame.index === 6)) {
         const now = scene.time.now;
-        if (!scene.game.lastFootstepTime || now < scene.game.lastFootstepTime || now - scene.game.lastFootstepTime >= 160) {
+        const vol = gameState.getEffectiveVolume('footsteps', 0.45);
+        if (
+          vol > 0 &&
+          (!scene.game.lastFootstepTime || now < scene.game.lastFootstepTime || now - scene.game.lastFootstepTime >= 160)
+        ) {
           if (scene.cache.audio.exists('sfx-footstep')) {
             scene.game.lastFootstepTime = now;
             scene.sound.play('sfx-footstep', {
-              volume: 0.45,
+              volume: vol,
               detune: Phaser.Math.Between(-80, 80),
             });
           }

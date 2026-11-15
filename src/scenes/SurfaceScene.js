@@ -97,7 +97,7 @@ export class SurfaceScene extends RoomScene {
       this.game.events.off('d7:crops-harvested', this.onDay7CropsHarvested, this);
       if (this.landingSound) {
         this.landingSound.stop();
-        this.landingSound.destroy();
+        this.sound.remove(this.landingSound);
         this.landingSound = null;
       }
     });
@@ -173,9 +173,10 @@ export class SurfaceScene extends RoomScene {
       .setDepth(DEPTH.WORLD_MIN + 45);
 
     this.landingSound = null;
-    if (this.cache.audio.exists('sfx-landing')) {
-      this.landingSound = this.sound.add('sfx-landing', { volume: 0.65 });
-      this.landingSound.play({ seek: 4, volume: 0.65 });
+    const landVol = gameState.getEffectiveVolume('sfx', 0.65);
+    if (landVol > 0 && this.cache.audio.exists('sfx-landing')) {
+      this.landingSound = this.sound.add('sfx-landing', { volume: landVol });
+      this.landingSound.play({ seek: 4, volume: landVol });
     }
 
     // Diagonal crash into Martian soil, straightening horizontally
@@ -189,8 +190,9 @@ export class SurfaceScene extends RoomScene {
       onComplete: () => {
         // Moderate scene vibration for grittiness + impact boom
         this.cameras.main.shake(650, 0.015);
-        if (this.cache.audio.exists('sfx-crash-boom')) {
-          this.sound.play('sfx-crash-boom', { volume: 0.85 });
+        const boomVol = gameState.getEffectiveVolume('sfx', 0.85);
+        if (boomVol > 0 && this.cache.audio.exists('sfx-crash-boom')) {
+          this.sound.play('sfx-crash-boom', { volume: boomVol });
         }
 
         // Dark impact crater shadow beneath the grounded hull
@@ -218,7 +220,7 @@ export class SurfaceScene extends RoomScene {
                 onComplete: () => {
                   if (this.landingSound) {
                     this.landingSound.stop();
-                    this.landingSound.destroy();
+                    this.sound.remove(this.landingSound);
                     this.landingSound = null;
                   }
                 },
@@ -777,6 +779,11 @@ export class SurfaceScene extends RoomScene {
             'fact:show',
             "Fact: Just like the ISS Oxygen Generation System (OGS) splits water into hydrogen and breathable oxygen via electrolysis, NASA's MOXIE experiment on Perseverance proved we can generate oxygen on Mars—producing 122 grams of pure oxygen."
           );
+          if (this.companion && this.companion.active) {
+            this.walkActorTo(this.companion, GAME_WIDTH - 120, LANE.top + 45, 310, () => {
+              if (this.companion) this.companion.setVisible(false);
+            });
+          }
         });
       });
     } else {
@@ -889,6 +896,8 @@ export class SurfaceScene extends RoomScene {
   // ==========================================
   initDay4Surface() {
     this.cameras.main.scrollX = 0;
+    gameState.activeAstronaut = 'muntasir';
+    this.player.setIdentity('Muntasir', COLORS.muntasir);
 
     const solarStation = this.stations.find((s) => s.def.id === 'solar_panel');
     if (solarStation) solarStation.setVisible(true);
@@ -1184,6 +1193,11 @@ export class SurfaceScene extends RoomScene {
         () => {
           this.transitioning = false;
           this.game.events.emit('toast', 'Kilopower Reactor online & Radiation Meter active (100% Safe)! Return inside.');
+          if (this.companion && this.companion.active) {
+            this.walkActorTo(this.companion, GAME_WIDTH - 120, LANE.top + 46, 320, () => {
+              if (this.companion) this.companion.setVisible(false);
+            });
+          }
         }
       );
     });

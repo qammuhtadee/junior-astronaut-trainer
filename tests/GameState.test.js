@@ -229,3 +229,53 @@ describe('Day 4 Geiger & Days 5-7 GameState flags and checkpoints', () => {
     expect(gameState.d6SwappedToMaisha).toBe(false);
   });
 });
+
+describe('Audio settings state & persistence', () => {
+  it('computes effective volumes for music, sfx, footsteps, and talking with mute toggles', () => {
+    const gs = new GameState();
+    expect(gs.audioSettings).toEqual({
+      musicVolume: 1,
+      musicMuted: false,
+      sfxVolume: 1,
+      sfxMuted: false,
+      footstepsVolume: 1,
+      footstepsMuted: false,
+      talkingVolume: 1,
+      talkingMuted: false,
+    });
+
+    let lastAudioEvent = null;
+    gs.on('audio', (s) => {
+      lastAudioEvent = { ...s };
+    });
+
+    gs.setAudioSettings({ musicVolume: 0.4, footstepsMuted: true, talkingVolume: 0.5, sfxVolume: 0.8 });
+    expect(lastAudioEvent.musicVolume).toBe(0.4);
+    expect(gs.getEffectiveVolume('music', 0.35)).toBeCloseTo(0.14);
+    expect(gs.getEffectiveVolume('sfx', 0.5)).toBeCloseTo(0.4);
+    expect(gs.getEffectiveVolume('footsteps', 0.45)).toBe(0);
+    expect(gs.getEffectiveVolume('talking', 0.52)).toBeCloseTo(0.26);
+
+    gs.setAudioSettings({ footstepsMuted: false, footstepsVolume: 0.6, talkingMuted: true });
+    expect(gs.getEffectiveVolume('footsteps', 0.45)).toBeCloseTo(0.27);
+    expect(gs.getEffectiveVolume('talking', 0.52)).toBe(0);
+  });
+
+  it('preserves user audio settings across reset() and checkpoint restore()', () => {
+    const gs = new GameState();
+    gs.setAudioSettings({ musicVolume: 0.25, musicMuted: true, footstepsVolume: 0.7 });
+    gs.goTo('d4_morning');
+    gs.saveCheckpoint('d4_audio_test');
+
+    // Change audio settings after saving checkpoint, then reset and restore
+    gs.setAudioSettings({ musicVolume: 0.9, musicMuted: false, talkingVolume: 0.3 });
+    gs.restoreCheckpoint('d4_audio_test');
+    expect(gs.audioSettings.musicVolume).toBe(0.9);
+    expect(gs.audioSettings.musicMuted).toBe(false);
+    expect(gs.audioSettings.talkingVolume).toBe(0.3);
+
+    gs.reset();
+    expect(gs.audioSettings.musicVolume).toBe(0.9);
+    expect(gs.audioSettings.talkingVolume).toBe(0.3);
+  });
+});

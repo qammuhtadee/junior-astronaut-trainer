@@ -723,7 +723,7 @@ export class RoomScene extends Phaser.Scene {
     const stopStorm = () => {
       if (stormSound) {
         stormSound.stop();
-        stormSound.destroy();
+        this.sound.remove(stormSound);
         stormSound = null;
       }
     };
@@ -735,8 +735,11 @@ export class RoomScene extends Phaser.Scene {
       duration: 800,
       onComplete: () => {
         if (playStorm && this.cache.audio.exists('sfx-storm')) {
-          stormSound = this.sound.add('sfx-storm', { loop: true, volume: 0.5 });
-          stormSound.play();
+          const stormVol = gameState.getEffectiveVolume('sfx', 0.5);
+          if (stormVol > 0) {
+            stormSound = this.sound.add('sfx-storm', { loop: true, volume: stormVol });
+            stormSound.play();
+          }
         }
         this.tweens.add({
           targets: sleepText,
@@ -758,8 +761,9 @@ export class RoomScene extends Phaser.Scene {
     this.transitioning = true;
     this.game.events.emit('prompt', null);
 
-    if (this.cache.audio.exists('sfx-airlock')) {
-      this.sound.play('sfx-airlock', { volume: 0.65 });
+    const airlockVol = gameState.getEffectiveVolume('sfx', 0.65);
+    if (airlockVol > 0 && this.cache.audio.exists('sfx-airlock')) {
+      this.sound.play('sfx-airlock', { volume: airlockVol });
     }
 
     // When Muntasir enters the Outpost after aligning the solar panel on Day 1,
@@ -772,11 +776,6 @@ export class RoomScene extends Phaser.Scene {
     // When Muntasir returns inside with the ice core on Day 2, hand control to Maisha to build the Oxygen Maker.
     if (gameState.day === 2 && this.roomId === 'surface' && targetRoom === 'outpost' && gameState.d2IceDrilled && !gameState.d2OxBuilt) {
       gameState.activeAstronaut = 'maisha';
-    }
-
-    // On Day 4 after Maisha pauses Water inside, hand control to Muntasir going outside to repair panels & build Reactor.
-    if (gameState.day === 4 && this.roomId === 'outpost' && targetRoom === 'surface' && gameState.d4WaterTurnedOff && !gameState.d4ReactorBuilt) {
-      gameState.activeAstronaut = 'muntasir';
     }
 
     this.cameras.main.fadeOut(FADE_MS, 0, 0, 0);

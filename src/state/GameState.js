@@ -9,6 +9,16 @@ import { stepById, METER_KEYS, RADIATION_MAX, RADIATION_REWIND_BELOW } from '../
 export class GameState {
   constructor() {
     this.listeners = new Map();
+    this.audioSettings = {
+      musicVolume: 1,
+      musicMuted: false,
+      sfxVolume: 1,
+      sfxMuted: false,
+      footstepsVolume: 1,
+      footstepsMuted: false,
+      talkingVolume: 1,
+      talkingMuted: false,
+    };
     this.reset();
   }
 
@@ -123,6 +133,7 @@ export class GameState {
     const skip = new Set([
       'listeners',
       'snapshots',
+      'audioSettings',
       'discoveredFacts',
       'hasUnreadLogbook',
       'tutorialLogbookDone',
@@ -143,11 +154,23 @@ export class GameState {
     const snap = this.snapshots?.[key];
     if (!snap) return false;
     for (const [k, val] of Object.entries(snap)) {
-      if (k === 'listeners' || k === 'snapshots') continue;
+      if (k === 'listeners' || k === 'snapshots' || k === 'audioSettings') continue;
       this[k] = val && typeof val === 'object' ? JSON.parse(JSON.stringify(val)) : val;
     }
     this.emit('meters', this.meters);
     return true;
+  }
+
+  setAudioSettings(patch) {
+    this.audioSettings = { ...this.audioSettings, ...patch };
+    this.emit('audio', this.audioSettings);
+  }
+
+  getEffectiveVolume(category, baseVolume = 1) {
+    const s = this.audioSettings || {};
+    if (s[`${category}Muted`]) return 0;
+    const mult = s[`${category}Volume`] ?? 1;
+    return Math.max(0, Math.min(1, baseVolume * mult));
   }
 
   /** Record a discovered NASA fact in the live logbook and light up the unread red dot. */

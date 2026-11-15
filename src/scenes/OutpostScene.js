@@ -1314,12 +1314,15 @@ export class OutpostScene extends RoomScene {
       return;
     }
 
-    // Brief stay inside before going out on Sol 4
-    this.companion = new Astronaut(this, 500, LANE.top + 42, {
-      name: 'Muntasir',
-      color: COLORS.muntasir,
+    // After Maisha pauses Water inside on Sol 4, Muntasir holds player control indoors to exit via Airlock
+    gameState.activeAstronaut = 'muntasir';
+    this.player.setIdentity('Muntasir', COLORS.muntasir);
+    this.companion = new Astronaut(this, 390, LANE.top + 42, {
+      name: 'Maisha',
+      color: COLORS.maisha,
     });
     this.companion.body_.setFlipX(false);
+    this.createStationGuide('airlock', 'Head Out: Fix Solar Panels', '#ffd166');
   }
 
   onDay4WaterTurnedOff() {
@@ -1332,19 +1335,49 @@ export class OutpostScene extends RoomScene {
       this.powerHighlight = null;
     }
 
+    // Immediately swap control to Muntasir inside the Outpost while Maisha stays indoors by the panel
+    gameState.activeAstronaut = 'muntasir';
+    const maishaX = this.player.x;
+    const maishaY = this.player.y;
+    const muntX = this.companion ? this.companion.x : 500;
+    const muntY = this.companion ? this.companion.y : LANE.top + 42;
+
+    this.player.setIdentity('Muntasir', COLORS.muntasir);
+    this.player.setPosition(muntX, muntY);
+    this.player.body_.setFlipX(false);
+    this.player.syncDepth();
+
+    if (!this.companion) {
+      this.companion = new Astronaut(this, maishaX, maishaY, {
+        name: 'Maisha',
+        color: COLORS.maisha,
+      });
+    } else {
+      this.companion.setIdentity('Maisha', COLORS.maisha);
+      this.companion.setPosition(maishaX, maishaY);
+    }
+    this.companion.body_.setFlipX(false);
+    this.companion.syncDepth();
+
     this.transitioning = true;
     this.time.delayedCall(250, () => {
       this.dialogueBox.showSequence(
         [
           {
             speaker: 'Maisha',
-            text: 'Water Station paused and emergency power boosted! Now Muntasir can head outside through the Airlock to fix the solar panels.',
+            text: "Water Station paused and emergency power boosted! Head outside through the Airlock, Muntasir—I'll monitor life support from inside.",
+            target: this.companion,
+          },
+          {
+            speaker: 'Muntasir',
+            text: "Got it! I'll head out through the Airlock now to clean and realign the solar panels.",
             target: this.player,
             isThought: true,
           },
         ],
         () => {
           this.transitioning = false;
+          this.createStationGuide('airlock', 'Head Out: Fix Solar Panels', '#ffd166');
         }
       );
     });

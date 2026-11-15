@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH } from '../config/constants.js';
+import { gameState } from '../state/GameState.js';
 
 /**
  * Independent curved-edge rectangular paper note on the almost top-right side.
@@ -184,11 +185,16 @@ export class FactCard extends Phaser.GameObjects.Container {
 
   startTypingSound() {
     this.stopTypingSound();
+    const vol = gameState.getEffectiveVolume('talking', 0.5);
+    if (vol <= 0) return;
+    if (this.typingSound && (this.typingSound.pendingRemove || !this.typingSound.currentConfig)) {
+      this.typingSound = null;
+    }
     if (this.scene?.cache?.audio?.exists('sfx-typing')) {
       if (!this.typingSound) {
-        this.typingSound = this.scene.sound.add('sfx-typing', { loop: true, volume: 0.5 });
+        this.typingSound = this.scene.sound.add('sfx-typing', { loop: true, volume: vol });
       }
-      this.typingSound.play({ loop: true, volume: 0.5 });
+      this.typingSound.play({ loop: true, volume: vol });
     }
   }
 

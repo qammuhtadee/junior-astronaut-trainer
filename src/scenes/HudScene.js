@@ -62,11 +62,13 @@ export class HudScene extends Phaser.Scene {
       height: 30,
     });
 
-    // Top Header: Title, Logbook, and Pause Button
+    // Top Header: Title, Logbook, Settings, and Pause Button
     this.createTitleBanner();
     this.createLogbookButton();
+    this.createSettingsButton();
     this.createPauseButton();
     this.createPauseOverlay();
+    this.createSettingsModal();
 
     // Floating NASA Fact Card (shifted left so it never covers the Airlock, larger for legibility)
     this.factCard = new FactCard(this, GAME_WIDTH - 595, 58);
@@ -97,6 +99,7 @@ export class HudScene extends Phaser.Scene {
       gameState.on('meters', () => this.refresh()),
       gameState.on('step', () => this.refresh()),
       gameState.on('logbook', () => this.syncLogbookDot()),
+      gameState.on('audio', () => this.applyAudioSettings()),
     ];
     this.game.events.on('prompt', this.showPrompt, this);
     this.game.events.on('toast', this.showToast, this);
@@ -200,7 +203,15 @@ export class HudScene extends Phaser.Scene {
       this.stopD5ModerateDecay();
       this.stopD6SurfaceRadiation();
       this.stopD7SurfaceRadiation();
-      const stormBgm = this.sound.get('sfx-storm');
+      if (this.settingsDragMove) {
+        this.input?.off('pointermove', this.settingsDragMove);
+        this.settingsDragMove = null;
+      }
+      if (this.settingsDragUp) {
+        this.input?.off('pointerup', this.settingsDragUp);
+        this.settingsDragUp = null;
+      }
+      const stormBgm = this.getValidSound('sfx-storm');
       if (stormBgm?.isPlaying) stormBgm.stop();
       this.factCard?.stopTypingSound();
     });
@@ -208,25 +219,63 @@ export class HudScene extends Phaser.Scene {
     this.refresh();
   }
 
+  getValidSound(key) {
+    const s = this.sound.get(key);
+    if (s && (s.pendingRemove || !s.currentConfig)) {
+      this.sound.remove(s);
+      return null;
+    }
+    return s;
+  }
+
+  applyAudioSettings() {
+    const bgmVol = gameState.getEffectiveVolume('music', 0.35);
+    ['bgm-main', 'bgm-day1', 'bgm-day2', 'bgm-day3', 'bgm-day4'].forEach((k) => {
+      const s = this.getValidSound(k);
+      if (s) s.setVolume(bgmVol);
+    });
+    const stormSfx = this.getValidSound('sfx-storm');
+    if (stormSfx) {
+      stormSfx.setVolume(gameState.getEffectiveVolume('sfx', gameState.day === 5 ? 0.42 : 0.5));
+    }
+    const radioSfx = this.getValidSound('sfx-radio');
+    if (radioSfx) {
+      radioSfx.setVolume(gameState.getEffectiveVolume('sfx', 0.55));
+    }
+    const talkSfx = this.getValidSound('voice-talk');
+    if (talkSfx) {
+      talkSfx.setVolume(gameState.getEffectiveVolume('talking', 0.5));
+    }
+    const typeSfx = this.getValidSound('sfx-typing');
+    if (typeSfx) {
+      typeSfx.setVolume(gameState.getEffectiveVolume('talking', 0.5));
+    }
+  }
+
   syncDayBgm() {
     if (gameState.day === 5) {
       ['bgm-main', 'bgm-day1', 'bgm-day2', 'bgm-day3', 'bgm-day4'].forEach((k) => {
-        const s = this.sound.get(k);
+        const s = this.getValidSound(k);
         if (s?.isPlaying) s.stop();
       });
       if (!this.cache.audio.exists('sfx-storm')) return;
-      const stormSound = this.sound.get('sfx-storm');
-      if (this.currentBgmKey === 'sfx-storm' && stormSound?.isPlaying) return;
+      const stormVol = gameState.getEffectiveVolume('sfx', 0.42);
+      const stormSound = this.getValidSound('sfx-storm');
+      if (this.currentBgmKey === 'sfx-storm' && stormSound?.isPlaying) {
+        stormSound.setVolume(stormVol);
+        return;
+      }
       if (stormSound) {
-        if (!stormSound.isPlaying) stormSound.play({ loop: true, volume: 0.42 });
+        if (!stormSound.isPlaying) stormSound.play({ loop: true, volume: stormVol });
+        else stormSound.setVolume(stormVol);
       } else {
-        this.sound.add('sfx-storm', { loop: true, volume: 0.42 }).play();
+        this.sound.add('sfx-storm', { loop: true, volume: stormVol }).play();
       }
       this.currentBgmKey = 'sfx-storm';
       return;
     }
 
-    const stormPlaying = this.sound.get('sfx-storm');
+    const stormPlaying = this.getValidSound('sfx-storm');
     if (stormPlaying?.isPlaying) stormPlaying.stop();
 
     const dayKey =
@@ -234,19 +283,24 @@ export class HudScene extends Phaser.Scene {
     const targetKey = this.cache.audio.exists(dayKey) ? dayKey : 'bgm-main';
     if (!this.cache.audio.exists(targetKey)) return;
 
-    const curSound = this.sound.get(targetKey);
-    if (this.currentBgmKey === targetKey && curSound?.isPlaying) return;
+    const bgmVol = gameState.getEffectiveVolume('music', 0.35);
+    const curSound = this.getValidSound(targetKey);
+    if (this.currentBgmKey === targetKey && curSound?.isPlaying) {
+      curSound.setVolume(bgmVol);
+      return;
+    }
 
     ['bgm-main', 'bgm-day1', 'bgm-day2', 'bgm-day3', 'bgm-day4'].forEach((k) => {
       if (k === targetKey) return;
-      const s = this.sound.get(k);
+      const s = this.getValidSound(k);
       if (s?.isPlaying) s.stop();
     });
 
     if (curSound) {
-      if (!curSound.isPlaying) curSound.play({ loop: true, volume: 0.35 });
+      if (!curSound.isPlaying) curSound.play({ loop: true, volume: bgmVol });
+      else curSound.setVolume(bgmVol);
     } else {
-      this.sound.add(targetKey, { loop: true, volume: 0.35 }).play();
+      this.sound.add(targetKey, { loop: true, volume: bgmVol }).play();
     }
     this.currentBgmKey = targetKey;
   }
@@ -1368,6 +1422,297 @@ export class HudScene extends Phaser.Scene {
     });
   }
 
+  createSettingsButton() {
+    const sx = GAME_WIDTH - 78;
+    const sy = 28;
+    const btn = this.add.container(sx, sy);
+
+    const bg = this.add.graphics();
+    const drawBtn = (hover = false) => {
+      bg.clear();
+      bg.fillStyle(hover ? 0x273142 : 0x181f2c, 0.9);
+      bg.fillRoundedRect(-17, -17, 34, 34, 6);
+      bg.lineStyle(1.5, hover ? 0x38bdf8 : 0x475569, 1);
+      bg.strokeRoundedRect(-17, -17, 34, 34, 6);
+    };
+    drawBtn(false);
+
+    const icon = this.add
+      .text(0, 0, '⚙', {
+        fontFamily: 'monospace',
+        fontSize: '20px',
+        color: '#e2e8f0',
+      })
+      .setOrigin(0.5);
+
+    btn.add([bg, icon]);
+
+    const hit = this.add.rectangle(0, 0, 34, 34, 0x000000, 0).setInteractive({ useHandCursor: true });
+    hit.on('pointerover', () => {
+      drawBtn(true);
+      icon.setColor('#38bdf8');
+    });
+    hit.on('pointerout', () => {
+      drawBtn(false);
+      icon.setColor('#e2e8f0');
+    });
+    hit.on('pointerdown', (_p, _lx, _ly, event) => {
+      if (event) event.stopPropagation();
+      this.toggleSettingsModal();
+    });
+    btn.add(hit);
+  }
+
+  createSettingsModal() {
+    this.isSettingsOpen = false;
+    this.roomPausedBySettings = false;
+    this.settingsContainer = this.add.container(GAME_WIDTH / 2, GAME_HEIGHT / 2).setDepth(2600).setVisible(false);
+
+    const backdrop = this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.78).setInteractive();
+    backdrop.on('pointerdown', (_p, _lx, _ly, event) => {
+      if (event) event.stopPropagation();
+    });
+
+    const panel = this.add.graphics();
+    panel.fillStyle(0x0f172a, 0.97);
+    panel.fillRoundedRect(-280, -195, 560, 390, 14);
+    panel.lineStyle(2.5, 0x38bdf8, 0.95);
+    panel.strokeRoundedRect(-280, -195, 560, 390, 14);
+
+    const title = this.add
+      .text(0, -160, 'AUDIO & SOUND SETTINGS', {
+        fontFamily: 'monospace',
+        fontSize: '19px',
+        fontStyle: 'bold',
+        color: '#ffd166',
+      })
+      .setOrigin(0.5);
+
+    const closeX = this.add
+      .text(252, -160, '[X]', {
+        fontFamily: 'monospace',
+        fontSize: '16px',
+        fontStyle: 'bold',
+        color: '#f87171',
+      })
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerdown', (_p, _lx, _ly, event) => {
+        if (event) event.stopPropagation();
+        this.toggleSettingsModal(false);
+      });
+
+    this.settingsContainer.add([backdrop, panel, title, closeX]);
+
+    const channels = [
+      { key: 'music', label: 'Music (BGM)', accent: 0x38bdf8, y: -92 },
+      { key: 'sfx', label: 'Sound Effects (SFX)', accent: 0xf59e0b, y: -32 },
+      { key: 'footsteps', label: 'Footsteps', accent: 0xa78bfa, y: 28 },
+      { key: 'talking', label: 'Talking & Voice', accent: 0x4ade80, y: 88 },
+    ];
+
+    const trackX = -46;
+    const trackW = 180;
+    let activeDragRow = null;
+    this.settingsRowUpdaters = [];
+
+    const updateSliderFromPointer = (row, pointer) => {
+      const worldTrackLeft = GAME_WIDTH / 2 + trackX;
+      const ratio = Phaser.Math.Clamp((pointer.x - worldTrackLeft) / trackW, 0, 1);
+      const snapped = Math.round(ratio * 100) / 100;
+      gameState.setAudioSettings({
+        [`${row.key}Volume`]: snapped,
+        [`${row.key}Muted`]: snapped === 0,
+      });
+      this.refreshSettingsRows();
+    };
+
+    channels.forEach((ch) => {
+      const lbl = this.add
+        .text(-246, ch.y, ch.label, {
+          fontFamily: 'monospace',
+          fontSize: '13px',
+          fontStyle: 'bold',
+          color: '#f8fafc',
+        })
+        .setOrigin(0, 0.5);
+
+      const trackGfx = this.add.graphics();
+      const knob = this.add.circle(trackX + trackW, ch.y, 9, 0xffffff).setStrokeStyle(2.5, ch.accent);
+      const pctText = this.add
+        .text(trackX + trackW + 32, ch.y, '100%', {
+          fontFamily: 'monospace',
+          fontSize: '13px',
+          fontStyle: 'bold',
+          color: '#cbd5e1',
+        })
+        .setOrigin(0.5);
+
+      const muteBg = this.add.rectangle(224, ch.y, 68, 28, 0x16a34a, 1).setStrokeStyle(1.5, 0x86efac, 1);
+      const muteTxt = this.add
+        .text(224, ch.y, 'ON', {
+          fontFamily: 'monospace',
+          fontSize: '12px',
+          fontStyle: 'bold',
+          color: '#ffffff',
+        })
+        .setOrigin(0.5);
+
+      const muteHit = this.add
+        .zone(224, ch.y, 68, 28)
+        .setInteractive({ useHandCursor: true })
+        .on('pointerdown', (_p, _lx, _ly, event) => {
+          if (event) event.stopPropagation();
+          const mutedKey = `${ch.key}Muted`;
+          const volKey = `${ch.key}Volume`;
+          const nextMuted = !gameState.audioSettings[mutedKey];
+          const patch = { [mutedKey]: nextMuted };
+          if (!nextMuted && (gameState.audioSettings[volKey] ?? 1) === 0) {
+            patch[volKey] = 0.5;
+          }
+          gameState.setAudioSettings(patch);
+          this.refreshSettingsRows();
+        });
+
+      const row = { ...ch, trackGfx, knob, pctText, muteBg, muteTxt };
+      const sliderHit = this.add
+        .zone(trackX + trackW / 2, ch.y, trackW + 18, 28)
+        .setInteractive({ useHandCursor: true })
+        .on('pointerdown', (pointer, _lx, _ly, event) => {
+          if (event) event.stopPropagation();
+          activeDragRow = row;
+          updateSliderFromPointer(row, pointer);
+        });
+
+      const redraw = () => {
+        const vol = gameState.audioSettings[`${ch.key}Volume`] ?? 1;
+        const muted = !!gameState.audioSettings[`${ch.key}Muted`];
+        const effective = muted ? 0 : vol;
+        const fillW = Math.max(0, trackW * effective);
+
+        trackGfx.clear();
+        trackGfx.fillStyle(0x1e293b, 1);
+        trackGfx.fillRoundedRect(trackX, ch.y - 5, trackW, 10, 5);
+        trackGfx.lineStyle(1, 0x475569, 1);
+        trackGfx.strokeRoundedRect(trackX, ch.y - 5, trackW, 10, 5);
+        if (fillW > 0) {
+          trackGfx.fillStyle(ch.accent, 0.95);
+          trackGfx.fillRoundedRect(trackX, ch.y - 5, fillW, 10, 5);
+        }
+
+        knob.setX(trackX + fillW);
+        knob.setFillStyle(muted ? 0x64748b : 0xffffff);
+        pctText.setText(`${Math.round(effective * 100)}%`);
+        pctText.setColor(muted ? '#f87171' : '#e2e8f0');
+
+        muteBg.setFillStyle(muted ? 0x991b1b : 0x16a34a, 1);
+        muteBg.setStrokeStyle(1.5, muted ? 0xf87171 : 0x86efac, 1);
+        muteTxt.setText(muted ? 'MUTED' : 'ON');
+      };
+
+      row.redraw = redraw;
+      this.settingsRowUpdaters.push(row);
+      this.settingsContainer.add([lbl, trackGfx, knob, sliderHit, pctText, muteBg, muteTxt, muteHit]);
+    });
+
+    this.settingsDragMove = (pointer) => {
+      if (this.isSettingsOpen && activeDragRow && pointer.isDown) {
+        updateSliderFromPointer(activeDragRow, pointer);
+      }
+    };
+    this.settingsDragUp = () => {
+      activeDragRow = null;
+    };
+    this.input.on('pointermove', this.settingsDragMove);
+    this.input.on('pointerup', this.settingsDragUp);
+
+    // Mute All / Unmute All button
+    const muteAllBg = this.add.rectangle(-95, 152, 165, 34, 0x334155, 1).setStrokeStyle(1.5, 0x94a3b8, 1);
+    this.muteAllTxt = this.add
+      .text(-95, 152, 'MUTE ALL', {
+        fontFamily: 'monospace',
+        fontSize: '13px',
+        fontStyle: 'bold',
+        color: '#f8fafc',
+      })
+      .setOrigin(0.5);
+    const muteAllHit = this.add
+      .zone(-95, 152, 165, 34)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerdown', (_p, _lx, _ly, event) => {
+        if (event) event.stopPropagation();
+        const s = gameState.audioSettings;
+        const allMuted = s.musicMuted && s.sfxMuted && s.footstepsMuted && s.talkingMuted;
+        const nextMuted = !allMuted;
+        const patch = {
+          musicMuted: nextMuted,
+          sfxMuted: nextMuted,
+          footstepsMuted: nextMuted,
+          talkingMuted: nextMuted,
+        };
+        if (!nextMuted) {
+          if (s.musicVolume === 0) patch.musicVolume = 0.5;
+          if (s.sfxVolume === 0) patch.sfxVolume = 0.5;
+          if (s.footstepsVolume === 0) patch.footstepsVolume = 0.5;
+          if (s.talkingVolume === 0) patch.talkingVolume = 0.5;
+        }
+        gameState.setAudioSettings(patch);
+        this.refreshSettingsRows();
+      });
+
+    // Close button
+    const closeBg = this.add.rectangle(95, 152, 145, 34, 0x2563eb, 1).setStrokeStyle(1.5, 0x93c5fd, 1);
+    const closeTxt = this.add
+      .text(95, 152, 'DONE', {
+        fontFamily: 'monospace',
+        fontSize: '13px',
+        fontStyle: 'bold',
+        color: '#ffffff',
+      })
+      .setOrigin(0.5);
+    const closeHit = this.add
+      .zone(95, 152, 145, 34)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerdown', (_p, _lx, _ly, event) => {
+        if (event) event.stopPropagation();
+        this.toggleSettingsModal(false);
+      });
+
+    this.settingsContainer.add([muteAllBg, this.muteAllTxt, muteAllHit, closeBg, closeTxt, closeHit]);
+    this.refreshSettingsRows();
+  }
+
+  refreshSettingsRows() {
+    if (!this.settingsRowUpdaters) return;
+    this.settingsRowUpdaters.forEach((r) => r.redraw());
+    if (this.muteAllTxt) {
+      const s = gameState.audioSettings;
+      const allMuted = s.musicMuted && s.sfxMuted && s.footstepsMuted && s.talkingMuted;
+      this.muteAllTxt.setText(allMuted ? 'UNMUTE ALL' : 'MUTE ALL');
+    }
+  }
+
+  toggleSettingsModal(force) {
+    const next = typeof force === 'boolean' ? force : !this.isSettingsOpen;
+    if (next === this.isSettingsOpen) return;
+    this.isSettingsOpen = next;
+    this.settingsContainer.setVisible(next);
+    const activeRoom = gameState.room === 'surface' ? SCENES.SURFACE : SCENES.OUTPOST;
+
+    if (next) {
+      this.refreshSettingsRows();
+      if (!this.isPaused && this.scene.isActive(activeRoom)) {
+        this.scene.pause(activeRoom);
+        this.roomPausedBySettings = true;
+      }
+    } else if (this.roomPausedBySettings) {
+      this.roomPausedBySettings = false;
+      if (!this.isPaused && this.scene.isPaused(activeRoom)) {
+        this.scene.resume(activeRoom);
+      }
+    }
+  }
+
   createPauseButton() {
     const px = GAME_WIDTH - 36;
     const py = 28;
@@ -1393,7 +1738,10 @@ export class HudScene extends Phaser.Scene {
     const hit = this.add.rectangle(0, 0, 34, 34, 0x000000, 0).setInteractive({ useHandCursor: true });
     hit.on('pointerover', () => drawPause(true));
     hit.on('pointerout', () => drawPause(false));
-    hit.on('pointerdown', () => this.togglePause());
+    hit.on('pointerdown', (_p, _lx, _ly, event) => {
+      if (event) event.stopPropagation();
+      this.togglePause();
+    });
     btn.add(hit);
 
     this.input.keyboard.on('keydown-P', () => this.togglePause());
@@ -1401,17 +1749,20 @@ export class HudScene extends Phaser.Scene {
 
   createPauseOverlay() {
     this.isPaused = false;
-    this.pauseContainer = this.add.container(GAME_WIDTH / 2, GAME_HEIGHT / 2).setVisible(false);
+    this.pauseContainer = this.add.container(GAME_WIDTH / 2, GAME_HEIGHT / 2).setDepth(2500).setVisible(false);
 
-    const backdrop = this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.75);
+    const backdrop = this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.75).setInteractive();
+    backdrop.on('pointerdown', (_p, _lx, _ly, event) => {
+      if (event) event.stopPropagation();
+    });
     const box = this.add.graphics();
     box.fillStyle(0x111827, 0.95);
-    box.fillRoundedRect(-180, -100, 360, 200, 12);
+    box.fillRoundedRect(-185, -120, 370, 240, 12);
     box.lineStyle(2, 0x64748b, 1);
-    box.strokeRoundedRect(-180, -100, 360, 200, 12);
+    box.strokeRoundedRect(-185, -120, 370, 240, 12);
 
     const title = this.add
-      .text(0, -45, 'SIMULATION PAUSED', {
+      .text(0, -76, 'SIMULATION PAUSED', {
         fontFamily: 'monospace',
         fontSize: '20px',
         fontStyle: 'bold',
@@ -1420,14 +1771,36 @@ export class HudScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     const hint = this.add
-      .text(0, 5, 'Press [P] or click Resume to continue', {
+      .text(0, -34, 'Press [P] or click Resume to continue', {
         fontFamily: 'monospace',
         fontSize: '13px',
         color: '#94a3b8',
       })
       .setOrigin(0.5);
 
-    const resumeBtn = this.add.container(0, 50);
+    const settingsBtn = this.add.container(0, 18);
+    const sBg = this.add.graphics();
+    sBg.fillStyle(0x1e293b, 1);
+    sBg.fillRoundedRect(-90, -16, 180, 32, 6);
+    sBg.lineStyle(1.5, 0x38bdf8, 1);
+    sBg.strokeRoundedRect(-90, -16, 180, 32, 6);
+    const sText = this.add
+      .text(0, 0, '⚙ AUDIO SETTINGS', {
+        fontFamily: 'monospace',
+        fontSize: '13px',
+        fontStyle: 'bold',
+        color: '#38bdf8',
+      })
+      .setOrigin(0.5);
+    settingsBtn.add([sBg, sText]);
+    settingsBtn.setSize(180, 32);
+    settingsBtn.setInteractive({ useHandCursor: true });
+    settingsBtn.on('pointerdown', (_p, _lx, _ly, event) => {
+      if (event) event.stopPropagation();
+      this.toggleSettingsModal(true);
+    });
+
+    const resumeBtn = this.add.container(0, 72);
     const rBg = this.add.graphics();
     rBg.fillStyle(0x2563eb, 1);
     rBg.fillRoundedRect(-70, -16, 140, 32, 6);
@@ -1442,20 +1815,30 @@ export class HudScene extends Phaser.Scene {
     resumeBtn.add([rBg, rText]);
     resumeBtn.setSize(140, 32);
     resumeBtn.setInteractive({ useHandCursor: true });
-    resumeBtn.on('pointerdown', () => this.togglePause());
+    resumeBtn.on('pointerdown', (_p, _lx, _ly, event) => {
+      if (event) event.stopPropagation();
+      this.togglePause();
+    });
 
-    this.pauseContainer.add([backdrop, box, title, hint, resumeBtn]);
+    this.pauseContainer.add([backdrop, box, title, hint, settingsBtn, resumeBtn]);
   }
 
   togglePause() {
+    if (this.isSettingsOpen) {
+      this.toggleSettingsModal(false);
+    }
     this.isPaused = !this.isPaused;
     this.pauseContainer.setVisible(this.isPaused);
 
-    const activeRoom = gameState.room === 'surface' ? 'Surface' : 'Outpost';
+    const activeRoom = gameState.room === 'surface' ? SCENES.SURFACE : SCENES.OUTPOST;
     if (this.isPaused) {
-      this.scene.pause(activeRoom);
+      if (this.scene.isActive(activeRoom)) {
+        this.scene.pause(activeRoom);
+      }
     } else {
-      this.scene.resume(activeRoom);
+      if (this.scene.isPaused(activeRoom)) {
+        this.scene.resume(activeRoom);
+      }
     }
   }
 }

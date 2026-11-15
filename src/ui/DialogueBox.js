@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH } from '../config/constants.js';
+import { gameState } from '../state/GameState.js';
 
 /**
  * Story-driven dialogue system.
@@ -398,26 +399,44 @@ export class DialogueBox extends Phaser.GameObjects.Container {
   startLineAudio(isRadio, isThought, speaker = '') {
     this.stopLineAudio();
     if (isRadio) {
-      if (this.scene.cache.audio.exists('sfx-radio')) {
-        if (!this.radioSound) {
-          this.radioSound = this.scene.sound.add('sfx-radio', { loop: true, volume: 0.55 });
-        }
-        this.radioSound.play({ loop: true, volume: 0.55, seek: 22 });
+      const vol = gameState.getEffectiveVolume('sfx', 0.55);
+      if (vol <= 0 || !this.scene?.cache?.audio?.exists('sfx-radio')) return;
+      if (this.radioSound && (this.radioSound.pendingRemove || !this.radioSound.currentConfig)) {
+        this.radioSound = null;
+      }
+      if (!this.radioSound) {
+        this.radioSound = this.scene.sound.add('sfx-radio', { loop: true, volume: vol });
+      }
+      this.radioSound.play({ loop: true, volume: vol });
+      if (this.radioSound.isPlaying && typeof this.radioSound.setSeek === 'function') {
+        try {
+          this.radioSound.setSeek(22);
+        } catch (_e) {}
       }
       return;
     }
 
-    if (this.scene.cache.audio.exists('voice-talk')) {
-      if (!this.talkSound) {
-        this.talkSound = this.scene.sound.add('voice-talk', { loop: true, volume: 0.5 });
-      }
-      this.talkTurnCount = (this.talkTurnCount ?? 0) + 1;
-      const isMaisha = speaker.toLowerCase().includes('maisha');
-      const maleOffsets = [0.2, 5.2, 10.5, 19.0, 26.5, 37.0, 54.0];
-      const femaleOffsets = [73.2, 79.5, 86.0, 94.5, 104.0, 115.0, 127.0];
-      const pool = isMaisha ? femaleOffsets : maleOffsets;
-      const seek = pool[this.talkTurnCount % pool.length];
-      this.talkSound.play({ loop: true, volume: isThought ? 0.38 : 0.52, seek });
+    const baseVol = isThought ? 0.38 : 0.52;
+    const vol = gameState.getEffectiveVolume('talking', baseVol);
+    if (vol <= 0 || !this.scene?.cache?.audio?.exists('voice-talk')) return;
+
+    if (this.talkSound && (this.talkSound.pendingRemove || !this.talkSound.currentConfig)) {
+      this.talkSound = null;
+    }
+    if (!this.talkSound) {
+      this.talkSound = this.scene.sound.add('voice-talk', { loop: true, volume: vol });
+    }
+    this.talkTurnCount = (this.talkTurnCount ?? 0) + 1;
+    const isMaisha = speaker.toLowerCase().includes('maisha');
+    const maleOffsets = [0.2, 5.2, 10.5, 19.0, 26.5, 37.0, 54.0];
+    const femaleOffsets = [73.2, 79.5, 86.0, 94.5, 104.0, 115.0, 127.0];
+    const pool = isMaisha ? femaleOffsets : maleOffsets;
+    const seek = pool[this.talkTurnCount % pool.length];
+    this.talkSound.play({ loop: true, volume: vol });
+    if (this.talkSound.isPlaying && typeof this.talkSound.setSeek === 'function') {
+      try {
+        this.talkSound.setSeek(seek);
+      } catch (_e) {}
     }
   }
 
@@ -457,11 +476,11 @@ export class DialogueBox extends Phaser.GameObjects.Container {
   destroy() {
     this.stopLineAudio();
     if (this.talkSound) {
-      this.talkSound.destroy();
+      this.scene?.sound?.remove(this.talkSound);
       this.talkSound = null;
     }
     if (this.radioSound) {
-      this.radioSound.destroy();
+      this.scene?.sound?.remove(this.radioSound);
       this.radioSound = null;
     }
     if (this.typeEvent) this.typeEvent.remove();

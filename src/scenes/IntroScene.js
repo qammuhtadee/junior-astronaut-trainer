@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { SCENES, GAME_WIDTH, GAME_HEIGHT } from '../config/constants.js';
+import { gameState } from '../state/GameState.js';
 
 /**
  * Opening screen on a dark background where lines transition one by one as the player taps.
@@ -85,12 +86,18 @@ export class IntroScene extends Phaser.Scene {
   ensureBgmPlaying() {
     const key = this.cache.audio.exists('bgm-day1') ? 'bgm-day1' : 'bgm-main';
     if (!this.cache.audio.exists(key)) return;
-    const existing = this.sound.get(key);
+    const vol = gameState.getEffectiveVolume('music', 0.35);
+    let existing = this.sound.get(key);
+    if (existing && (existing.pendingRemove || !existing.currentConfig)) {
+      this.sound.remove(existing);
+      existing = null;
+    }
     if (existing) {
-      if (!existing.isPlaying) existing.play({ loop: true, volume: 0.35 });
+      if (!existing.isPlaying) existing.play({ loop: true, volume: vol });
+      else existing.setVolume(vol);
       return;
     }
-    this.sound.add(key, { loop: true, volume: 0.35 }).play();
+    this.sound.add(key, { loop: true, volume: vol }).play();
   }
 
   showLine(idx) {
