@@ -1,6 +1,276 @@
-# Junior Astronaut Trainer — Complete Dialogues (Day 4 to Day 7 & Ending)
+# Junior Astronaut Trainer — Complete Dialogues (Day 1 to Day 7 & Ending)
 
-This file extracts **verbatim** all character dialogues, thought bubbles (`[Thought]`), Deep Space Comms broadcasts (`[Radio]`), inline fact reveals (`[Fact Reveal]`), choice modals, rewind/critical warnings, interaction toasts, and End-of-Sol transitions from **Day 4 onwards** (`OutpostScene.js`, `SurfaceScene.js`, `RoomScene.js`, `HudScene.js`, `PowerPanelTask.js`, and `CelebrationScene.js`).
+This file extracts **verbatim** all character dialogues, thought bubbles (`[Thought]`), radio / Deep Space Comms broadcasts (`[Radio]`), inline fact reveals (`[Fact Reveal]`), floating `FactCard` popups, first-time tutorials, choice modals, rewind/critical warnings, interaction toasts, and End-of-Sol transitions across **Day 1 through Day 7 and the Celebration Ending** (`SurfaceScene.js`, `OutpostScene.js`, `RoomScene.js`, `HudScene.js`, `SolarAlignTask.js`, `OxygenBuildTask.js`, `WaterBuildTask.js`, `PowerPanelTask.js`, and `CelebrationScene.js`).
+
+---
+
+## DAY 1 — Crash Landing, Mission Logbook, Solar Array & First Night
+
+### 1.1 Crash Landing & Surface Intro Dialogue (Mars Surface)
+*Sources: `src/scenes/SurfaceScene.js` (`startIntroDialogue`, L329–416) & `src/scenes/HudScene.js` (`L1278`, `L1349–1370`)*
+
+- **Muntasir** `[!]` *(Speaking)*:
+  > "Ah, here we go, the spacecraft went out of orbit and crashed on Mars."
+- **Maisha** *(Speaking)*:
+  > "Thank god, it didn't fall in a bad manner, we got out safe. Is the radio saying anything?"
+- **Radio** `[Radio]`:
+  > "Spacecraft is bound on orbit. Telemetry link severed during atmospheric entry—executing automated orbital relay protocol."
+- **Muntasir** *(Speaking)*:
+  > "Seems like our base on earth doesn't know about the crash. We have some facts to check."
+- **Inline Fact Reveal** `[Fact Reveal]`:
+  > "Fact: depending on relative position of earth to mars, it can take from 3-22 minutes to send a message and get a response back between earth and mars due to the vast distance it has to cover."
+- **Muntasir** *(Speaking)*:
+  > "How are we going to keep track of all these NASA facts and mission telemetry?"
+- **Maisha** *(Speaking)*:
+  > "I'm keeping track of everything we learn in our Mission Logbook! Every task and NASA fact gets recorded live at the top of our screen."
+- **First-Time Logbook Tutorial Overlay** (`HudScene.js:1278`):
+  > "MISSION LOGBOOK UPDATED!
+  >
+  > Maisha records every NASA fact, mission photo, and reference
+  > in this open 2-page journal.
+  >
+  > Whenever you see the RED DOT on the Logbook icon above,
+  > a new discovery has been added. Click it anytime to flip pages!"
+- **Maisha** *(Speaking)*:
+  > "So we would have to work independently without any help from the base station."
+- **Muntasir** *(Speaking)*:
+  > "Where do we take shelter?"
+- **Maisha** *(Speaking)*:
+  > "Seems like we have an outpost already build for living."
+- **Inline Fact Reveal** `[Fact Reveal]`:
+  > "Fact: NASA has plans to build an outpost on Mars Surface using regolith, a type of martian soil that can be compressed into bricks when combined with other chemicals, which will be 3D printed. The Mars Dune Alpha at the Johnson Space Centre has already simulated the process of building, on Earth in artificial environments"
+- **Muntasir** *(Speaking)*:
+  > "Let's go in..."
+- **First-Time Controls Tutorial Overlay** (`HudScene.js:1349–1370`, right after walking to the Airlock):
+  - Header: `MISSION CONTROLS TUTORIAL`
+  > "• Use ARROW KEYS (◄ ▲ ▼ ►) to walk around the Martian surface & outpost.
+  > • Stand near any glowing station or Airlock and press SPACE (or TAP) to interact."
+
+### 1.2 Dark Outpost Visit 1 (Inside Outpost)
+*Source: `src/scenes/OutpostScene.js` (`initFirstDarkVisit`, L200–206)*
+
+- **Maisha** *(Speaking)*:
+  > "Seems like we don't have any power or lights, we should do something about it. Let's get out."
+
+### 1.3 Solar Array Deployment & Alignment (Mars Surface)
+*Sources: `src/scenes/SurfaceScene.js` (`initSurfacePostCrash`, L465–480; `runPowerChargeUp`, L580) & `src/scenes/tasks/SolarAlignTask.js` (`L176–207`)*
+
+- **Muntasir** `[Thought]`:
+  > "We can build a solar panel right there, so that we can harvest light energy and turn it into electricity."
+- **Post-Thought FactCard** (`fact:show`, `SurfaceScene.js:477`):
+  > "Fact: NASA uses solar cells and panels on spacecraft to make them navigate on space where other manners of electricity production is impractical"
+- **First-Time Solar Alignment Tutorial** (`SolarAlignTask.js:176, 207`):
+  - Header: `FIRST-TIME TUTORIAL: AIM SOLAR PANEL`
+  > "Use the ARROW KEYS (◄ ▲ ▼ ►) to steer the solar array
+  > and center the glowing Sun inside the crosshair!
+  > (You can also drag with mouse or touch.)"
+- **Toast after Alignment** (`SurfaceScene.js:580`):
+  > "Power restored! Walk to the Airlock to go inside."
+
+### 1.4 Returning Inside & Restoring Habitat Lights (Inside Outpost)
+*Sources: `src/scenes/OutpostScene.js` (`initPowerRestoredVisit`, L236–244; `onLightsRestored`, L357–394; `onLightsTurnedOff`, L417–419) & `src/scenes/tasks/PowerPanelTask.js` (`L101–103, L479`)*
+
+- **Maisha** `[Thought]` (upon entering powered dark Outpost):
+  > "Muntasir connected the solar array! I should walk over to the Power Panel and flip the breaker switch to turn on the habitat lights."
+- **Power Panel Toggle** (`PowerPanelTask.js:102–103`): `LIGHTS` — `"Main habitat illumination"`
+- **Power Panel Toast** (if applied before turning lights ON, `PowerPanelTask.js:479`):
+  > "Switch LIGHTS to [ONLINE] to turn on the habitat lights!"
+- **Muntasir** *(Speaking, after lights turn ON)*:
+  > "Hurray. We can finally see."
+- **Maisha** *(Speaking)*:
+  > "It's night-time, and seems like the battery isn't charging."
+- **Muntasir** *(Speaking)*:
+  > "At night there is no sun, so there is no natural light for the solar panels to be powered up, we have to be careful about energy consumption soon."
+- **Muntasir** *(Speaking)*:
+  > "Seems like we are both tired. Let's have some rest on our bunks."
+- **Post-Dialogue FactCard** (`fact:show`, `OutpostScene.js:386`):
+  > "Fact: Mars surface has about 43% light level of earth, so its also harder for solar panels to recharge there"
+- **Toast** (subsequent lights ON, `OutpostScene.js:394`): `"Habitat lights online."`
+- **Rewind Warning** (if lights turned OFF afterwards, `OutpostScene.js:418`):
+  > "You can't navigate around without lights! Turn on the lights at the Power Panel or rewind to the checkpoint."
+
+### 1.5 Day 1 Toasts, Sleep Guards & End-of-Sol 1 Transition
+*Source: `src/scenes/RoomScene.js` (`L98–108, L252, L512–523`)*
+
+- **Progression Toasts & Warnings**:
+  - Airlock (Surface -> Outpost before solar panel): `"Build and align the solar panel first!"`
+  - Airlock (Outpost -> Surface before lights intro): `"Turn on the lights at the Power Panel first!"`
+  - Airlock (Outpost -> Surface if lights turned back OFF): `"You can't navigate around without lights! Turn on the lights or rewind to the checkpoint."`
+  - Solar Panel (`L252`): `"Solar array is aligned and perfectly fine."`
+  - Bed Sleep Guards (`L512, L516`): `"Turn on the lights at the Power Panel first!"` / `"You can't navigate around without lights! Turn on the lights before resting."`
+- **End-of-Sol 1 Transition** (`RoomScene.js:523`, with storm audio):
+  > `END OF SOL 1`
+  >
+  > `Muntasir and Maisha rest on their bunks.`
+  > `Overnight, a Martian dust storm sweeps across the outpost and coats the solar panels...`
+  >
+  > `SOL 2 BEGINS`
+
+---
+
+## DAY 2 — Dust Storm Clean-Up, Ice Drilling & Oxygen Maker
+
+### 2.1 Morning Intro (Inside Outpost)
+*Source: `src/scenes/OutpostScene.js` (`initDay2Outpost`, L476–500)*
+
+- **Maisha** *(Speaking)*:
+  > "Good morning, Muntasir! Look at our Power meter—it's shaking and dropping slowly!"
+- **Muntasir** *(Speaking)*:
+  > "An overnight Martian dust storm must have coated our solar array outside!"
+- **Muntasir** `[Thought]`:
+  > "I should go outside through the Airlock and wipe the dust off the solar panel."
+- **Post-Dialogue FactCard** (`fact:show`, `OutpostScene.js:499`):
+  > "Fact: NASA's Mars Exploration Rover Opportunity went silent in the global Martian dust storm of June 2018, and its mission was declared over in February 2019."
+
+### 2.2 Cleaning Solar Panel & Low Oxygen Alert (Mars Surface)
+*Source: `src/scenes/SurfaceScene.js` (`onDay2PanelCleaned`, L757–781)*
+
+- **Maisha** `[!]` *(Speaking)*:
+  > "Muntasir! I just checked the life support console—our habitat oxygen reserves are getting dangerously low!"
+- **Muntasir** *(Speaking)*:
+  > "We can melt subsurface Martian ice and split water with electricity to make oxygen, just like the ISS!"
+- **Maisha** *(Speaking)*:
+  > "Look over there—the surface scanner found subsurface ice! Drill a core sample while I prepare the outpost."
+- **Post-Dialogue FactCard** (`fact:show`, `SurfaceScene.js:780`):
+  > "Fact: Just like the ISS Oxygen Generation System (OGS) splits water into hydrogen and breathable oxygen via electrolysis, NASA's MOXIE experiment on Perseverance proved we can generate oxygen on Mars—producing 122 grams of pure oxygen."
+
+### 2.3 After Drilling Ice Core (Mars Surface)
+*Source: `src/scenes/SurfaceScene.js` (`onDay2IceDrilled`, L814–822)*
+
+- **Muntasir** `[Thought]`:
+  > "Got the Martian ice core! Let's head back inside so Maisha can build the Oxygen Maker."
+
+### 2.4 Building Oxygen Maker & Loading Hopper (Inside Outpost)
+*Sources: `src/scenes/OutpostScene.js` (`initDay2Outpost`, L521–529; `onDay2OxygenBuilt`, L655–673) & `src/scenes/tasks/OxygenBuildTask.js` (`L320`)*
+
+- **Maisha** `[Thought]` (upon Muntasir returning with ice):
+  > "Muntasir drilled the Martian ice! I can assemble the Oxygen Maker right here and split the water into breathable O2."
+- **Non-Canon Power Allocation Rewind Warning** (`OxygenBuildTask.js:320`):
+  > "You can't survive without oxygen! One astronaut needs about 0.84 kg of oxygen a day. Allocate power to the Oxygen Maker!"
+- **Maisha** *(Speaking, after assembly)*:
+  > "Great! The Oxygen Maker is assembled and wired into the habitat power grid."
+- **Muntasir** *(Speaking)*:
+  > "Now we need to feed our harvested Martian ice blocks into its top Hopper so it can melt the ice and produce breathable air."
+- **Maisha** `[Thought]`:
+  > "I should walk up to the Oxygen Maker and load the ice blocks into the Hopper."
+
+### 2.5 After Loading Ice & Day 2 Night Prep (Inside Outpost)
+*Source: `src/scenes/OutpostScene.js` (`onDay2IceLoaded`, L703–729)*
+
+- **Maisha** *(Speaking)*:
+  > "The ice is melting inside the Hopper! Fresh breathable oxygen is flowing into the habitat now."
+- **Muntasir** *(Speaking)*:
+  > "Night has fallen and the solar panels cannot charge in the dark, so keeping both the lights and the Oxygen Maker running all night will drain our battery."
+- **Maisha** `[Thought]`:
+  > "I should open the Power Panel and turn off the habitat lights to save power for the Oxygen Maker before we rest on the bunks."
+- **Post-Dialogue FactCard** (`fact:show`, `OutpostScene.js:728`):
+  > "Fact: On Mars, splitting water with electricity makes O2 just like on the ISS. Perseverance's MOXIE also made ~122g of oxygen from Martian CO2 air. One person needs ~0.84 kg O2/day."
+
+### 2.6 Day 2 Warnings, Toasts & End-of-Sol 2 Transition
+*Sources: `src/scenes/tasks/PowerPanelTask.js` (`L747–775`), `src/scenes/HudScene.js` (`L840`), & `src/scenes/RoomScene.js` (`L113–131, L223, L264, L269, L403, L536–564`)*
+
+- **Rewind Warnings**:
+  - Oxygen switched OFF (`PowerPanelTask.js:747`): `"Warning: Never switch off the Oxygen Maker! Without life support, breathable air in the habitat will run out fast."`
+  - Oxygen hits 0% (`HudScene.js:840`): `"CRITICAL: Habitat Oxygen hit 0%! Turn OXYGEN MAKER back ON or rewind!"`
+- **Power Panel Toasts (`PowerPanelTask.js`)**:
+  - `"Oxygen Maker back online and habitat lights off for the night."` (`L767`)
+  - `"Habitat lights off for the night. Rest on the bunks!"` (`L768`)
+  - `"Oxygen Maker back online."` (`L774, L779`)
+- **Progression Toasts & Bed Sleep Guards (`RoomScene.js`)**:
+  - Airlock (Surface -> Outpost): `"Clean the solar panel first!"` / `"Drill for subsurface ice before heading back inside!"`
+  - Airlock (Outpost -> Surface): `"Build the Oxygen Maker inside first!"` / `"Load Martian ice into the Oxygen Maker Hopper first!"`
+  - Solar Panel / Ice Site / Oxygen Maker (`L223, L264, L269, L403`): `"Solar array is clean and operating at 100%."` / `"Clean the solar array first!"` / `"Ice core already harvested for today."` / `"Oxygen Maker is online and producing breathable air."`
+  - Bed (`L536, L541`): `"Build the Oxygen Maker first!"` / `"Load Martian ice into the Oxygen Maker Hopper first!"`
+  - Bed Warnings (`L547, L556`): `"Oxygen Maker is OFF and oxygen is dropping! Flip OXYGEN back ON at the Power Panel or rewind before sleeping."` / `"Leaving the lights on overnight with the Oxygen Maker running drained the battery to 0%! Turn off the lights at the Power Panel before sleeping."`
+- **End-of-Sol 2 Transition** (`RoomScene.js:563`):
+  > `END OF SOL 2`
+  >
+  > `With the lights off and the Oxygen Maker humming softly, the crew rests safely through the night...`
+  >
+  > `SOL 3 BEGINS`
+
+---
+
+## DAY 3 — Water Crisis, Subsurface Ice Pipeline & Power Balancing
+
+### 3.1 Morning Intro (Inside Outpost)
+*Source: `src/scenes/OutpostScene.js` (`initDay3Outpost`, L758–786)*
+
+- **Muntasir** *(Speaking)*:
+  > "For the past 2 days, we didn't have water. I only had a little bit of food. I'm really hungry and dehydrated."
+- **Maisha** *(Speaking)*:
+  > "I think we have enough dried foods to last a few days."
+- **Muntasir** *(Speaking)*:
+  > "But water is scarce out here on Mars, and we only have the ice which we can drill again, and use it to get water."
+- **Maisha** *(Speaking)*:
+  > "I think we can salvage the water station from our spacecraft and use it to melt and purify the ice. Let’s go get some ice from the pile outside!"
+- **Post-Dialogue FactCard** (`fact:show`, `OutpostScene.js:785`):
+  > "Fact: Liquid water cannot stay on Mars's low-pressure surface, so astronauts must drill buried water ice—mapped globally by NASA's Mars Reconnaissance Orbiter."
+
+### 3.2 After Drilling Fresh Ice Outside (Mars Surface)
+*Source: `src/scenes/SurfaceScene.js` (`onDay3IceDrilled`, L874–888)*
+
+- **Maisha** `[Thought]`:
+  > "Harvested plenty of subsurface Martian ice! Let’s head back inside through the Airlock and salvage our Water Station."
+- **Post-Thought FactCard** (`fact:show`, `SurfaceScene.js:887`):
+  > "Fact: NASA's Phoenix lander uncovered bright subsurface water ice just centimeters beneath Martian soil in 2008—confirming astronauts can harvest local ice!"
+
+### 3.3 Returning Inside & Building Water Station (Inside Outpost)
+*Sources: `src/scenes/OutpostScene.js` (`initDay3Outpost`, L817–825; `onDay3WaterBuilt`, L1024–1037) & `src/scenes/tasks/WaterBuildTask.js` (`L398`)*
+
+- **Maisha** `[Thought]` (before Water Station build):
+  > "Got the ice core! I salvaged the Water Station parts from our spacecraft—let’s connect the pipes and build it."
+- **Non-Canon Power Allocation Rewind Warning** (`WaterBuildTask.js:398`):
+  > "Warning: Without power to heat and purify Martian ice, the crew will dehydrate! Humans can survive only about 3 days without water."
+- **Maisha** *(Speaking, after pipe assembly)*:
+  > "Now we can get fresh water here! Running the heater and filter draws extra power from our grid, though—a fair trade to stay hydrated."
+- **Maisha** `[Thought]`:
+  > "Let’s drop the Martian ice blocks into the Water Station hopper to melt and purify it!"
+
+### 3.4 Loading Ice into Water Station & Oxygen Depletion Alert (Inside Outpost)
+*Source: `src/scenes/OutpostScene.js` (`onDay3WaterIceLoaded`, L1065–1092)*
+
+- **Maisha** *(Speaking)*:
+  > "Fresh purified water is filling our outpost storage tank! Wait—hear that alert chime?"
+- **Muntasir** *(Speaking)*:
+  > "Our oxygen meter is also depleting! Let’s put the rest of the ice on the Oxygen Maker production and call it a day."
+- **Maisha** `[Thought]`:
+  > "Walk over to the Oxygen Maker and load the rest of our harvested ice!"
+- **Post-Dialogue FactCard** (`fact:show`, `OutpostScene.js:1091`):
+  > "Fact: On the International Space Station, NASA recycles ~98% of all water using heat, distillation, and filtration beds so crews never run dry!"
+
+### 3.5 After Refilling Oxygen -> Day 3 Night Prep (Inside Outpost)
+*Source: `src/scenes/OutpostScene.js` (`onDay3OxIceLoaded`, L1116–1140)*
+
+- **Maisha** *(Speaking)*:
+  > "Nighttime is hitting again, and the power is going out faster now with both Water and Oxygen life support active."
+- **Muntasir** *(Speaking)*:
+  > "It is more important we keep the habitat lights OFF before sleeping—while leaving Oxygen and Water production running!"
+- **Maisha** `[Thought]`:
+  > "Switch off ONLY the lights at the Power Breaker Board, then get some rest in the Bunks."
+
+### 3.6 Day 3 Warnings, Toasts & End-of-Sol 3 Transition
+*Sources: `src/scenes/tasks/PowerPanelTask.js` (`L710–781`), `src/scenes/HudScene.js` (`L840, L972`), & `src/scenes/RoomScene.js` (`L134–148, L229, L279, L344–352, L410–415, L574–608`)*
+
+- **Power Panel Rewind Warnings (`PowerPanelTask.js`)**:
+  - Oxygen switched OFF (`L710`): `"Warning: Switching off the Oxygen Maker saves power, but breathable air is depleting fast! You will suffocate without oxygen."`
+  - Water switched OFF (`L719`): `"Warning: Switching off the Water Station saves power, but water purification stops and the crew risks severe dehydration!"`
+  - Lights turned back ON (`L728`): `"Warning: Turning the lights back on dropped reserve power into the red danger zone! Keep the lights off before sleeping."`
+  - Water back ON toast (`L781`): `"Water Station back online."`
+- **Critical Meter Alerts (`HudScene.js`)**:
+  - Oxygen 0% (`L840`): `"CRITICAL: Habitat Oxygen hit 0%! Turn OXYGEN MAKER back ON or rewind!"`
+  - Water 0% (`L972`): `"CRITICAL: Habitat Water hit 0%! Rewind to allocate power or turn WATER STATION back ON!"`
+- **Progression Toasts & Bed Sleep Guards (`RoomScene.js`)**:
+  - Airlock (`L134, L139, L143, L147`): `"Drill for subsurface ice before heading back inside!"` / `"Build the Water Station inside first!"` / `"Load Martian ice into the Water Station first!"` / `"Load the remaining ice into the Oxygen Maker first!"`
+  - Solar Panel / Ice Site / Water Station / Oxygen Maker (`L229, L279, L344, L352, L410, L415`): `"Solar array is clear today—focus on water and ice!"` / `"Ice core already harvested for today."` / `"Drill Martian ice outside first!"` / `"Water Station is online and purifying Martian water."` / `"Build and supply the Water Station with ice first!"` / `"Oxygen Maker is online and producing breathable air."`
+  - Bed Guards (`L574, L578, L582, L586`): `"Drill subsurface Martian ice outside first!"` / `"Build the Water Station first!"` / `"Load ice into the Water Station first!"` / `"Load the remaining ice into the Oxygen Maker before sleeping!"`
+  - Bed Warnings (`L592, L601`): `"Life support systems (Oxygen & Water) must remain active overnight! Rewind and keep both life support switches ON."` / `"Leaving the lights on overnight with Oxygen and Water running drops battery power into the danger zone (30%)! Turn off only the lights at the Power Panel before sleeping."`
+- **End-of-Sol 3 Transition** (`RoomScene.js:608`, with storm audio):
+  > `END OF SOL 3`
+  >
+  > `With the habitat lights off, water purified, and oxygen flowing, the crew rests safely through the night...`
+  >
+  > `SOL 4 BEGINS`
 
 ---
 
