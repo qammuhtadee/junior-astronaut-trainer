@@ -565,15 +565,24 @@ export class RoomScene extends Phaser.Scene {
     if (this.createStationGuide) {
       this.createStationGuide('power_panel', 'Adjust Power Panel', '#fbbf24');
     }
-    const speaker = gameState.activeAstronaut === 'maisha' ? 'Muntasir' : 'Maisha';
+    const hasCompanion = !!(this.companion && this.companion.active);
+    const activeName = gameState.activeAstronaut === 'maisha' ? 'Maisha' : 'Muntasir';
+    const speaker = hasCompanion ? (activeName === 'Maisha' ? 'Muntasir' : 'Maisha') : activeName;
+    const displayText = hasCompanion
+      ? text
+      : text
+          .replace(/\bGo turn OFF\b/i, 'I should turn OFF')
+          .replace(/\bGo to the Power Panel\b/i, 'I should go to the Power Panel')
+          .replace(/\bHead to the Power Panel\b/i, 'I should head to the Power Panel');
     if (this.dialogueBox && !this.transitioning) {
       this.transitioning = true;
       this.dialogueBox.showSequence(
         [
           {
             speaker,
-            text,
-            target: this.companion || this.player,
+            text: displayText,
+            isThought: !hasCompanion,
+            target: hasCompanion ? this.companion : this.player,
           },
         ],
         () => {

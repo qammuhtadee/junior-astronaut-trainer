@@ -1671,9 +1671,9 @@ export class OutpostScene extends RoomScene {
       this.dialogueBox.showSequence(
         [
           {
-            speaker: 'Muntasir',
+            speaker: this.companion?.active ? 'Muntasir' : 'Maisha',
             text: 'All 5 drinkable H2O bags are locked into our sleeping walls—look, our bunk Radiation Protection stabilized right at 95%!',
-            target: this.companion || this.player,
+            target: this.companion?.active ? this.companion : this.player,
           },
           {
             isFactReveal: true,
