@@ -32,8 +32,8 @@ export class LogbookModal extends Phaser.GameObjects.Container {
   }
 
   buildModal() {
-    const bookW = 1040;
-    const bookH = 604;
+    const bookW = 1120;
+    const bookH = 626;
 
     // Dark screen backdrop that blocks clicks to underlying scenes
     const backdrop = this.scene.add
@@ -54,11 +54,11 @@ export class LogbookModal extends Phaser.GameObjects.Container {
     bookBg.lineStyle(3, 0x78350f, 1);
     bookBg.strokeRoundedRect(-bookW / 2, -bookH / 2, bookW, bookH, 14);
 
-    const pageW = 494;
-    const pageH = 572;
-    const leftX = -504;
+    const pageW = 534;
+    const pageH = 594;
+    const leftX = -544;
     const rightX = 10;
-    const pageY = -286;
+    const pageY = -297;
 
     [leftX, rightX].forEach((px) => {
       bookBg.fillStyle(0xfef9e7, 1);
@@ -67,7 +67,7 @@ export class LogbookModal extends Phaser.GameObjects.Container {
       bookBg.strokeRoundedRect(px, pageY, pageW, pageH, 6);
 
       // Vertical red notebook margin line
-      const marginX = px + 32;
+      const marginX = px + 30;
       bookBg.lineStyle(1.2, 0xfca5a5, 0.85);
       bookBg.lineBetween(marginX, pageY + 14, marginX, pageY + pageH - 14);
 
@@ -81,7 +81,7 @@ export class LogbookModal extends Phaser.GameObjects.Container {
     // Center spine groove & metallic rings
     bookBg.fillStyle(0x5d4037, 0.9);
     bookBg.fillRect(-10, pageY - 2, 20, pageH + 4);
-    for (let ry = -235; ry <= 235; ry += 55) {
+    for (let ry = -245; ry <= 245; ry += 55) {
       bookBg.lineStyle(2.5, 0x94a3b8, 1);
       bookBg.lineBetween(-12, ry, 12, ry);
     }
@@ -90,9 +90,9 @@ export class LogbookModal extends Phaser.GameObjects.Container {
     // Header Title Ribbon & Close Button
     this.add(
       this.scene.add
-        .text(-bookW / 2 + 24, -bookH / 2 - 22, 'ASTRONAUT MISSION LOGBOOK  //  NASA SCIENCE ARCHIVE', {
+        .text(-bookW / 2 + 24, -bookH / 2 - 20, 'ASTRONAUT MISSION LOGBOOK  //  NASA SCIENCE ARCHIVE', {
           fontFamily: 'monospace',
-          fontSize: '16px',
+          fontSize: '17px',
           fontStyle: 'bold',
           color: '#ffd166',
         })
@@ -100,9 +100,9 @@ export class LogbookModal extends Phaser.GameObjects.Container {
     );
 
     const closeBtn = this.scene.add
-      .text(bookW / 2 - 4, -bookH / 2 - 22, '[ X CLOSE / ESC ]', {
+      .text(bookW / 2 - 4, -bookH / 2 - 20, '[ X CLOSE / ESC ]', {
         fontFamily: 'monospace',
-        fontSize: '15px',
+        fontSize: '16px',
         fontStyle: 'bold',
         color: '#fecaca',
         backgroundColor: '#450a0a',
@@ -122,9 +122,9 @@ export class LogbookModal extends Phaser.GameObjects.Container {
 
     // Bottom Navigation Bar
     this.prevBtn = this.scene.add
-      .text(-bookW / 2 + 24, bookH / 2 + 22, '[ ◀ PREV ]', {
+      .text(-bookW / 2 + 24, bookH / 2 + 20, '[ ◀ PREV ]', {
         fontFamily: 'monospace',
-        fontSize: '15px',
+        fontSize: '16px',
         fontStyle: 'bold',
         color: '#f8fafc',
         backgroundColor: '#1e293b',
@@ -139,9 +139,9 @@ export class LogbookModal extends Phaser.GameObjects.Container {
     this.add(this.prevBtn);
 
     this.spreadLabel = this.scene.add
-      .text(0, bookH / 2 + 22, 'SPREAD 1 / 1', {
+      .text(0, bookH / 2 + 20, 'SPREAD 1 / 1', {
         fontFamily: 'monospace',
-        fontSize: '14px',
+        fontSize: '15px',
         fontStyle: 'bold',
         color: '#cbd5e1',
       })
@@ -149,9 +149,9 @@ export class LogbookModal extends Phaser.GameObjects.Container {
     this.add(this.spreadLabel);
 
     this.nextBtn = this.scene.add
-      .text(bookW / 2 - 24, bookH / 2 + 22, '[ NEXT ▶ ]', {
+      .text(bookW / 2 - 24, bookH / 2 + 20, '[ NEXT ▶ ]', {
         fontFamily: 'monospace',
-        fontSize: '15px',
+        fontSize: '16px',
         fontStyle: 'bold',
         color: '#f8fafc',
         backgroundColor: '#1e293b',
@@ -324,14 +324,14 @@ export class LogbookModal extends Phaser.GameObjects.Container {
     const rightIdx = leftIdx + 1;
 
     if (unlocked.length === 0) {
-      this.renderAwaitingPage(-504, -286, 1);
-      this.renderAwaitingPage(10, -286, 2);
+      this.renderAwaitingPage(-544, -297, 1);
+      this.renderAwaitingPage(10, -297, 2);
     } else {
-      this.renderPageSlot(-504, -286, unlocked[leftIdx], leftIdx + 1);
+      this.renderPageSlot(-544, -297, unlocked[leftIdx], leftIdx + 1);
       if (unlocked[rightIdx]) {
-        this.renderPageSlot(10, -286, unlocked[rightIdx], rightIdx + 1);
+        this.renderPageSlot(10, -297, unlocked[rightIdx], rightIdx + 1);
       } else {
-        this.renderAwaitingPage(10, -286, rightIdx + 1);
+        this.renderAwaitingPage(10, -297, rightIdx + 1);
       }
     }
 
@@ -386,7 +386,7 @@ export class LogbookModal extends Phaser.GameObjects.Container {
 
     // Glowing LED grow lights & warm cone rays inside dome
     g.fillStyle(0xfef08a, 0.14);
-    g.fillTriangle(x + 115, y + 36, x + 90, y + 102, x + 298, y + 102);
+    g.fillTriangle(x + 115, y + 36, x + 90, y + 102, x + w - 90, y + 102);
     g.fillStyle(0xfde047, 1);
     g.fillRoundedRect(x + 122, y + 32, w - 244, 7, 3);
 
@@ -395,7 +395,8 @@ export class LogbookModal extends Phaser.GameObjects.Container {
     g.fillRoundedRect(x + 94, y + 96, w - 188, 16, 4);
 
     // 4 cute green space crops growing out of water tray
-    const plantXs = [x + 124, x + 168, x + 214, x + 258];
+    const midX = x + w / 2;
+    const plantXs = [midX - 96, midX - 32, midX + 32, midX + 96];
     plantXs.forEach((px) => {
       g.lineStyle(2.5, 0x22c55e, 1);
       g.lineBetween(px, y + 96, px, y + 74);
@@ -408,46 +409,46 @@ export class LogbookModal extends Phaser.GameObjects.Container {
     this.pagesContainer.add(g);
 
     // Clear vector labels
-    const labelStyle = { fontFamily: 'monospace', fontSize: '11px', fontStyle: 'bold', color: '#e2e8f0' };
+    const labelStyle = { fontFamily: 'monospace', fontSize: '12px', fontStyle: 'bold', color: '#e2e8f0' };
     this.pagesContainer.add(this.scene.add.text(x + 10, y + 10, 'H2O SHIELD\nBLOCKS RAYS', { ...labelStyle, color: '#7dd3fc' }));
     this.pagesContainer.add(this.scene.add.text(x + w / 2, y + 14, 'LED GROW SUN', { ...labelStyle, color: '#fde047' }).setOrigin(0.5));
     this.pagesContainer.add(this.scene.add.text(x + w / 2, y + h - 11, 'HYDROPONIC TRAY • CO2 IN ➔ O2 + FOOD OUT', { ...labelStyle, color: '#fde68a' }).setOrigin(0.5));
   }
 
   renderPageSlot(px, py, entry, pageNum) {
-    const x0 = px + 40;
-    const contentW = 440;
+    const x0 = px + 36;
+    const contentW = 482;
 
     // SOL badge + Page Counter
     this.pagesContainer.add(
-      this.scene.add.text(x0, py + 14, `${entry.sol}  //  TOPIC #${String(pageNum).padStart(2, '0')}`, {
+      this.scene.add.text(x0, py + 12, `${entry.sol}  //  TOPIC #${String(pageNum).padStart(2, '0')}`, {
         fontFamily: 'monospace',
-        fontSize: '13px',
+        fontSize: '14px',
         fontStyle: 'bold',
         color: '#b45309',
       })
     );
 
     // Topic Title
-    const titleObj = this.scene.add.text(x0, py + 32, entry.title, {
+    const titleObj = this.scene.add.text(x0, py + 30, entry.title, {
       fontFamily: 'monospace',
-      fontSize: '18px',
+      fontSize: '20px',
       fontStyle: 'bold',
       color: '#0f172a',
       wordWrap: { width: contentW },
     });
     this.pagesContainer.add(titleObj);
 
-    let cursorY = py + 32 + titleObj.height + 6;
+    let cursorY = py + 30 + titleObj.height + 5;
     const images = entry.images || [];
 
     if (images.length === 1) {
-      this.drawPhotoFrame(x0, cursorY, contentW, 124, images[0]);
-      cursorY += 127;
+      this.drawPhotoFrame(x0, cursorY, contentW, 114, images[0]);
+      cursorY += 117;
       if (entry.imageCaption) {
         const cap = this.scene.add.text(x0, cursorY, entry.imageCaption, {
           fontFamily: 'monospace',
-          fontSize: '12px',
+          fontSize: '13px',
           fontStyle: 'italic',
           color: '#475569',
           wordWrap: { width: contentW },
@@ -456,14 +457,14 @@ export class LogbookModal extends Phaser.GameObjects.Container {
         cursorY += cap.height + 6;
       }
     } else if (images.length === 2) {
-      const halfW = 215;
-      this.drawPhotoFrame(x0, cursorY, halfW, 124, images[0]);
-      this.drawPhotoFrame(x0 + 225, cursorY, halfW, 124, images[1]);
-      cursorY += 127;
+      const halfW = 236;
+      this.drawPhotoFrame(x0, cursorY, halfW, 114, images[0]);
+      this.drawPhotoFrame(x0 + 246, cursorY, halfW, 114, images[1]);
+      cursorY += 117;
       if (entry.imageCaption) {
         const cap = this.scene.add.text(x0, cursorY, entry.imageCaption, {
           fontFamily: 'monospace',
-          fontSize: '12px',
+          fontSize: '13px',
           fontStyle: 'italic',
           color: '#475569',
           wordWrap: { width: contentW },
@@ -472,12 +473,12 @@ export class LogbookModal extends Phaser.GameObjects.Container {
         cursorY += cap.height + 6;
       }
     } else if (entry.vectorArt === 'greenhouse') {
-      this.drawGreenhouseVectorArt(x0, cursorY, contentW, 132);
-      cursorY += 136;
+      this.drawGreenhouseVectorArt(x0, cursorY, contentW, 122);
+      cursorY += 126;
       if (entry.imageCaption) {
         const cap = this.scene.add.text(x0, cursorY, entry.imageCaption, {
           fontFamily: 'monospace',
-          fontSize: '12px',
+          fontSize: '13px',
           fontStyle: 'italic',
           color: '#475569',
           wordWrap: { width: contentW },
@@ -488,16 +489,16 @@ export class LogbookModal extends Phaser.GameObjects.Container {
     } else if (entry.noImageCallout) {
       const bannerGfx = this.scene.add.graphics();
       bannerGfx.fillStyle(0x0f172a, 1);
-      bannerGfx.fillRoundedRect(x0, cursorY, contentW, 56, 8);
+      bannerGfx.fillRoundedRect(x0, cursorY, contentW, 54, 8);
       bannerGfx.lineStyle(2, 0x38bdf8, 1);
-      bannerGfx.strokeRoundedRect(x0, cursorY, contentW, 56, 8);
+      bannerGfx.strokeRoundedRect(x0, cursorY, contentW, 54, 8);
       this.pagesContainer.add(bannerGfx);
 
       this.pagesContainer.add(
         this.scene.add
-          .text(x0 + contentW / 2, cursorY + 28, entry.noImageCallout, {
+          .text(x0 + contentW / 2, cursorY + 27, entry.noImageCallout, {
             fontFamily: 'monospace',
-            fontSize: '13.5px',
+            fontSize: '14.5px',
             fontStyle: 'bold',
             color: '#7dd3fc',
             align: 'center',
@@ -505,29 +506,44 @@ export class LogbookModal extends Phaser.GameObjects.Container {
           })
           .setOrigin(0.5)
       );
-      cursorY += 66;
+      cursorY += 64;
     } else {
       cursorY += 6;
     }
 
+    // Strictly Separated Formal Reference Box at Bottom of Page
+    const refBoxY = py + 492;
+    const refBoxH = 80;
+    const maxBodyBottom = entry.closingQuote ? refBoxY - 82 : refBoxY - 10;
+
     // Kid-friendly Science Facts Body (no inline citations)
+    let bodyFontPx = images.length === 0 && !entry.vectorArt ? 17.5 : 16;
+    let bodySpacing = 4;
     const bodyObj = this.scene.add.text(x0, cursorY, entry.factText, {
       fontFamily: 'monospace',
-      fontSize: images.length === 0 && !entry.vectorArt ? '15.5px' : '14px',
+      fontSize: `${bodyFontPx}px`,
       color: '#0f172a',
-      lineSpacing: 5,
+      lineSpacing: bodySpacing,
       wordWrap: { width: contentW },
     });
+    while (cursorY + bodyObj.height > maxBodyBottom && bodyFontPx > 13) {
+      if (bodySpacing > 2) {
+        bodySpacing -= 1;
+      } else {
+        bodyFontPx -= 0.5;
+      }
+      bodyObj.setStyle({
+        fontSize: `${bodyFontPx}px`,
+        lineSpacing: bodySpacing,
+        wordWrap: { width: contentW },
+      });
+    }
     this.pagesContainer.add(bodyObj);
     cursorY += bodyObj.height + 10;
 
-    // Strictly Separated Formal Reference Box at Bottom of Page
-    const refBoxY = py + 474;
-    const refBoxH = 74;
-
     // Optional Closing Quote Plaque (Finale Spread)
     if (entry.closingQuote) {
-      const quoteBoxY = Math.min(cursorY + 6, refBoxY - 78);
+      const quoteBoxY = Math.min(cursorY + 4, refBoxY - 78);
       const quoteGfx = this.scene.add.graphics();
       quoteGfx.fillStyle(0xfef08a, 0.55);
       quoteGfx.fillRoundedRect(x0, quoteBoxY, contentW, 68, 8);
@@ -539,7 +555,7 @@ export class LogbookModal extends Phaser.GameObjects.Container {
         this.scene.add
           .text(x0 + contentW / 2, quoteBoxY + 34, `"${entry.closingQuote}"`, {
             fontFamily: 'monospace',
-            fontSize: '16px',
+            fontSize: '18px',
             fontStyle: 'bold',
             color: '#7c2d12',
             align: 'center',
@@ -559,18 +575,18 @@ export class LogbookModal extends Phaser.GameObjects.Container {
     this.pagesContainer.add(
       this.scene.add.text(x0 + 8, refBoxY + 6, 'FORMAL NASA / ARCHIVE REFERENCE', {
         fontFamily: 'monospace',
-        fontSize: '11px',
+        fontSize: '12px',
         fontStyle: 'bold',
         color: '#334155',
       })
     );
 
     this.pagesContainer.add(
-      this.scene.add.text(x0 + 8, refBoxY + 22, entry.formalReference, {
+      this.scene.add.text(x0 + 8, refBoxY + 23, entry.formalReference, {
         fontFamily: 'monospace',
-        fontSize: '11px',
+        fontSize: '12px',
         color: '#1e3a8a',
-        lineSpacing: 3,
+        lineSpacing: 2,
         wordWrap: { width: contentW - 16 },
       })
     );
@@ -578,9 +594,9 @@ export class LogbookModal extends Phaser.GameObjects.Container {
     // Page number footer
     this.pagesContainer.add(
       this.scene.add
-        .text(px + 478, py + 562, `PAGE ${pageNum}`, {
+        .text(px + 518, py + 588, `PAGE ${pageNum}`, {
           fontFamily: 'monospace',
-          fontSize: '12px',
+          fontSize: '13px',
           color: '#78716c',
         })
         .setOrigin(1, 1)
@@ -592,7 +608,7 @@ export class LogbookModal extends Phaser.GameObjects.Container {
     this.pagesContainer.add(
       this.scene.add.text(x0, py + 190, 'NEXT SOL BRIEFING LOCKED', {
         fontFamily: 'monospace',
-        fontSize: '17px',
+        fontSize: '19px',
         fontStyle: 'bold',
         color: '#a8a29e',
       })
@@ -600,22 +616,22 @@ export class LogbookModal extends Phaser.GameObjects.Container {
     this.pagesContainer.add(
       this.scene.add.text(
         x0,
-        py + 230,
+        py + 234,
         'Finish today’s mission tasks to unlock tomorrow’s NASA Logbook lessons and photographs!',
         {
           fontFamily: 'monospace',
-          fontSize: '15px',
+          fontSize: '17px',
           color: '#78716c',
-          lineSpacing: 6,
-          wordWrap: { width: 410 },
+          lineSpacing: 7,
+          wordWrap: { width: 450 },
         }
       )
     );
     this.pagesContainer.add(
       this.scene.add
-        .text(px + 478, py + 562, `PAGE ${pageNum}`, {
+        .text(px + 518, py + 588, `PAGE ${pageNum}`, {
           fontFamily: 'monospace',
-          fontSize: '12px',
+          fontSize: '13px',
           color: '#78716c',
         })
         .setOrigin(1, 1)
