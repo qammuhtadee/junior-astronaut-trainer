@@ -782,25 +782,44 @@ export class RoomScene extends Phaser.Scene {
     }
   }
 
-  /** Fade to black, show end-of-sol message, then advance to the next Sol. */
+  /** Fade to black, show end-of-sol message, and wait for player tap/SPACE before advancing. */
   runSleepTransition(message, onDone, playStorm = false) {
     this.transitioning = true;
     this.game.events.emit('prompt', null);
 
     const cx = GAME_WIDTH / 2;
     const cy = GAME_HEIGHT / 2;
-    const overlay = this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0).setOrigin(0).setDepth(3000);
+    const overlay = this.add
+      .rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0)
+      .setOrigin(0)
+      .setDepth(3000)
+      .setInteractive();
     const sleepText = this.add
-      .text(cx, cy, message, {
+      .text(cx, cy - 30, message, {
         fontFamily: 'monospace',
-        fontSize: '18px',
+        fontSize: '20px',
         align: 'center',
-        lineSpacing: 10,
+        lineSpacing: 12,
+        wordWrap: { width: 860 },
         color: '#ffd166',
       })
       .setOrigin(0.5)
       .setAlpha(0)
       .setDepth(3001);
+
+    const continueBtn = this.add
+      .text(cx, cy + 160, '[ ▶ TAP OR PRESS SPACE TO CONTINUE ]', {
+        fontFamily: 'monospace',
+        fontSize: '16px',
+        fontStyle: 'bold',
+        color: '#e2e8f0',
+        backgroundColor: '#1e293b',
+        padding: { x: 18, y: 10 },
+      })
+      .setOrigin(0.5)
+      .setAlpha(0)
+      .setDepth(3002)
+      .setInteractive({ useHandCursor: true });
 
     this.tweens.add({
       targets: overlay,
@@ -810,14 +829,48 @@ export class RoomScene extends Phaser.Scene {
         if (playStorm) {
           this.game.events.emit('storm:transition-play', 5600);
         }
+
+        let pulseTween = null;
         this.tweens.add({
-          targets: sleepText,
+          targets: [sleepText, continueBtn],
           alpha: 1,
           duration: 600,
-          hold: 2600,
-          yoyo: true,
           onComplete: () => {
-            onDone();
+            pulseTween = this.tweens.add({
+              targets: continueBtn,
+              alpha: { from: 1, to: 0.55 },
+              duration: 750,
+              yoyo: true,
+              repeat: -1,
+            });
+
+            let advanced = false;
+            const handleContinue = () => {
+              if (advanced) return;
+              advanced = true;
+              if (pulseTween) pulseTween.stop();
+              this.input.keyboard?.off('keydown-SPACE', handleContinue);
+              this.input.keyboard?.off('keydown-ENTER', handleContinue);
+              overlay.disableInteractive();
+              continueBtn.disableInteractive();
+              this.tweens.add({
+                targets: [sleepText, continueBtn],
+                alpha: 0,
+                duration: 350,
+                onComplete: () => {
+                  onDone();
+                },
+              });
+            };
+
+            // Brief delay prevents an accidental extra key press from skipping the card
+            this.time.delayedCall(300, () => {
+              if (advanced || !this.scene?.isActive()) return;
+              overlay.once('pointerdown', handleContinue);
+              continueBtn.once('pointerdown', handleContinue);
+              this.input.keyboard?.once('keydown-SPACE', handleContinue);
+              this.input.keyboard?.once('keydown-ENTER', handleContinue);
+            });
           },
         });
       },

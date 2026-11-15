@@ -314,6 +314,15 @@ export class DialogueBox extends Phaser.GameObjects.Container {
       }
     }
 
+    // Keep speech bubbles clear of the top HUD bar and top-left telemetry meters
+    by = Math.max(64, by);
+    if (isRadio && camLeft === 0 && bx < 250) {
+      bx = 250;
+    }
+    if (bx < camLeft + 485) {
+      by = Math.max(138, by);
+    }
+
     this.bubbleContainer.setPosition(bx, by);
 
     // Color theme per speaker

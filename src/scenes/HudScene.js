@@ -72,7 +72,7 @@ export class HudScene extends Phaser.Scene {
     this.createSettingsModal();
 
     // Floating NASA Fact Card (shifted left so it never covers the Airlock, larger for legibility)
-    this.factCard = new FactCard(this, GAME_WIDTH - 595, 58);
+    this.factCard = new FactCard(this, GAME_WIDTH - 615, 58);
 
     // Floating Side Warning Card (shows wrong decisions with Rewind to Checkpoint)
     this.warningCard = new WarningCard(this, 24, 136);
@@ -108,6 +108,7 @@ export class HudScene extends Phaser.Scene {
     this.game.events.on('fact:show', this.onShowFact, this);
     this.game.events.on('fact:hide', this.onHideFact, this);
     this.game.events.on('logbook:unlock', this.onUnlockFact, this);
+    this.game.events.on('logbook:auto-open', this.onAutoOpenLogbook, this);
     this.game.events.on('tutorial:logbook', this.showLogbookTutorial, this);
     this.game.events.on('tutorial:move', this.showMoveTutorial, this);
     this.game.events.on('warning:show', this.onShowWarning, this);
@@ -159,6 +160,7 @@ export class HudScene extends Phaser.Scene {
       this.game.events.off('fact:show', this.onShowFact, this);
       this.game.events.off('fact:hide', this.onHideFact, this);
       this.game.events.off('logbook:unlock', this.onUnlockFact, this);
+      this.game.events.off('logbook:auto-open', this.onAutoOpenLogbook, this);
       this.game.events.off('tutorial:logbook', this.showLogbookTutorial, this);
       this.game.events.off('tutorial:move', this.showMoveTutorial, this);
       this.game.events.off('warning:show', this.onShowWarning, this);
@@ -407,6 +409,22 @@ export class HudScene extends Phaser.Scene {
     gameState.unlockFact(resolved);
   }
 
+  onAutoOpenLogbook(payload = {}) {
+    const day = payload?.day ?? gameState.day ?? 1;
+    const onClose = typeof payload === 'function' ? payload : payload?.onClose || null;
+    this.logbookModal.openForDay(day, { auto: true, onClose });
+  }
+
+  playWrongSound() {
+    const now = this.time?.now ?? 0;
+    if (this.lastWrongSoundAt && now - this.lastWrongSoundAt < 350) return;
+    this.lastWrongSoundAt = now;
+    const vol = gameState.getEffectiveVolume('sfx', 0.72);
+    if (vol > 0 && this.cache.audio.exists('sfx-wrong')) {
+      this.sound.play('sfx-wrong', { volume: vol });
+    }
+  }
+
   onHideFact(immediate = true) {
     this.factCard.hide(immediate);
   }
@@ -416,6 +434,7 @@ export class HudScene extends Phaser.Scene {
     if (msg && msg.includes('0.84 kg')) {
       gameState.unlockFact('human_o2_consumption');
     }
+    this.playWrongSound();
     this.warningCard.show(payload);
   }
 

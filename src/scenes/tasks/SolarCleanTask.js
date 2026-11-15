@@ -53,7 +53,7 @@ export class SolarCleanTask extends Phaser.Scene {
     const title = this.add
       .text(0, -panelH / 2 + 27, 'CLEAN SOLAR ARRAY (4x4 SWIPE)', {
         fontFamily: 'monospace',
-        fontSize: '16px',
+        fontSize: '18px',
         fontStyle: 'bold',
         color: '#ffffff',
       })
@@ -63,7 +63,7 @@ export class SolarCleanTask extends Phaser.Scene {
     const closeBtn = this.add
       .text(panelW / 2 - 30, -panelH / 2 + 27, '[X]', {
         fontFamily: 'monospace',
-        fontSize: '16px',
+        fontSize: '18px',
         fontStyle: 'bold',
         color: '#fecaca',
       })
@@ -75,7 +75,7 @@ export class SolarCleanTask extends Phaser.Scene {
     this.statusText = this.add
       .text(0, -panelH / 2 + 66, '', {
         fontFamily: 'monospace',
-        fontSize: '14px',
+        fontSize: '15px',
         fontStyle: 'bold',
         color: '#ffd166',
       })
@@ -125,7 +125,7 @@ export class SolarCleanTask extends Phaser.Scene {
     this.hintText = this.add
       .text(0, panelH / 2 - 28, 'Click or swipe across the dusty tiles to clean all 16!', {
         fontFamily: 'monospace',
-        fontSize: '12px',
+        fontSize: '14px',
         color: '#94a3b8',
       })
       .setOrigin(0.5);

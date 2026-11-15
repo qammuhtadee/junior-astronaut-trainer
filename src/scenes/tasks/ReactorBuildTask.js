@@ -50,7 +50,7 @@ export class ReactorBuildTask extends Phaser.Scene {
       this.add
         .text(0, -panelH / 2 + 27, 'KILOPOWER FISSION REACTOR CONSOLE', {
           fontFamily: 'monospace',
-          fontSize: '16px',
+          fontSize: '18px',
           fontStyle: 'bold',
           color: '#ffffff',
         })
@@ -60,7 +60,7 @@ export class ReactorBuildTask extends Phaser.Scene {
     const closeBtn = this.add
       .text(panelW / 2 - 30, -panelH / 2 + 27, '[X]', {
         fontFamily: 'monospace',
-        fontSize: '16px',
+        fontSize: '18px',
         fontStyle: 'bold',
         color: '#fecaca',
       })
@@ -72,7 +72,7 @@ export class ReactorBuildTask extends Phaser.Scene {
     this.statusText = this.add
       .text(0, -panelH / 2 + 68, 'STAGE 1/3: LOCK ALL 3 SHIELD RINGS IN THE GREEN ZONE!', {
         fontFamily: 'monospace',
-        fontSize: '12px',
+        fontSize: '14px',
         fontStyle: 'bold',
         color: '#ffd166',
       })
@@ -95,7 +95,7 @@ export class ReactorBuildTask extends Phaser.Scene {
     this.coreBadge = this.add
       .text(this.coreX, 134, 'SHIELDS LOCKED: 0 / 3', {
         fontFamily: 'monospace',
-        fontSize: '12px',
+        fontSize: '14px',
         fontStyle: 'bold',
         color: '#34d399',
       })
@@ -126,7 +126,7 @@ export class ReactorBuildTask extends Phaser.Scene {
       this.add
         .text(rightX, -140, 'STAGE 2: CONTROL RODS (38-42 kW)', {
           fontFamily: 'monospace',
-          fontSize: '11px',
+          fontSize: '13px',
           fontStyle: 'bold',
           color: '#93c5fd',
         })
@@ -139,17 +139,17 @@ export class ReactorBuildTask extends Phaser.Scene {
     this.kwLabel = this.add
       .text(rightX, -98, 'OUTPUT: 8 kW (TARGET: 38-42 kW)', {
         fontFamily: 'monospace',
-        fontSize: '11px',
+        fontSize: '13px',
         fontStyle: 'bold',
         color: '#facc15',
       })
       .setOrigin(0.5);
     this.modal.add(this.kwLabel);
 
-    this.insertBtn = this.makeBtn(rightX - 58, -56, 104, '[ ◀ INSERT ]', 0x334155, 0x64748b, () =>
+    this.insertBtn = this.makeBtn(rightX - 60, -56, 114, '[ ◀ INSERT ]', 0x334155, 0x64748b, () =>
       this.adjustRods(-5)
     );
-    this.withdrawBtn = this.makeBtn(rightX + 58, -56, 104, '[ WITHDRAW ▶ ]', 0x334155, 0x64748b, () =>
+    this.withdrawBtn = this.makeBtn(rightX + 60, -56, 114, '[ WITHDRAW ▶ ]', 0x334155, 0x64748b, () =>
       this.adjustRods(5)
     );
     this.engageCoreBtn = this.makeBtn(rightX, -10, 214, '[ ENGAGE 40 kW LOCK ]', 0x059669, 0x34d399, () =>
@@ -167,9 +167,9 @@ export class ReactorBuildTask extends Phaser.Scene {
 
     this.modal.add(
       this.add
-        .text(rightX, 52, 'STAGE 3: PHASE IGNITION (1 → 2 → 3)', {
+        .text(rightX, 52, 'STAGE 3: IGNITION (1 → 2 → 3)', {
           fontFamily: 'monospace',
-          fontSize: '10px',
+          fontSize: '12px',
           fontStyle: 'bold',
           color: '#a7f3d0',
         })
@@ -187,7 +187,7 @@ export class ReactorBuildTask extends Phaser.Scene {
       this.add
         .text(0, panelH / 2 - 28, 'A small Kilopower fission unit supplies steady 40 kW electricity day & night!', {
           fontFamily: 'sans-serif',
-          fontSize: '12px',
+          fontSize: '14px',
           color: '#cbd5e1',
           backgroundColor: '#0f172a',
           padding: { x: 10, y: 5 },
@@ -242,7 +242,7 @@ export class ReactorBuildTask extends Phaser.Scene {
     const lbl = this.add
       .text(0, 0, text, {
         fontFamily: 'monospace',
-        fontSize: '10px',
+        fontSize: '12px',
         fontStyle: 'bold',
         color: '#ffffff',
       })

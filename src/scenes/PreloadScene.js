@@ -136,6 +136,22 @@ export class PreloadScene extends Phaser.Scene {
     this.load.image('station-water', 'assets/sprites/water-station.png');
     this.load.image('station-bunk', 'assets/sprites/bunk.png');
 
+    // Final Logbook archival NASA photos
+    this.load.image('logbook-mars1', 'assets/logbook/mars1.jpg');
+    this.load.image('logbook-phoenix', 'assets/logbook/phoenix.jpg');
+    this.load.image('logbook-solar1', 'assets/logbook/solar1.jpg');
+    this.load.image('logbook-opportunity', 'assets/logbook/opportunity.jpg');
+    this.load.image('logbook-dust1', 'assets/logbook/dust1.jpg');
+    this.load.image('logbook-curiosity', 'assets/logbook/curiosity.jpg');
+    this.load.image('logbook-mars-ice', 'assets/logbook/mars-ice.jpg');
+    this.load.image('logbook-moxie', 'assets/logbook/moxie.jpg');
+    this.load.image('logbook-perseverance', 'assets/logbook/perseverance.jpg');
+    this.load.image('logbook-nuclear-fission', 'assets/logbook/nuclear-fission.jpg');
+    this.load.image('logbook-solar-storm-1', 'assets/logbook/solar-storm-1.jpg');
+    this.load.image('logbook-solar-storm-2', 'assets/logbook/solar-storm-2.jpg');
+    this.load.image('logbook-greenhouse-1', 'assets/logbook/greenhouse-1.jpg');
+    this.load.image('logbook-foot-1', 'assets/logbook/foot-1.jpg');
+
     this.load.audio('bgm-main', 'assets/audio/bgm/main-theme.mp3');
     this.load.audio('bgm-day1', 'assets/audio/bgm/day1.mp3');
     this.load.audio('bgm-day2', 'assets/audio/bgm/day2.mp3');
@@ -144,6 +160,8 @@ export class PreloadScene extends Phaser.Scene {
     this.load.audio('sfx-airlock', 'assets/audio/sfx/airlock.wav');
     this.load.audio('sfx-footstep', 'assets/audio/sfx/footstep.wav');
     this.load.audio('sfx-page', 'assets/audio/sfx/page-flip.ogg');
+    this.load.audio('sfx-logpop', 'assets/audio/sfx/logpop.mp3');
+    this.load.audio('sfx-wrong', 'assets/audio/sfx/wrong.mp3');
     this.load.audio('sfx-radio', 'assets/audio/sfx/radio.ogg');
     this.load.audio('sfx-crash-boom', 'assets/audio/sfx/crash-boom.mp3');
     this.load.audio('sfx-landing', 'assets/audio/sfx/airplane-landing.mp3');

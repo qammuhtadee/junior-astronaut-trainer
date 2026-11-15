@@ -41,7 +41,7 @@ export class IceDrillTask extends Phaser.Scene {
       this.add
         .text(0, -panelH / 2 + 27, 'SUBSURFACE ICE DRILL', {
           fontFamily: 'monospace',
-          fontSize: '16px',
+          fontSize: '18px',
           fontStyle: 'bold',
           color: '#ffffff',
         })
@@ -51,7 +51,7 @@ export class IceDrillTask extends Phaser.Scene {
     const closeBtn = this.add
       .text(panelW / 2 - 30, -panelH / 2 + 27, '[X]', {
         fontFamily: 'monospace',
-        fontSize: '16px',
+        fontSize: '18px',
         fontStyle: 'bold',
         color: '#fecaca',
       })
@@ -63,7 +63,7 @@ export class IceDrillTask extends Phaser.Scene {
     this.statusText = this.add
       .text(0, -panelH / 2 + 66, 'HOLD TO DRILL — RELEASE TO COOL BIT', {
         fontFamily: 'monospace',
-        fontSize: '13px',
+        fontSize: '15px',
         fontStyle: 'bold',
         color: '#ffd166',
       })
@@ -97,7 +97,7 @@ export class IceDrillTask extends Phaser.Scene {
       this.add
         .text(shaftX + shaftW / 2, shaftY + shaftH * 0.9, 'ICE LAYER TARGET', {
           fontFamily: 'monospace',
-          fontSize: '12px',
+          fontSize: '14px',
           fontStyle: 'bold',
           color: '#ffffff',
         })
@@ -115,13 +115,13 @@ export class IceDrillTask extends Phaser.Scene {
 
     this.depthLabel = this.add.text(142, shaftY, 'DEPTH: 0%', {
       fontFamily: 'monospace',
-      fontSize: '13px',
+      fontSize: '15px',
       fontStyle: 'bold',
       color: '#38bdf8',
     });
     this.heatLabel = this.add.text(142, shaftY + 128, 'TEMP: 0%', {
       fontFamily: 'monospace',
-      fontSize: '13px',
+      fontSize: '15px',
       fontStyle: 'bold',
       color: '#50fa7b',
     });
@@ -134,7 +134,7 @@ export class IceDrillTask extends Phaser.Scene {
     const drillBtnText = this.add
       .text(0, 0, '[ HOLD TO DRILL (OR SPACE) ]', {
         fontFamily: 'monospace',
-        fontSize: '15px',
+        fontSize: '17px',
         fontStyle: 'bold',
         color: '#ffffff',
       })

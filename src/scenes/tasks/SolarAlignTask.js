@@ -102,7 +102,7 @@ export class SolarAlignTask extends Phaser.Scene {
     this.hintText = this.add
       .text(cx, cy + viewRadius + 32, 'Use ARROW KEYS / WASD to steer camera', {
         fontFamily: 'monospace',
-        fontSize: '14px',
+        fontSize: '15px',
         color: '#a0aab8',
       })
       .setOrigin(0.5);
@@ -111,7 +111,7 @@ export class SolarAlignTask extends Phaser.Scene {
     const closeBtn = this.add
       .text(cx + viewRadius + 40, cy - viewRadius - 10, '[ESC / X]', {
         fontFamily: 'monospace',
-        fontSize: '15px',
+        fontSize: '17px',
         color: '#ff6666',
         backgroundColor: '#220000',
         padding: { x: 8, y: 4 },
@@ -175,7 +175,7 @@ export class SolarAlignTask extends Phaser.Scene {
       this.add
         .text(0, -96, 'FIRST-TIME TUTORIAL: AIM SOLAR PANEL', {
           fontFamily: 'monospace',
-          fontSize: '16px',
+          fontSize: '18px',
           fontStyle: 'bold',
           color: '#ffd166',
         })
@@ -189,7 +189,7 @@ export class SolarAlignTask extends Phaser.Scene {
       cap.lineStyle(2, 0x38bdf8, 1);
       cap.strokeRoundedRect(kx - 20, ky - 20, 40, 40, 8);
       const txt = this.add
-        .text(kx, ky, label, { fontFamily: 'monospace', fontSize: '16px', fontStyle: 'bold', color: '#f8fafc' })
+        .text(kx, ky, label, { fontFamily: 'monospace', fontSize: '18px', fontStyle: 'bold', color: '#f8fafc' })
         .setOrigin(0.5);
       this.tutorialOverlay.add([cap, txt]);
     };
@@ -207,7 +207,7 @@ export class SolarAlignTask extends Phaser.Scene {
           'Use the ARROW KEYS (◄ ▲ ▼ ►) to steer the solar array\nand center the glowing Sun inside the crosshair!\n(You can also drag with mouse or touch.)',
           {
             fontFamily: 'monospace',
-            fontSize: '13px',
+            fontSize: '15px',
             align: 'center',
             lineSpacing: 5,
             color: '#e2e8f0',
@@ -220,7 +220,7 @@ export class SolarAlignTask extends Phaser.Scene {
       this.add
         .text(0, 106, '▶ TAP OR PRESS ANY KEY TO START', {
           fontFamily: 'monospace',
-          fontSize: '13px',
+          fontSize: '15px',
           fontStyle: 'bold',
           color: '#34d399',
         })

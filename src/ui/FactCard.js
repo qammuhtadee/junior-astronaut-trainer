@@ -8,12 +8,12 @@ import { gameState } from '../state/GameState.js';
  * and stays visible until manually closed by the player (never blocks movement or dialogue).
  */
 export class FactCard extends Phaser.GameObjects.Container {
-  constructor(scene, x = GAME_WIDTH - 595, y = 58) {
+  constructor(scene, x = GAME_WIDTH - 615, y = 58) {
     super(scene, x, y);
 
     this.baseY = y;
-    this.cardWidth = 410;
-    this.cardHeight = 160;
+    this.cardWidth = 446;
+    this.cardHeight = 166;
     this.visible = false;
     this.isTyping = false;
     this.fullText = '';
@@ -27,9 +27,9 @@ export class FactCard extends Phaser.GameObjects.Container {
     this.add(this.bg);
 
     // 2. Top Paper Header
-    this.headerText = scene.add.text(16, 11, '📌 NASA FACT // LOGBOOK UPDATED', {
+    this.headerText = scene.add.text(16, 10, '📌 NASA FACT // LOGBOOK UPDATED', {
       fontFamily: 'monospace',
-      fontSize: '13px',
+      fontSize: '15px',
       fontStyle: 'bold',
       color: '#92400e',
     });
@@ -37,9 +37,9 @@ export class FactCard extends Phaser.GameObjects.Container {
 
     // 3. Manual Close [X] button at top-right of the note
     this.closeBtn = scene.add
-      .text(this.cardWidth - 14, 11, '[X]', {
+      .text(this.cardWidth - 14, 10, '[X]', {
         fontFamily: 'monospace',
-        fontSize: '14px',
+        fontSize: '15px',
         fontStyle: 'bold',
         color: '#b45309',
       })
@@ -52,11 +52,11 @@ export class FactCard extends Phaser.GameObjects.Container {
     this.add(this.closeBtn);
 
     // 4. Typed Fact Text on Paper
-    this.bodyText = scene.add.text(16, 36, '', {
+    this.bodyText = scene.add.text(16, 38, '', {
       fontFamily: 'monospace',
-      fontSize: '14px',
+      fontSize: '16px',
       color: '#1e293b',
-      lineSpacing: 5,
+      lineSpacing: 6,
       wordWrap: { width: this.cardWidth - 32 },
     });
     this.add(this.bodyText);
@@ -65,7 +65,7 @@ export class FactCard extends Phaser.GameObjects.Container {
     this.dismissPrompt = scene.add
       .text(this.cardWidth - 14, this.cardHeight - 10, 'Click [X] to close', {
         fontFamily: 'monospace',
-        fontSize: '11px',
+        fontSize: '13px',
         color: '#92400e',
       })
       .setOrigin(1, 1);
@@ -138,13 +138,13 @@ export class FactCard extends Phaser.GameObjects.Container {
     const dummy = this.scene.add
       .text(0, 0, text, {
         fontFamily: 'monospace',
-        fontSize: '14px',
-        lineSpacing: 5,
+        fontSize: '16px',
+        lineSpacing: 6,
         wordWrap: { width: this.cardWidth - 32 },
       })
       .setVisible(false);
 
-    const neededHeight = Math.max(145, dummy.height + 64);
+    const neededHeight = Math.max(152, dummy.height + 68);
     dummy.destroy();
     this.redrawCard(neededHeight);
 

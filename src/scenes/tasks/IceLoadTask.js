@@ -62,7 +62,7 @@ export class IceLoadTask extends Phaser.Scene {
           this.isWaterMode ? 'WATER STATION ICE MELT & PURIFIER' : 'ICE HOPPER & ELECTROLYSIS LOADER',
           {
             fontFamily: 'monospace',
-            fontSize: '16px',
+            fontSize: '18px',
             fontStyle: 'bold',
             color: '#ffffff',
           }
@@ -73,7 +73,7 @@ export class IceLoadTask extends Phaser.Scene {
     const closeBtn = this.add
       .text(panelW / 2 - 30, -panelH / 2 + 27, '[X]', {
         fontFamily: 'monospace',
-        fontSize: '16px',
+        fontSize: '18px',
         fontStyle: 'bold',
         color: '#fecaca',
       })
@@ -85,7 +85,7 @@ export class IceLoadTask extends Phaser.Scene {
     this.statusText = this.add
       .text(0, -panelH / 2 + 68, 'DRAG MARTIAN ICE BLOCKS INTO THE TOP HOPPER!', {
         fontFamily: 'monospace',
-        fontSize: '12px',
+        fontSize: '14px',
         fontStyle: 'bold',
         color: '#ffd166',
       })
@@ -111,7 +111,7 @@ export class IceLoadTask extends Phaser.Scene {
       this.add
         .text(crateX, crateY - crateH / 2 + 18, 'ICE CORE CRATE', {
           fontFamily: 'monospace',
-          fontSize: '12px',
+          fontSize: '14px',
           fontStyle: 'bold',
           color: '#7dd3fc',
         })
@@ -184,7 +184,7 @@ export class IceLoadTask extends Phaser.Scene {
       this.add
         .text(this.hopperX, this.hopperY - 46, '▼ TOP ICE HOPPER ▼', {
           fontFamily: 'monospace',
-          fontSize: '11px',
+          fontSize: '13px',
           fontStyle: 'bold',
           color: '#7dd3fc',
         })
@@ -206,7 +206,7 @@ export class IceLoadTask extends Phaser.Scene {
     this.tankLabel = this.add
       .text(this.tankX, this.tankY - 58, this.isWaterMode ? 'ICE → PURE H2O' : 'H2O → O2 TANK', {
         fontFamily: 'monospace',
-        fontSize: '10px',
+        fontSize: '12px',
         fontStyle: 'bold',
         color: '#bae6fd',
       })
@@ -216,7 +216,7 @@ export class IceLoadTask extends Phaser.Scene {
     this.o2Badge = this.add
       .text(this.tankX, this.tankY + 42, this.isWaterMode ? 'H2O OUTPUT: 0%' : 'O2 OUTPUT: 0%', {
         fontFamily: 'monospace',
-        fontSize: '11px',
+        fontSize: '13px',
         fontStyle: 'bold',
         color: '#34d399',
         backgroundColor: '#022c22',
@@ -228,7 +228,7 @@ export class IceLoadTask extends Phaser.Scene {
     this.counterText = this.add
       .text(this.tankX, 146, `ICE LOADED: ${this.loadedCount} / ${TOTAL_ICE_BLOCKS}`, {
         fontFamily: 'monospace',
-        fontSize: '13px',
+        fontSize: '15px',
         fontStyle: 'bold',
         color: '#e0f2fe',
       })
@@ -245,7 +245,7 @@ export class IceLoadTask extends Phaser.Scene {
             : 'Melted Martian water ice splits into pure Oxygen (O2) & Hydrogen (H2)!',
           {
             fontFamily: 'sans-serif',
-            fontSize: '12px',
+            fontSize: '14px',
             color: '#cbd5e1',
             backgroundColor: '#0f172a',
             padding: { x: 10, y: 5 },
@@ -379,7 +379,7 @@ export class IceLoadTask extends Phaser.Scene {
       const lbl = this.add
         .text(0, 0, 'H2O ICE', {
           fontFamily: 'monospace',
-          fontSize: '10px',
+          fontSize: '12px',
           fontStyle: 'bold',
           color: '#082f49',
         })

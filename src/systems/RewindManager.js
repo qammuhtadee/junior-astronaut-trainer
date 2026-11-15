@@ -30,6 +30,7 @@ export const RewindManager = {
   },
 
   stopAllMeterTimers(hud) {
+    hud?.playWrongSound?.();
     hud.stopNightDrain?.();
     hud.stopDustDrain?.();
     hud.stopRapidOxygenDrain?.();
@@ -58,6 +59,7 @@ export const RewindManager = {
   },
 
   rewindLightsCheckpoint(hud) {
+    hud?.playWrongSound?.();
     hud.warningCard.hide();
     hud.stopInitialPowerCharge();
     gameState.habLightsOn = false;

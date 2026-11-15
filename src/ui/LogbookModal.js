@@ -4,9 +4,9 @@ import { LOGBOOK_ENTRIES } from '../data/logbookData.js';
 import { gameState } from '../state/GameState.js';
 
 /**
- * Open two-page astronaut journal / diary with lined pages, procedural NASA archival
- * illustrations, mission data metrics, and solid NASA references.
- * Live-updates as facts and tasks are discovered (unread badge triggers on HudScene).
+ * Open two-page astronaut journal with real NASA archival photographs,
+ * procedural vector science art, kid-friendly facts (ages 7-12),
+ * and formally separated NASA/nasa-data references.
  */
 export class LogbookModal extends Phaser.GameObjects.Container {
   constructor(scene) {
@@ -16,9 +16,9 @@ export class LogbookModal extends Phaser.GameObjects.Container {
     this.spreadIndex = 0;
     this.visible = false;
     this.pausedScenes = [];
+    this.onCloseCallback = null;
     this.setDepth(2600);
 
-    this.ensurePhotoTextures();
     this.buildModal();
     this.bindInputs();
 
@@ -31,267 +31,13 @@ export class LogbookModal extends Phaser.GameObjects.Container {
     scene.add.existing(this);
   }
 
-  ensurePhotoTextures() {
-    const texMgr = this.scene.textures;
-    const W = 380;
-    const H = 118;
-
-    const specs = [
-      { id: 'comm_delay', draw: (ctx) => this.drawCommDelayPhoto(ctx, W, H) },
-      { id: 'regolith_3d', draw: (ctx) => this.drawRegolithPhoto(ctx, W, H) },
-      { id: 'solar_arrays', draw: (ctx) => this.drawSolarArrayPhoto(ctx, W, H) },
-      { id: 'mars_sunlight_43', draw: (ctx) => this.drawSunlight43Photo(ctx, W, H) },
-      { id: 'opportunity_dust_2018', draw: (ctx) => this.drawOpportunityDustPhoto(ctx, W, H) },
-      { id: 'iss_electrolysis_moxie', draw: (ctx) => this.drawElectrolysisMoxiePhoto(ctx, W, H) },
-      { id: 'human_o2_consumption', draw: (ctx) => this.drawO2DemandPhoto(ctx, W, H) },
-    ];
-
-    specs.forEach(({ id, draw }) => {
-      const key = `logbook-photo-${id}`;
-      if (texMgr.exists(key)) return;
-      const canvasTex = texMgr.createCanvas(key, W, H);
-      const ctx = canvasTex.getContext();
-      draw(ctx);
-
-      // Crisp corner archive stamp
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.82)';
-      ctx.fillRect(W - 156, H - 18, 152, 14);
-      ctx.fillStyle = '#93c5fd';
-      ctx.font = 'bold 9px monospace';
-      ctx.textAlign = 'right';
-      ctx.fillText('NASA PUBLIC DOMAIN ARCHIVE', W - 8, H - 8);
-      ctx.textAlign = 'left';
-
-      canvasTex.refresh();
-    });
-  }
-
-  drawCommDelayPhoto(ctx, w, h) {
-    ctx.fillStyle = '#070b18';
-    ctx.fillRect(0, 0, w, h);
-    ctx.fillStyle = '#3b82f6';
-    ctx.beginPath();
-    ctx.arc(58, h / 2, 18, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#34d399';
-    ctx.beginPath();
-    ctx.arc(53, h / 2 - 4, 7, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = '#ea580c';
-    ctx.beginPath();
-    ctx.arc(w - 64, h / 2, 15, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.strokeStyle = '#38bdf8';
-    ctx.lineWidth = 2;
-    for (let r = 28; r <= 76; r += 16) {
-      ctx.beginPath();
-      ctx.arc(76, h / 2, r, -0.55, 0.55);
-      ctx.stroke();
-    }
-    ctx.setLineDash([5, 5]);
-    ctx.strokeStyle = '#ffd166';
-    ctx.beginPath();
-    ctx.moveTo(82, h / 2);
-    ctx.lineTo(w - 86, h / 2);
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    ctx.fillStyle = '#f8fafc';
-    ctx.font = 'bold 11px monospace';
-    ctx.fillText('EARTH', 42, h - 14);
-    ctx.fillText('MARS', w - 78, h - 14);
-    ctx.fillStyle = '#ffd166';
-    ctx.fillText('3 - 22 MIN ONE-WAY', 124, h / 2 - 14);
-  }
-
-  drawRegolithPhoto(ctx, w, h) {
-    ctx.fillStyle = '#431407';
-    ctx.fillRect(0, 0, w, h);
-    ctx.fillStyle = '#7c2d12';
-    ctx.fillRect(0, 74, w, h - 74);
-
-    // 3D-printed habitat dome with contour layers
-    ctx.fillStyle = '#d6d3d1';
-    ctx.beginPath();
-    ctx.arc(w / 2, 78, 52, Math.PI, 0);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.strokeStyle = '#78716c';
-    ctx.lineWidth = 1.5;
-    for (let y = 36; y <= 72; y += 9) {
-      ctx.beginPath();
-      ctx.moveTo(w / 2 - 42, y);
-      ctx.lineTo(w / 2 + 42, y);
-      ctx.stroke();
-    }
-    ctx.fillStyle = '#0f172a';
-    ctx.fillRect(w / 2 - 12, 54, 24, 24);
-    ctx.fillStyle = '#38bdf8';
-    ctx.fillRect(w / 2 + 18, 54, 14, 10);
-
-    ctx.fillStyle = '#fde68a';
-    ctx.font = 'bold 11px monospace';
-    ctx.fillText('MARS DUNE ALPHA // LAVACRETE', 14, 20);
-  }
-
-  drawSolarArrayPhoto(ctx, w, h) {
-    ctx.fillStyle = '#090d16';
-    ctx.fillRect(0, 0, w, h);
-
-    // Sunburst
-    ctx.fillStyle = '#ffd166';
-    ctx.beginPath();
-    ctx.arc(54, 34, 18, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(255, 209, 102, 0.55)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(74, 40);
-    ctx.lineTo(155, 58);
-    ctx.moveTo(72, 48);
-    ctx.lineTo(148, 72);
-    ctx.stroke();
-
-    // Photovoltaic wing panels
-    ctx.fillStyle = '#1d4ed8';
-    ctx.fillRect(140, 38, 175, 48);
-    ctx.strokeStyle = '#93c5fd';
-    ctx.lineWidth = 1.5;
-    for (let x = 140; x <= 315; x += 25) {
-      ctx.beginPath();
-      ctx.moveTo(x, 38);
-      ctx.lineTo(x, 86);
-      ctx.stroke();
-    }
-    for (let y = 38; y <= 86; y += 16) {
-      ctx.beginPath();
-      ctx.moveTo(140, y);
-      ctx.lineTo(315, y);
-      ctx.stroke();
-    }
-    ctx.fillStyle = '#f8fafc';
-    ctx.font = 'bold 11px monospace';
-    ctx.fillText('PHOTOVOLTAIC CELL ARRAYS', 14, h - 14);
-  }
-
-  drawSunlight43Photo(ctx, w, h) {
-    ctx.fillStyle = '#0b1020';
-    ctx.fillRect(0, 0, w, h);
-
-    ctx.fillStyle = '#f8fafc';
-    ctx.font = 'bold 11px monospace';
-    ctx.fillText('EARTH (1.0 AU)   100%  ~1,361 W/m2', 16, 30);
-    ctx.fillStyle = '#334155';
-    ctx.fillRect(16, 36, 260, 14);
-    ctx.fillStyle = '#38bdf8';
-    ctx.fillRect(16, 36, 260, 14);
-
-    ctx.fillStyle = '#fde68a';
-    ctx.fillText('MARS  (1.52 AU)   43%   ~590 W/m2', 16, 72);
-    ctx.fillStyle = '#334155';
-    ctx.fillRect(16, 78, 260, 14);
-    ctx.fillStyle = '#f97316';
-    ctx.fillRect(16, 78, Math.round(260 * 0.43), 14);
-  }
-
-  drawOpportunityDustPhoto(ctx, w, h) {
-    ctx.fillStyle = '#7c2d12';
-    ctx.fillRect(0, 0, w, h);
-    ctx.fillStyle = 'rgba(234, 88, 12, 0.55)';
-    ctx.fillRect(0, 0, w, h);
-    ctx.fillStyle = '#451a03';
-    ctx.fillRect(0, 82, w, 36);
-
-    // Rover body & solar deck silhouette coated in dust
-    ctx.fillStyle = '#d97706';
-    ctx.fillRect(130, 56, 95, 16);
-    ctx.fillStyle = '#1e293b';
-    ctx.fillRect(156, 40, 14, 18);
-    ctx.fillRect(150, 28, 26, 12);
-    ctx.fillStyle = '#0f172a';
-    [142, 178, 212].forEach((wx) => {
-      ctx.beginPath();
-      ctx.arc(wx, 82, 8, 0, Math.PI * 2);
-      ctx.fill();
-    });
-
-    ctx.fillStyle = '#fef08a';
-    ctx.font = 'bold 11px monospace';
-    ctx.fillText('MER-B OPPORTUNITY // JUNE 2018 DUST STORM', 14, 20);
-  }
-
-  drawElectrolysisMoxiePhoto(ctx, w, h) {
-    ctx.fillStyle = '#0f172a';
-    ctx.fillRect(0, 0, w, h);
-
-    // Ice block + electrolysis cell
-    ctx.fillStyle = '#38bdf8';
-    ctx.fillRect(24, 34, 62, 54);
-    ctx.fillStyle = '#e0f2fe';
-    ctx.font = 'bold 11px monospace';
-    ctx.fillText('H2O ICE', 31, 65);
-
-    ctx.fillStyle = '#fbbf24';
-    ctx.fillText('---> + e-', 95, 65);
-
-    ctx.fillStyle = '#065f46';
-    ctx.fillRect(172, 34, 78, 54);
-    ctx.strokeStyle = '#34d399';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(172, 34, 78, 54);
-    ctx.fillStyle = '#ecfdf5';
-    ctx.fillText('2H2 + O2', 184, 65);
-
-    // MOXIE golden cube badge
-    ctx.fillStyle = '#b45309';
-    ctx.fillRect(274, 34, 82, 54);
-    ctx.fillStyle = '#fef08a';
-    ctx.fillText('MOXIE', 295, 56);
-    ctx.fillText('122 g O2', 284, 74);
-
-    ctx.fillStyle = '#7dd3fc';
-    ctx.fillText('ISS ELECTROLYSIS + PERSEVERANCE MOXIE', 14, 20);
-  }
-
-  drawO2DemandPhoto(ctx, w, h) {
-    ctx.fillStyle = '#111827';
-    ctx.fillRect(0, 0, w, h);
-
-    ctx.fillStyle = '#1e293b';
-    ctx.fillRect(20, 28, 150, 62);
-    ctx.strokeStyle = '#38bdf8';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(20, 28, 150, 62);
-    ctx.fillStyle = '#38bdf8';
-    ctx.font = 'bold 13px monospace';
-    ctx.fillText('0.84 kg O2', 44, 54);
-    ctx.fillStyle = '#cbd5e1';
-    ctx.font = '10px monospace';
-    ctx.fillText('PER CREW / 24h', 40, 74);
-
-    // Breaker bars
-    ctx.fillStyle = '#34d399';
-    ctx.fillRect(195, 36, 155, 18);
-    ctx.fillStyle = '#0f172a';
-    ctx.font = 'bold 10px monospace';
-    ctx.fillText('O2 ELECTROLYSIS: ON (40%)', 200, 49);
-
-    ctx.fillStyle = '#475569';
-    ctx.fillRect(195, 64, 155, 18);
-    ctx.fillStyle = '#cbd5e1';
-    ctx.fillText('NIGHT LIGHTS: OFF (SAVE)', 200, 77);
-  }
-
   buildModal() {
     const bookW = 940;
     const bookH = 580;
 
     // Dark screen backdrop that blocks clicks to underlying scenes
     const backdrop = this.scene.add
-      .rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.78)
+      .rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.8)
       .setInteractive();
     backdrop.on('pointerdown', (_p, _lx, _ly, event) => {
       if (event) event.stopPropagation();
@@ -321,12 +67,12 @@ export class LogbookModal extends Phaser.GameObjects.Container {
       bookBg.strokeRoundedRect(px, pageY, pageW, pageH, 6);
 
       // Vertical red notebook margin line
-      const marginX = px === leftX ? px + 34 : px + 34;
+      const marginX = px + 34;
       bookBg.lineStyle(1.2, 0xfca5a5, 0.85);
       bookBg.lineBetween(marginX, pageY + 14, marginX, pageY + pageH - 14);
 
       // Horizontal ruled diary lines every 22px
-      bookBg.lineStyle(1, 0xd6d3d1, 0.7);
+      bookBg.lineStyle(1, 0xd6d3d1, 0.65);
       for (let ly = pageY + 42; ly < pageY + pageH - 22; ly += 22) {
         bookBg.lineBetween(px + 12, ly, px + pageW - 12, ly);
       }
@@ -344,7 +90,7 @@ export class LogbookModal extends Phaser.GameObjects.Container {
     // Header Title Ribbon & Close Button
     this.add(
       this.scene.add
-        .text(-bookW / 2 + 24, -bookH / 2 - 24, 'ASTRONAUT MISSION LOGBOOK  //  LIVE NASA ARCHIVE', {
+        .text(-bookW / 2 + 24, -bookH / 2 - 24, 'ASTRONAUT MISSION LOGBOOK  //  NASA SCIENCE ARCHIVE', {
           fontFamily: 'monospace',
           fontSize: '15px',
           fontStyle: 'bold',
@@ -436,6 +182,22 @@ export class LogbookModal extends Phaser.GameObjects.Container {
     this.scene.input.keyboard.on('keydown-RIGHT', this.onRight);
   }
 
+  /** Unlock every logbook entry up through the specified day (1-8). */
+  unlockUpToDay(maxDay) {
+    let changed = false;
+    LOGBOOK_ENTRIES.forEach((entry) => {
+      if (entry.day <= maxDay && !gameState.discoveredFacts.includes(entry.id)) {
+        gameState.discoveredFacts.push(entry.id);
+        changed = true;
+      }
+    });
+    if (changed) {
+      gameState.hasUnreadLogbook = true;
+      gameState.emit('logbook', { factId: null, unread: true, discoveredFacts: gameState.discoveredFacts });
+    }
+    return changed;
+  }
+
   getUnlockedEntries() {
     const discovered = new Set(gameState.discoveredFacts || []);
     return LOGBOOK_ENTRIES.filter((entry) => discovered.has(entry.id));
@@ -446,34 +208,75 @@ export class LogbookModal extends Phaser.GameObjects.Container {
     return Math.max(1, Math.ceil(count / 2));
   }
 
+  playPopSound() {
+    const vol = gameState.getEffectiveVolume('sfx', 0.72);
+    if (vol <= 0) return;
+    if (this.scene.cache.audio.exists('sfx-logpop')) {
+      this.scene.sound.play('sfx-logpop', { volume: vol });
+    } else if (this.scene.cache.audio.exists('sfx-page')) {
+      this.scene.sound.play('sfx-page', { volume: vol });
+    }
+  }
+
   playPageSound() {
-    const vol = gameState.getEffectiveVolume('sfx', 0.6);
+    const vol = gameState.getEffectiveVolume('sfx', 0.65);
     if (vol <= 0) return;
     if (this.scene.cache.audio.exists('sfx-page')) {
       this.scene.sound.play('sfx-page', { volume: vol });
     }
   }
 
+  pauseUnderlyingScenes() {
+    this.pausedScenes = [];
+    const ownKey = this.scene.scene.key;
+    this.scene.scene.manager.getScenes(true).forEach((s) => {
+      const key = s.scene.key;
+      if (key !== SCENES.HUD && key !== ownKey) {
+        this.scene.scene.pause(key);
+        this.pausedScenes.push(key);
+      }
+    });
+  }
+
+  /** Automatically or explicitly open directly to a given day's spread (1-8). */
+  openForDay(day, { auto = false, onClose = null } = {}) {
+    this.unlockUpToDay(day);
+    gameState.markLogbookRead();
+
+    const total = this.getTotalSpreads();
+    this.spreadIndex = Phaser.Math.Clamp(day - 1, 0, total - 1);
+    this.onCloseCallback = onClose || null;
+
+    if (!this.visible) {
+      this.pauseUnderlyingScenes();
+      this.setVisible(true);
+    }
+
+    if (auto) {
+      this.playPopSound();
+    } else {
+      this.playPageSound();
+    }
+    this.renderSpread();
+  }
+
+  /** Manual open from the top HUD Logbook icon (plays flipping-page SFX). */
   openLatest() {
     if (this.visible) {
       this.close();
       return;
     }
 
+    if (this.getUnlockedEntries().length === 0) {
+      this.unlockUpToDay(Math.max(1, gameState.day || 1));
+    }
     gameState.markLogbookRead();
 
     const count = this.getUnlockedEntries().length;
     this.spreadIndex = count > 0 ? Math.floor((count - 1) / 2) : 0;
+    this.onCloseCallback = null;
 
-    this.pausedScenes = [];
-    this.scene.scene.manager.getScenes(true).forEach((s) => {
-      const key = s.scene.key;
-      if (key !== SCENES.HUD && !this.scene.isPaused) {
-        this.scene.scene.pause(key);
-        this.pausedScenes.push(key);
-      }
-    });
-
+    this.pauseUnderlyingScenes();
     this.setVisible(true);
     this.playPageSound();
     this.renderSpread();
@@ -485,15 +288,17 @@ export class LogbookModal extends Phaser.GameObjects.Container {
 
     const toResume = [...this.pausedScenes];
     this.pausedScenes = [];
-    if (toResume.length > 0) {
-      this.scene.time.delayedCall(30, () => {
-        toResume.forEach((key) => {
-          if (this.scene?.scene) {
-            this.scene.scene.resume(key);
-          }
-        });
+    const cb = this.onCloseCallback;
+    this.onCloseCallback = null;
+
+    this.scene.time.delayedCall(30, () => {
+      toResume.forEach((key) => {
+        if (this.scene?.scene) {
+          this.scene.scene.resume(key);
+        }
       });
-    }
+      if (cb) cb();
+    });
   }
 
   changeSpread(delta) {
@@ -516,7 +321,7 @@ export class LogbookModal extends Phaser.GameObjects.Container {
     const rightIdx = leftIdx + 1;
 
     if (unlocked.length === 0) {
-      this.renderCoverPage(-454, -274);
+      this.renderAwaitingPage(-454, -274, 1);
       this.renderAwaitingPage(10, -274, 2);
     } else {
       this.renderPageSlot(-454, -274, unlocked[leftIdx], leftIdx + 1);
@@ -528,159 +333,248 @@ export class LogbookModal extends Phaser.GameObjects.Container {
     }
 
     this.spreadLabel.setText(
-      `SPREAD ${this.spreadIndex + 1} / ${totalSpreads}  (${unlocked.length} / ${LOGBOOK_ENTRIES.length} RECORDS)`
+      `SPREAD ${this.spreadIndex + 1} / ${totalSpreads}  (${unlocked.length} / ${LOGBOOK_ENTRIES.length} PAGES)`
     );
     this.prevBtn.setAlpha(this.spreadIndex > 0 ? 1 : 0.35);
     this.nextBtn.setAlpha(this.spreadIndex < totalSpreads - 1 ? 1 : 0.35);
   }
 
-  renderCoverPage(px, py) {
-    const x0 = px + 44;
-    const w = 384;
-    this.pagesContainer.add(
-      this.scene.add.text(x0, py + 24, 'MISSION JOURNAL — ARES VII', {
-        fontFamily: 'monospace',
-        fontSize: '18px',
-        fontStyle: 'bold',
-        color: '#9a3412',
-      })
-    );
-    this.pagesContainer.add(
-      this.scene.add.text(
-        x0,
-        py + 70,
-        'Astronaut Keeper: Maisha (Scientist-Medic)\nCo-Lead: Muntasir (Systems Engineer)\n\nEvery task completed and every NASA discovery encountered during your 7-Sol survival mission is logged automatically onto these pages with mission data, archival imagery, and references.\n\nWatch for the RED DOT on the Logbook icon whenever a new entry arrives!',
-        {
-          fontFamily: 'monospace',
-          fontSize: '13px',
-          color: '#1e293b',
-          lineSpacing: 8,
-          wordWrap: { width: w },
-        }
-      )
-    );
-    this.pagesContainer.add(
-      this.scene.add
-        .text(px + 426, py + 530, 'PAGE 1', {
-          fontFamily: 'monospace',
-          fontSize: '11px',
-          color: '#78716c',
-        })
-        .setOrigin(1, 1)
-    );
+  drawPhotoFrame(x, y, w, h, texKey) {
+    const frameGfx = this.scene.add.graphics();
+    frameGfx.fillStyle(0x0f172a, 1);
+    frameGfx.fillRect(x, y, w, h);
+    frameGfx.lineStyle(2, 0x475569, 1);
+    frameGfx.strokeRect(x, y, w, h);
+    this.pagesContainer.add(frameGfx);
+
+    if (texKey && this.scene.textures.exists(texKey)) {
+      const img = this.scene.add.image(x + w / 2, y + h / 2, texKey).setOrigin(0.5);
+      const scale = Math.min((w - 8) / img.width, (h - 8) / img.height);
+      img.setScale(scale);
+      this.pagesContainer.add(img);
+    }
+  }
+
+  drawGreenhouseVectorArt(x, y, w, h) {
+    const g = this.scene.add.graphics();
+    // Dark Martian sky backdrop inside diagram box
+    g.fillStyle(0x0b132b, 1);
+    g.fillRoundedRect(x, y, w, h, 6);
+    g.lineStyle(2, 0x38bdf8, 0.9);
+    g.strokeRoundedRect(x, y, w, h, 6);
+
+    // Martian red ground strip
+    g.fillStyle(0x7c2d12, 1);
+    g.fillRect(x + 2, y + h - 22, w - 4, 20);
+
+    // Outer water-bag shield walls (left & right of dome)
+    g.fillStyle(0x0284c7, 0.9);
+    g.fillRoundedRect(x + 56, y + 58, 18, 62, 4);
+    g.fillRoundedRect(x + w - 74, y + 58, 18, 62, 4);
+    g.lineStyle(1.5, 0x7dd3fc, 1);
+    g.strokeRoundedRect(x + 56, y + 58, 18, 62, 4);
+    g.strokeRoundedRect(x + w - 74, y + 58, 18, 62, 4);
+
+    // Pressurized dome shell
+    g.fillStyle(0x1e293b, 0.85);
+    g.fillRoundedRect(x + 78, y + 26, w - 156, 94, { tl: 46, tr: 46, bl: 4, br: 4 });
+    g.lineStyle(2.5, 0x4ade80, 0.95);
+    g.strokeRoundedRect(x + 78, y + 26, w - 156, 94, { tl: 46, tr: 46, bl: 4, br: 4 });
+
+    // Glowing LED grow lights & warm cone rays inside dome
+    g.fillStyle(0xfef08a, 0.14);
+    g.fillTriangle(x + 115, y + 36, x + 90, y + 102, x + 298, y + 102);
+    g.fillStyle(0xfde047, 1);
+    g.fillRoundedRect(x + 122, y + 32, w - 244, 7, 3);
+
+    // Blue hydroponic nutrient water tray
+    g.fillStyle(0x0369a1, 1);
+    g.fillRoundedRect(x + 94, y + 96, w - 188, 16, 4);
+
+    // 4 cute green space crops growing out of water tray
+    const plantXs = [x + 124, x + 168, x + 214, x + 258];
+    plantXs.forEach((px) => {
+      g.lineStyle(2.5, 0x22c55e, 1);
+      g.lineBetween(px, y + 96, px, y + 74);
+      g.fillStyle(0x4ade80, 1);
+      g.fillEllipse(px - 8, y + 78, 13, 8);
+      g.fillEllipse(px + 8, y + 78, 13, 8);
+      g.fillCircle(px, y + 69, 6);
+    });
+
+    this.pagesContainer.add(g);
+
+    // Clear vector labels
+    const labelStyle = { fontFamily: 'monospace', fontSize: '9.5px', fontStyle: 'bold', color: '#e2e8f0' };
+    this.pagesContainer.add(this.scene.add.text(x + 10, y + 10, 'H2O SHIELD\nBLOCKS RAYS', { ...labelStyle, color: '#7dd3fc' }));
+    this.pagesContainer.add(this.scene.add.text(x + w / 2, y + 14, 'LED GROW SUN', { ...labelStyle, color: '#fde047' }).setOrigin(0.5));
+    this.pagesContainer.add(this.scene.add.text(x + w / 2, y + h - 12, 'HYDROPONIC NUTRIENT WATER TRAY  •  CO2 IN ➔ O2 + FOOD OUT', { ...labelStyle, color: '#fde68a' }).setOrigin(0.5));
   }
 
   renderPageSlot(px, py, entry, pageNum) {
     const x0 = px + 42;
     const contentW = 388;
 
-    // SOL badge + Entry counter
+    // SOL badge + Page Counter
     this.pagesContainer.add(
-      this.scene.add.text(x0, py + 16, `${entry.sol}  //  LOG #${String(pageNum).padStart(2, '0')}`, {
+      this.scene.add.text(x0, py + 15, `${entry.sol}  //  TOPIC #${String(pageNum).padStart(2, '0')}`, {
         fontFamily: 'monospace',
-        fontSize: '11px',
+        fontSize: '11.5px',
         fontStyle: 'bold',
         color: '#b45309',
       })
     );
 
-    // Title
-    this.pagesContainer.add(
-      this.scene.add.text(x0, py + 34, entry.title, {
-        fontFamily: 'monospace',
-        fontSize: '15px',
-        fontStyle: 'bold',
-        color: '#0f172a',
-        wordWrap: { width: contentW },
-      })
-    );
+    // Topic Title
+    const titleObj = this.scene.add.text(x0, py + 33, entry.title, {
+      fontFamily: 'monospace',
+      fontSize: '16px',
+      fontStyle: 'bold',
+      color: '#0f172a',
+      wordWrap: { width: contentW },
+    });
+    this.pagesContainer.add(titleObj);
 
-    // Polaroid Photo Frame + NASA archival illustration
-    const frameY = py + 62;
-    const frameGfx = this.scene.add.graphics();
-    frameGfx.fillStyle(0xffffff, 1);
-    frameGfx.fillRect(x0, frameY, 384, 140);
-    frameGfx.lineStyle(1.5, 0x94a3b8, 1);
-    frameGfx.strokeRect(x0, frameY, 384, 140);
-    this.pagesContainer.add(frameGfx);
+    let cursorY = py + 33 + titleObj.height + 6;
+    const images = entry.images || [];
 
-    const photo = this.scene.add.image(x0 + 2, frameY + 2, `logbook-photo-${entry.id}`).setOrigin(0, 0);
-    this.pagesContainer.add(photo);
-
-    this.pagesContainer.add(
-      this.scene.add.text(x0 + 6, frameY + 123, entry.photoCaption, {
-        fontFamily: 'monospace',
-        fontSize: '9px',
-        color: '#475569',
-      })
-    );
-
-    // Real Data Metric Strip
-    const dataY = frameY + 148;
-    const metricBg = this.scene.add.graphics();
-    metricBg.fillStyle(0xe2e8f0, 0.9);
-    metricBg.fillRoundedRect(x0, dataY, contentW, 28, 4);
-    metricBg.lineStyle(1, 0x94a3b8, 0.8);
-    metricBg.strokeRoundedRect(x0, dataY, contentW, 28, 4);
-    this.pagesContainer.add(metricBg);
-
-    this.pagesContainer.add(
-      this.scene.add
-        .text(x0 + 8, dataY + 14, entry.dataMetric, {
+    if (images.length === 1) {
+      this.drawPhotoFrame(x0, cursorY, contentW, 134, images[0]);
+      cursorY += 137;
+      if (entry.imageCaption) {
+        const cap = this.scene.add.text(x0, cursorY, entry.imageCaption, {
           fontFamily: 'monospace',
-          fontSize: '10.5px',
-          fontStyle: 'bold',
-          color: '#0f172a',
-        })
-        .setOrigin(0, 0.5)
-    );
+          fontSize: '10px',
+          fontStyle: 'italic',
+          color: '#475569',
+          wordWrap: { width: contentW },
+        });
+        this.pagesContainer.add(cap);
+        cursorY += cap.height + 6;
+      }
+    } else if (images.length === 2) {
+      const halfW = 189;
+      this.drawPhotoFrame(x0, cursorY, halfW, 132, images[0]);
+      this.drawPhotoFrame(x0 + 199, cursorY, halfW, 132, images[1]);
+      cursorY += 135;
+      if (entry.imageCaption) {
+        const cap = this.scene.add.text(x0, cursorY, entry.imageCaption, {
+          fontFamily: 'monospace',
+          fontSize: '10px',
+          fontStyle: 'italic',
+          color: '#475569',
+          wordWrap: { width: contentW },
+        });
+        this.pagesContainer.add(cap);
+        cursorY += cap.height + 6;
+      }
+    } else if (entry.vectorArt === 'greenhouse') {
+      this.drawGreenhouseVectorArt(x0, cursorY, contentW, 140);
+      cursorY += 144;
+      if (entry.imageCaption) {
+        const cap = this.scene.add.text(x0, cursorY, entry.imageCaption, {
+          fontFamily: 'monospace',
+          fontSize: '10px',
+          fontStyle: 'italic',
+          color: '#475569',
+          wordWrap: { width: contentW },
+        });
+        this.pagesContainer.add(cap);
+        cursorY += cap.height + 6;
+      }
+    } else if (entry.noImageCallout) {
+      const bannerGfx = this.scene.add.graphics();
+      bannerGfx.fillStyle(0x0f172a, 1);
+      bannerGfx.fillRoundedRect(x0, cursorY, contentW, 56, 8);
+      bannerGfx.lineStyle(2, 0x38bdf8, 1);
+      bannerGfx.strokeRoundedRect(x0, cursorY, contentW, 56, 8);
+      this.pagesContainer.add(bannerGfx);
 
-    // Main NASA Science Fact Body
+      this.pagesContainer.add(
+        this.scene.add
+          .text(x0 + contentW / 2, cursorY + 28, entry.noImageCallout, {
+            fontFamily: 'monospace',
+            fontSize: '12px',
+            fontStyle: 'bold',
+            color: '#7dd3fc',
+            align: 'center',
+            wordWrap: { width: contentW - 20 },
+          })
+          .setOrigin(0.5)
+      );
+      cursorY += 66;
+    } else {
+      cursorY += 6;
+    }
+
+    // Kid-friendly Science Facts Body (no inline citations)
+    const bodyObj = this.scene.add.text(x0, cursorY, entry.factText, {
+      fontFamily: 'monospace',
+      fontSize: images.length === 0 && !entry.vectorArt ? '13px' : '12px',
+      color: '#0f172a',
+      lineSpacing: 5,
+      wordWrap: { width: contentW },
+    });
+    this.pagesContainer.add(bodyObj);
+    cursorY += bodyObj.height + 12;
+
+    // Optional Closing Quote Plaque (Finale Spread)
+    if (entry.closingQuote) {
+      const quoteBoxY = Math.min(cursorY, py + 368);
+      const quoteGfx = this.scene.add.graphics();
+      quoteGfx.fillStyle(0xfef08a, 0.55);
+      quoteGfx.fillRoundedRect(x0, quoteBoxY, contentW, 66, 8);
+      quoteGfx.lineStyle(2, 0xd97706, 0.9);
+      quoteGfx.strokeRoundedRect(x0, quoteBoxY, contentW, 66, 8);
+      this.pagesContainer.add(quoteGfx);
+
+      this.pagesContainer.add(
+        this.scene.add
+          .text(x0 + contentW / 2, quoteBoxY + 33, `"${entry.closingQuote}"`, {
+            fontFamily: 'monospace',
+            fontSize: '13.5px',
+            fontStyle: 'bold',
+            color: '#7c2d12',
+            align: 'center',
+            wordWrap: { width: contentW - 24 },
+          })
+          .setOrigin(0.5)
+      );
+    }
+
+    // Strictly Separated Formal Reference Box at Bottom of Page
+    const refBoxY = py + 448;
+    const refBoxH = 72;
+    const refGfx = this.scene.add.graphics();
+    refGfx.fillStyle(0xe2e8f0, 0.94);
+    refGfx.fillRoundedRect(x0, refBoxY, contentW, refBoxH, 6);
+    refGfx.lineStyle(1, 0x64748b, 0.9);
+    refGfx.strokeRoundedRect(x0, refBoxY, contentW, refBoxH, 6);
+    this.pagesContainer.add(refGfx);
+
     this.pagesContainer.add(
-      this.scene.add.text(x0, dataY + 38, entry.factText, {
+      this.scene.add.text(x0 + 8, refBoxY + 6, 'FORMAL NASA / ARCHIVE REFERENCE', {
         fontFamily: 'monospace',
-        fontSize: '12px',
-        color: '#1e293b',
-        lineSpacing: 6,
-        wordWrap: { width: contentW },
-      })
-    );
-
-    // Astronaut Handwritten-Style Diary Note
-    const diaryY = py + 365;
-    const diaryBg = this.scene.add.graphics();
-    diaryBg.fillStyle(0xfef08a, 0.4);
-    diaryBg.fillRoundedRect(x0, diaryY, contentW, 74, 6);
-    diaryBg.lineStyle(1, 0xd97706, 0.55);
-    diaryBg.strokeRoundedRect(x0, diaryY, contentW, 74, 6);
-    this.pagesContainer.add(diaryBg);
-
-    this.pagesContainer.add(
-      this.scene.add.text(x0 + 10, diaryY + 10, entry.diaryNote, {
-        fontFamily: 'monospace',
-        fontSize: '11.5px',
-        fontStyle: 'italic',
-        color: '#7c2d12',
-        lineSpacing: 5,
-        wordWrap: { width: contentW - 20 },
-      })
-    );
-
-    // Solid NASA Reference + Page Number Footer
-    this.pagesContainer.add(
-      this.scene.add.text(x0, py + 455, entry.reference, {
-        fontFamily: 'monospace',
-        fontSize: '10px',
+        fontSize: '9.5px',
         fontStyle: 'bold',
-        color: '#1d4ed8',
-        lineSpacing: 4,
-        wordWrap: { width: contentW },
+        color: '#334155',
       })
     );
 
+    this.pagesContainer.add(
+      this.scene.add.text(x0 + 8, refBoxY + 21, entry.formalReference, {
+        fontFamily: 'monospace',
+        fontSize: '9.5px',
+        color: '#1e3a8a',
+        lineSpacing: 3,
+        wordWrap: { width: contentW - 16 },
+      })
+    );
+
+    // Page number footer
     this.pagesContainer.add(
       this.scene.add
-        .text(px + 428, py + 532, `PAGE ${pageNum}`, {
+        .text(px + 428, py + 536, `PAGE ${pageNum}`, {
           fontFamily: 'monospace',
           fontSize: '11px',
           color: '#78716c',
@@ -692,9 +586,9 @@ export class LogbookModal extends Phaser.GameObjects.Container {
   renderAwaitingPage(px, py, pageNum) {
     const x0 = px + 44;
     this.pagesContainer.add(
-      this.scene.add.text(x0, py + 190, 'AWAITING FIELD DATA...', {
+      this.scene.add.text(x0, py + 190, 'NEXT SOL BRIEFING LOCKED', {
         fontFamily: 'monospace',
-        fontSize: '16px',
+        fontSize: '15px',
         fontStyle: 'bold',
         color: '#a8a29e',
       })
@@ -703,10 +597,10 @@ export class LogbookModal extends Phaser.GameObjects.Container {
       this.scene.add.text(
         x0,
         py + 228,
-        'Continue completing mission tasks and inspecting crew telemetry to record the next NASA research entry here.',
+        'Finish today’s mission tasks to unlock tomorrow’s NASA Logbook lessons and photographs!',
         {
           fontFamily: 'monospace',
-          fontSize: '12px',
+          fontSize: '12.5px',
           color: '#78716c',
           lineSpacing: 6,
           wordWrap: { width: 370 },
@@ -715,7 +609,7 @@ export class LogbookModal extends Phaser.GameObjects.Container {
     );
     this.pagesContainer.add(
       this.scene.add
-        .text(px + 428, py + 532, `PAGE ${pageNum}`, {
+        .text(px + 428, py + 536, `PAGE ${pageNum}`, {
           fontFamily: 'monospace',
           fontSize: '11px',
           color: '#78716c',

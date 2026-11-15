@@ -55,7 +55,7 @@ export class PowerPanelTask extends Phaser.Scene {
     const title = this.add
       .text(0, -panelH / 2 + 27, '⚡ OUTPOST POWER BREAKER BOARD', {
         fontFamily: 'monospace',
-        fontSize: '17px',
+        fontSize: '18px',
         fontStyle: 'bold',
         color: '#111827',
       })
@@ -66,7 +66,7 @@ export class PowerPanelTask extends Phaser.Scene {
     this.statusText = this.add
       .text(0, -panelH / 2 + 68, 'TOTAL POWER: 100% | LOAD: BALANCED', {
         fontFamily: 'monospace',
-        fontSize: '14px',
+        fontSize: '15px',
         color: '#ffd166',
       })
       .setOrigin(0.5);
@@ -76,7 +76,7 @@ export class PowerPanelTask extends Phaser.Scene {
     const closeBtn = this.add
       .text(panelW / 2 - 30, -panelH / 2 + 27, '[X]', {
         fontFamily: 'monospace',
-        fontSize: '16px',
+        fontSize: '18px',
         fontStyle: 'bold',
         color: '#ffffff',
       })
@@ -240,25 +240,25 @@ export class PowerPanelTask extends Phaser.Scene {
       // Label & Description
       const labelText = this.add.text(-panelW / 2 + 36, -16, sw.label, {
         fontFamily: 'monospace',
-        fontSize: '15px',
+        fontSize: '17px',
         fontStyle: 'bold',
         color: '#ffffff',
       });
       const descText = this.add.text(-panelW / 2 + 36, 6, sw.desc, {
         fontFamily: 'monospace',
-        fontSize: '11px',
+        fontSize: '13px',
         color: '#8b949e',
       });
       rowContainer.add([labelText, descText]);
 
       // Aerospace Tactile Switch (Recessed Track + Beveled Rocker Slider)
-      const trackX = panelW / 2 - 85;
+      const trackX = panelW / 2 - 144;
       const track = this.add.graphics();
       const knob = this.add.graphics();
       const statusPill = this.add
-        .text(trackX + 42, 0, sw.on ? '[ONLINE]' : '[OFFLINE]', {
+        .text(trackX + 34, 0, sw.on ? '[ONLINE]' : '[OFFLINE]', {
           fontFamily: 'monospace',
-          fontSize: '11px',
+          fontSize: '13px',
           fontStyle: 'bold',
           color: sw.on ? '#06b6d4' : '#64748b',
         })
@@ -348,7 +348,7 @@ export class PowerPanelTask extends Phaser.Scene {
     const btnText = this.add
       .text(0, 0, 'APPLY CONFIGURATION', {
         fontFamily: 'monospace',
-        fontSize: '14px',
+        fontSize: '15px',
         fontStyle: 'bold',
         color: '#ffffff',
       })

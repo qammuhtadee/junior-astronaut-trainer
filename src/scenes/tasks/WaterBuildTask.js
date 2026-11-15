@@ -56,7 +56,7 @@ export class WaterBuildTask extends Phaser.Scene {
       this.add
         .text(0, -panelH / 2 + 27, 'CONNECT WATER STATION PIPES', {
           fontFamily: 'monospace',
-          fontSize: '16px',
+          fontSize: '18px',
           fontStyle: 'bold',
           color: '#ffffff',
         })
@@ -66,7 +66,7 @@ export class WaterBuildTask extends Phaser.Scene {
     const closeBtn = this.add
       .text(panelW / 2 - 30, -panelH / 2 + 27, '[X]', {
         fontFamily: 'monospace',
-        fontSize: '16px',
+        fontSize: '18px',
         fontStyle: 'bold',
         color: '#fecaca',
       })
@@ -78,7 +78,7 @@ export class WaterBuildTask extends Phaser.Scene {
     this.statusText = this.add
       .text(0, -panelH / 2 + 68, 'DRAG EACH SALVAGED PIPE TO ITS MATCHING BLUEPRINT SLOT!', {
         fontFamily: 'monospace',
-        fontSize: '12px',
+        fontSize: '14px',
         fontStyle: 'bold',
         color: '#ffd166',
       })
@@ -119,7 +119,7 @@ export class WaterBuildTask extends Phaser.Scene {
       const slotLabel = this.add
         .text(slotX + 8, sy - 7, isPlaced ? `✔ ${part.label}` : `SLOT: ${part.label}`, {
           fontFamily: 'monospace',
-          fontSize: '10px',
+          fontSize: '12px',
           fontStyle: 'bold',
           color: isPlaced ? '#ffffff' : '#94a3b8',
         })
@@ -127,7 +127,7 @@ export class WaterBuildTask extends Phaser.Scene {
       const slotSub = this.add
         .text(slotX + 8, sy + 9, part.sub, {
           fontFamily: 'monospace',
-          fontSize: '9px',
+          fontSize: '11px',
           color: isPlaced ? '#bfdbfe' : '#475569',
         })
         .setOrigin(0.5);
@@ -161,7 +161,7 @@ export class WaterBuildTask extends Phaser.Scene {
         const text = this.add
           .text(-62, -7, part.label, {
             fontFamily: 'monospace',
-            fontSize: '11px',
+            fontSize: '13px',
             fontStyle: 'bold',
             color: '#f8fafc',
           })
@@ -169,7 +169,7 @@ export class WaterBuildTask extends Phaser.Scene {
         const subText = this.add
           .text(-62, 9, part.sub, {
             fontFamily: 'monospace',
-            fontSize: '9px',
+            fontSize: '11px',
             color: '#94a3b8',
           })
           .setOrigin(0, 0.5);
@@ -217,7 +217,7 @@ export class WaterBuildTask extends Phaser.Scene {
     const cTitle = this.add
       .text(0, -76, 'WATER PIPELINE CONNECTED!\nALLOCATE POWER TO MELT & PURIFY ICE?', {
         fontFamily: 'monospace',
-        fontSize: '15px',
+        fontSize: '17px',
         fontStyle: 'bold',
         align: 'center',
         lineSpacing: 6,
@@ -228,7 +228,7 @@ export class WaterBuildTask extends Phaser.Scene {
     const cDesc = this.add
       .text(0, -18, 'Heating Martian ice and filtering sediment draws extra battery power,\nbut refills clean drinking water for the crew!', {
         fontFamily: 'monospace',
-        fontSize: '11px',
+        fontSize: '13px',
         align: 'center',
         lineSpacing: 4,
         color: '#cbd5e1',
@@ -368,7 +368,7 @@ export class WaterBuildTask extends Phaser.Scene {
     const label = this.add
       .text(0, 0, text, {
         fontFamily: 'monospace',
-        fontSize: '13px',
+        fontSize: '15px',
         fontStyle: 'bold',
         color: '#ffffff',
       })

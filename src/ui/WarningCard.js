@@ -10,8 +10,8 @@ export class WarningCard extends Phaser.GameObjects.Container {
     super(scene, x, y);
 
     this.baseY = y;
-    this.cardWidth = 340;
-    this.cardHeight = 148;
+    this.cardWidth = 380;
+    this.cardHeight = 160;
     this.visible = false;
     this.rewindEvent = 'checkpoint:rewind-lights';
     this.setDepth(2100);
@@ -21,9 +21,9 @@ export class WarningCard extends Phaser.GameObjects.Container {
     this.add(this.bg);
 
     // 2. Warning Header
-    this.headerText = scene.add.text(14, 10, '⚠ WARNING // WRONG DECISION', {
+    this.headerText = scene.add.text(14, 9, '⚠ WARNING // WRONG DECISION', {
       fontFamily: 'monospace',
-      fontSize: '12px',
+      fontSize: '14px',
       fontStyle: 'bold',
       color: '#fca5a5',
     });
@@ -31,9 +31,9 @@ export class WarningCard extends Phaser.GameObjects.Container {
 
     // 3. Manual Close [X] button
     this.closeBtn = scene.add
-      .text(this.cardWidth - 14, 10, '[X]', {
+      .text(this.cardWidth - 14, 9, '[X]', {
         fontFamily: 'monospace',
-        fontSize: '12px',
+        fontSize: '14px',
         fontStyle: 'bold',
         color: '#fca5a5',
       })
@@ -46,34 +46,34 @@ export class WarningCard extends Phaser.GameObjects.Container {
     this.add(this.closeBtn);
 
     // 4. Warning Message Body
-    this.bodyText = scene.add.text(14, 34, '', {
+    this.bodyText = scene.add.text(14, 38, '', {
       fontFamily: 'monospace',
-      fontSize: '12px',
+      fontSize: '15px',
       color: '#fef2f2',
-      lineSpacing: 4,
+      lineSpacing: 5,
       wordWrap: { width: this.cardWidth - 28 },
     });
     this.add(this.bodyText);
 
     // 5. Prominent [ REWIND TO CHECKPOINT ] button
-    this.rewindBtn = scene.add.container(this.cardWidth / 2, this.cardHeight - 26);
+    this.rewindBtn = scene.add.container(this.cardWidth / 2, this.cardHeight - 28);
     this.rewindBg = scene.add.graphics();
     this.rewindBg.fillStyle(0xd97706, 1);
-    this.rewindBg.fillRoundedRect(-124, -15, 248, 30, 6);
+    this.rewindBg.fillRoundedRect(-146, -16, 292, 32, 6);
     this.rewindBg.lineStyle(2, 0xfbbf24, 1);
-    this.rewindBg.strokeRoundedRect(-124, -15, 248, 30, 6);
+    this.rewindBg.strokeRoundedRect(-146, -16, 292, 32, 6);
 
     this.rewindText = scene.add
       .text(0, 0, '[ ⏪ REWIND TO CHECKPOINT ]', {
         fontFamily: 'monospace',
-        fontSize: '12px',
+        fontSize: '14px',
         fontStyle: 'bold',
         color: '#111827',
       })
       .setOrigin(0.5);
 
     this.rewindBtn.add([this.rewindBg, this.rewindText]);
-    this.rewindBtn.setSize(248, 30);
+    this.rewindBtn.setSize(292, 32);
     this.rewindBtn.setInteractive({ useHandCursor: true });
     this.rewindBtn.on('pointerdown', (_pointer, _localX, _localY, event) => {
       if (event) event.stopPropagation();
@@ -110,13 +110,13 @@ export class WarningCard extends Phaser.GameObjects.Container {
 
     // Header highlight stripe
     this.bg.fillStyle(0x7f1d1d, 0.7);
-    this.bg.fillRoundedRect(2, 2, this.cardWidth - 4, 24, { tl: 10, tr: 10, bl: 0, br: 0 });
+    this.bg.fillRoundedRect(2, 2, this.cardWidth - 4, 28, { tl: 10, tr: 10, bl: 0, br: 0 });
 
     // Glowing red/amber border
     this.bg.lineStyle(2.5, 0xef4444, 0.95);
     this.bg.strokeRoundedRect(0, 0, this.cardWidth, height, 12);
 
-    this.rewindBtn.setY(height - 26);
+    this.rewindBtn.setY(height - 28);
   }
 
   show(payload = "You can't navigate around without lights! Operating the outpost in pitch darkness is unsafe.") {
@@ -128,7 +128,7 @@ export class WarningCard extends Phaser.GameObjects.Container {
     this.setVisible(true);
     this.setAlpha(0);
 
-    const neededHeight = Math.max(138, this.bodyText.height + 92);
+    const neededHeight = Math.max(150, this.bodyText.height + 98);
     this.redrawCard(neededHeight);
 
     this.scene.tweens.add({

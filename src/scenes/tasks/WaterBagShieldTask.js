@@ -83,7 +83,7 @@ export class WaterBagShieldTask extends Phaser.Scene {
       this.add
         .text(0, -panelH / 2 + 27, cfg.title, {
           fontFamily: 'monospace',
-          fontSize: '15px',
+          fontSize: '17px',
           fontStyle: 'bold',
           color: '#ffffff',
         })
@@ -93,7 +93,7 @@ export class WaterBagShieldTask extends Phaser.Scene {
     const closeBtn = this.add
       .text(panelW / 2 - 30, -panelH / 2 + 27, '[X]', {
         fontFamily: 'monospace',
-        fontSize: '16px',
+        fontSize: '18px',
         fontStyle: 'bold',
         color: '#fecaca',
       })
@@ -105,7 +105,7 @@ export class WaterBagShieldTask extends Phaser.Scene {
     this.statusText = this.add
       .text(0, -panelH / 2 + 66, 'DRAG OR CLICK SEALED WATER BAGS ONTO ALL 5 SHIELD SLOTS', {
         fontFamily: 'monospace',
-        fontSize: '12px',
+        fontSize: '14px',
         fontStyle: 'bold',
         color: '#ffd166',
       })
@@ -126,7 +126,7 @@ export class WaterBagShieldTask extends Phaser.Scene {
       this.add
         .text(rackX, -130, 'SEALED H2O BAGS (5)', {
           fontFamily: 'monospace',
-          fontSize: '11px',
+          fontSize: '13px',
           fontStyle: 'bold',
           color: '#7dd3fc',
         })
@@ -153,7 +153,7 @@ export class WaterBagShieldTask extends Phaser.Scene {
       this.add
         .text(targetX, targetY - 2, cfg.targetLabel, {
           fontFamily: 'monospace',
-          fontSize: '11px',
+          fontSize: '13px',
           fontStyle: 'bold',
           color: '#f8fafc',
           align: 'center',
@@ -166,7 +166,7 @@ export class WaterBagShieldTask extends Phaser.Scene {
     this.radIndicator = this.add
       .text(targetX, -126, 'RADIATION FLUX: UNSHIELDED (0/5 BAGS)', {
         fontFamily: 'monospace',
-        fontSize: '11px',
+        fontSize: '13px',
         fontStyle: 'bold',
         color: '#f87171',
       })
@@ -186,7 +186,7 @@ export class WaterBagShieldTask extends Phaser.Scene {
       const hint = this.add
         .text(sx, sy, `BAG ${idx + 1}`, {
           fontFamily: 'monospace',
-          fontSize: '9px',
+          fontSize: '11px',
           color: '#7dd3fc',
         })
         .setOrigin(0.5);
@@ -209,7 +209,7 @@ export class WaterBagShieldTask extends Phaser.Scene {
       const txt = this.add
         .text(0, 0, `H2O SHIELD #${i + 1}`, {
           fontFamily: 'monospace',
-          fontSize: '11px',
+          fontSize: '13px',
           fontStyle: 'bold',
           color: '#e0f2fe',
         })
@@ -260,7 +260,7 @@ export class WaterBagShieldTask extends Phaser.Scene {
       this.add
         .text(0, panelH / 2 - 48, 'Hydrogen in sealed water slows & blocks gamma/particle radiation with 0% H2O wastage!', {
           fontFamily: 'monospace',
-          fontSize: '11px',
+          fontSize: '13px',
           color: '#93c5fd',
           align: 'center',
           wordWrap: { width: panelW - 60 },
@@ -317,7 +317,7 @@ export class WaterBagShieldTask extends Phaser.Scene {
           this.add
             .text(slot.x, slot.y, 'H2O ✓', {
               fontFamily: 'monospace',
-              fontSize: '10px',
+              fontSize: '12px',
               fontStyle: 'bold',
               color: '#ecfeff',
             })

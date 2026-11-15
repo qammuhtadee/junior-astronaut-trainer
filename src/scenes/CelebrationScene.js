@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { SCENES, GAME_WIDTH, GAME_HEIGHT, HORIZON_Y, COLORS, DEPTH, LANE } from '../config/constants.js';
 import { Astronaut } from '../objects/Astronaut.js';
 import { DialogueBox } from '../ui/DialogueBox.js';
+import { LogbookModal } from '../ui/LogbookModal.js';
 import { gameState } from '../state/GameState.js';
 
 /**
@@ -130,15 +131,19 @@ export class CelebrationScene extends Phaser.Scene {
       duration: 850,
     });
 
+    this.logbookModal = new LogbookModal(this);
+    this.logbookModal.setDepth(3500);
+    this.logbookModal.unlockUpToDay(8);
+
     const card = this.add.container(cx, cy).setDepth(3001).setAlpha(0);
     const gfx = this.add.graphics();
     gfx.fillStyle(0x0f172a, 0.97);
-    gfx.fillRoundedRect(-330, -170, 660, 340, 18);
+    gfx.fillRoundedRect(-330, -195, 660, 390, 18);
     gfx.lineStyle(3, 0xfacc15, 0.95);
-    gfx.strokeRoundedRect(-330, -170, 660, 340, 18);
+    gfx.strokeRoundedRect(-330, -195, 660, 390, 18);
 
     const title = this.add
-      .text(0, -108, 'COMPLETE! CONGRATULATIONS!', {
+      .text(0, -138, 'COMPLETE! CONGRATULATIONS!', {
         fontFamily: 'monospace',
         fontSize: '30px',
         fontStyle: 'bold',
@@ -149,7 +154,7 @@ export class CelebrationScene extends Phaser.Scene {
     const subtitle = this.add
       .text(
         0,
-        -24,
+        -46,
         'Muntasir & Maisha stabilized Ares Outpost across 7 Sols!\n\n' +
           '✓ Solar Arrays & Kilopower Nuclear Power Online\n' +
           '✓ Subsurface Ice Drilled: 100% Oxygen & Clean Water\n' +
@@ -157,7 +162,7 @@ export class CelebrationScene extends Phaser.Scene {
           '✓ Sustainable Mars Greenhouse Harvested (NASA & CSA Data)',
         {
           fontFamily: 'monospace',
-          fontSize: '13px',
+          fontSize: '13.5px',
           lineSpacing: 6,
           color: '#e2e8f0',
           align: 'center',
@@ -165,9 +170,9 @@ export class CelebrationScene extends Phaser.Scene {
       )
       .setOrigin(0.5);
 
-    const btnBg = this.add.rectangle(0, 114, 240, 48, 0x16a34a, 1).setStrokeStyle(2, 0x86efac, 1);
+    const btnBg = this.add.rectangle(0, 88, 250, 44, 0x16a34a, 1).setStrokeStyle(2, 0x86efac, 1);
     const btnTxt = this.add
-      .text(0, 114, 'PLAY AGAIN', {
+      .text(0, 88, 'PLAY AGAIN', {
         fontFamily: 'monospace',
         fontSize: '17px',
         fontStyle: 'bold',
@@ -176,7 +181,7 @@ export class CelebrationScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     const btnZone = this.add
-      .zone(0, 114, 240, 48)
+      .zone(0, 88, 250, 44)
       .setInteractive({ useHandCursor: true })
       .on('pointerover', () => btnBg.setFillStyle(0x22c55e, 1))
       .on('pointerout', () => btnBg.setFillStyle(0x16a34a, 1))
@@ -187,7 +192,26 @@ export class CelebrationScene extends Phaser.Scene {
         this.scene.start(SCENES.INTRO);
       });
 
-    card.add([gfx, title, subtitle, btnBg, btnTxt, btnZone]);
+    const logBg = this.add.rectangle(0, 146, 250, 44, 0x1d4ed8, 1).setStrokeStyle(2, 0x93c5fd, 1);
+    const logTxt = this.add
+      .text(0, 146, '📖 SHOW LOGBOOK', {
+        fontFamily: 'monospace',
+        fontSize: '16px',
+        fontStyle: 'bold',
+        color: '#ffffff',
+      })
+      .setOrigin(0.5);
+
+    const logZone = this.add
+      .zone(0, 146, 250, 44)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerover', () => logBg.setFillStyle(0x2563eb, 1))
+      .on('pointerout', () => logBg.setFillStyle(0x1d4ed8, 1))
+      .on('pointerdown', () => {
+        this.logbookModal.openForDay(8, { auto: false });
+      });
+
+    card.add([gfx, title, subtitle, btnBg, btnTxt, btnZone, logBg, logTxt, logZone]);
     this.tweens.add({
       targets: card,
       alpha: 1,

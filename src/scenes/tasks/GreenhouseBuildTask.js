@@ -52,7 +52,7 @@ export class GreenhouseBuildTask extends Phaser.Scene {
       this.add
         .text(0, -panelH / 2 + 27, 'ASSEMBLE MARS GREENHOUSE', {
           fontFamily: 'monospace',
-          fontSize: '16px',
+          fontSize: '18px',
           fontStyle: 'bold',
           color: '#ffffff',
         })
@@ -62,7 +62,7 @@ export class GreenhouseBuildTask extends Phaser.Scene {
     const closeBtn = this.add
       .text(panelW / 2 - 30, -panelH / 2 + 27, '[X]', {
         fontFamily: 'monospace',
-        fontSize: '16px',
+        fontSize: '18px',
         fontStyle: 'bold',
         color: '#fecaca',
       })
@@ -74,7 +74,7 @@ export class GreenhouseBuildTask extends Phaser.Scene {
     this.statusText = this.add
       .text(0, -panelH / 2 + 68, 'DRAG OR CLICK EACH MODULE INTO ITS GREENHOUSE SLOT (HURRY!)', {
         fontFamily: 'monospace',
-        fontSize: '12px',
+        fontSize: '14px',
         fontStyle: 'bold',
         color: '#ffd166',
       })
@@ -106,7 +106,7 @@ export class GreenhouseBuildTask extends Phaser.Scene {
       const slotLbl = this.add
         .text(slotX, part.slotY, `SLOT: ${part.label}`, {
           fontFamily: 'monospace',
-          fontSize: '11px',
+          fontSize: '13px',
           color: '#94a3b8',
         })
         .setOrigin(0.5);
@@ -120,7 +120,7 @@ export class GreenhouseBuildTask extends Phaser.Scene {
       const cardTxt = this.add
         .text(0, 0, part.label, {
           fontFamily: 'monospace',
-          fontSize: '12px',
+          fontSize: '14px',
           fontStyle: 'bold',
           color: '#f8fafc',
         })
@@ -176,7 +176,7 @@ export class GreenhouseBuildTask extends Phaser.Scene {
       this.add
         .text(0, panelH / 2 - 44, 'Compact closed-loop hydroponics grow fresh crops far from Earth resupply.', {
           fontFamily: 'monospace',
-          fontSize: '11px',
+          fontSize: '13px',
           color: '#86efac',
           align: 'center',
         })

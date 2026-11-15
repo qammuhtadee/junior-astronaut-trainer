@@ -468,7 +468,6 @@ export class OutpostScene extends RoomScene {
       gameState.d2IntroDone = true;
       gameState.habLightsOn = true;
       this.syncLightsLayer();
-      this.game.events.emit('power:start-dust-drain');
 
       this.player.body_.setFlipX(true);
       this.companion = new Astronaut(this, 500, LANE.top + 42, {
@@ -478,34 +477,42 @@ export class OutpostScene extends RoomScene {
       this.companion.body_.setFlipX(false);
 
       this.transitioning = true;
-      this.time.delayedCall(350, () => {
-        this.dialogueBox.showSequence(
-          [
-            {
-              speaker: 'Maisha',
-              text: "Good morning, Muntasir! Look at our Power meter—it's shaking and dropping slowly!",
-              target: this.companion,
-            },
-            {
-              speaker: 'Muntasir',
-              text: 'An overnight Martian dust storm must have coated our solar array outside!',
-              target: this.player,
-            },
-            {
-              speaker: 'Muntasir',
-              text: 'I should go outside through the Airlock and wipe the dust off the solar panel.',
-              target: this.player,
-              isThought: true,
-            },
-          ],
-          () => {
-            this.transitioning = false;
-            this.game.events.emit(
-              'fact:show',
-              "Fact: NASA's Mars Exploration Rover Opportunity went silent in the global Martian dust storm of June 2018, and its mission was declared over in February 2019."
+      this.time.delayedCall(260, () => {
+        if (!this.scene.isActive()) return;
+        this.game.events.emit('logbook:auto-open', {
+          day: 2,
+          onClose: () => {
+            if (!this.scene.isActive()) return;
+            this.game.events.emit('power:start-dust-drain');
+            this.dialogueBox.showSequence(
+              [
+                {
+                  speaker: 'Maisha',
+                  text: "Good morning, Muntasir! Look at our Power meter—it's shaking and dropping slowly!",
+                  target: this.companion,
+                },
+                {
+                  speaker: 'Muntasir',
+                  text: 'An overnight Martian dust storm must have coated our solar array outside!',
+                  target: this.player,
+                },
+                {
+                  speaker: 'Muntasir',
+                  text: 'I should go outside through the Airlock and wipe the dust off the solar panel.',
+                  target: this.player,
+                  isThought: true,
+                },
+              ],
+              () => {
+                this.transitioning = false;
+                this.game.events.emit(
+                  'fact:show',
+                  "Fact: NASA's Mars Exploration Rover Opportunity went silent in the global Martian dust storm of June 2018, and its mission was declared over in February 2019."
+                );
+              }
             );
-          }
-        );
+          },
+        });
       });
       return;
     }
@@ -760,38 +767,45 @@ export class OutpostScene extends RoomScene {
       this.companion.body_.setFlipX(false);
 
       this.transitioning = true;
-      this.time.delayedCall(350, () => {
-        this.dialogueBox.showSequence(
-          [
-            {
-              speaker: 'Muntasir',
-              text: "For the past 2 days, we didn't have water. I only had a little bit of food. I'm really hungry and dehydrated.",
-              target: this.companion,
-            },
-            {
-              speaker: 'Maisha',
-              text: 'I think we have enough dried foods to last a few days.',
-              target: this.player,
-            },
-            {
-              speaker: 'Muntasir',
-              text: 'But water is scarce out here on Mars, and we only have the ice which we can drill again, and use it to get water.',
-              target: this.companion,
-            },
-            {
-              speaker: 'Maisha',
-              text: 'I think we can salvage the water station from our spacecraft and use it to melt and purify the ice. Let’s go get some ice from the pile outside!',
-              target: this.player,
-            },
-          ],
-          () => {
-            this.transitioning = false;
-            this.game.events.emit(
-              'fact:show',
-              "Fact: Liquid water cannot stay on Mars's low-pressure surface, so astronauts must drill buried water ice—mapped globally by NASA's Mars Reconnaissance Orbiter."
+      this.time.delayedCall(260, () => {
+        if (!this.scene.isActive()) return;
+        this.game.events.emit('logbook:auto-open', {
+          day: 3,
+          onClose: () => {
+            if (!this.scene.isActive()) return;
+            this.dialogueBox.showSequence(
+              [
+                {
+                  speaker: 'Muntasir',
+                  text: "For the past 2 days, we didn't have water. I only had a little bit of food. I'm really hungry and dehydrated.",
+                  target: this.companion,
+                },
+                {
+                  speaker: 'Maisha',
+                  text: 'I think we have enough dried foods to last a few days.',
+                  target: this.player,
+                },
+                {
+                  speaker: 'Muntasir',
+                  text: 'But water is scarce out here on Mars, and we only have the ice which we can drill again, and use it to get water.',
+                  target: this.companion,
+                },
+                {
+                  speaker: 'Maisha',
+                  text: 'I think we can salvage the water station from our spacecraft and use it to melt and purify the ice. Let’s go get some ice from the pile outside!',
+                  target: this.player,
+                },
+              ],
+              () => {
+                this.transitioning = false;
+                this.game.events.emit(
+                  'fact:show',
+                  "Fact: Liquid water cannot stay on Mars's low-pressure surface, so astronauts must drill buried water ice—mapped globally by NASA's Mars Reconnaissance Orbiter."
+                );
+              }
             );
-          }
-        );
+          },
+        });
       });
       return;
     }
@@ -1162,7 +1176,6 @@ export class OutpostScene extends RoomScene {
       gameState.habLightsOn = true;
       this.syncLightsLayer();
       gameState.setMeters({ power: 20 });
-      this.game.events.emit('power:start-dust-drain');
 
       this.player.body_.setFlipX(true);
       this.companion = new Astronaut(this, 500, LANE.top + 42, {
@@ -1172,37 +1185,45 @@ export class OutpostScene extends RoomScene {
       this.companion.body_.setFlipX(false);
 
       this.transitioning = true;
-      this.time.delayedCall(350, () => {
-        this.dialogueBox.showSequence(
-          [
-            {
-              speaker: 'Muntasir',
-              text: 'Seems like a second dust storm hit the solar panels overnight! Our power has gone down to dangerous levels.',
-              target: this.companion,
-              exclamation: true,
-            },
-            {
-              speaker: 'Maisha',
-              text: 'We can turn off the Water Station for now since we have enough stored to last a while, and save up on emergency power!',
-              target: this.player,
-            },
-            {
-              speaker: 'Muntasir',
-              text: "I'm gonna go outside and fix the panels up once you pause the water pump.",
-              target: this.companion,
-            },
-            {
-              speaker: 'Maisha',
-              text: 'Use the Power Breaker Board to switch OFF only the Water Station for now.',
-              target: this.player,
-              isThought: true,
-            },
-          ],
-          () => {
-            this.transitioning = false;
-            this.createPowerPanelGuide('Turn off Water');
-          }
-        );
+      this.time.delayedCall(260, () => {
+        if (!this.scene.isActive()) return;
+        this.game.events.emit('logbook:auto-open', {
+          day: 4,
+          onClose: () => {
+            if (!this.scene.isActive()) return;
+            this.game.events.emit('power:start-dust-drain');
+            this.dialogueBox.showSequence(
+              [
+                {
+                  speaker: 'Muntasir',
+                  text: 'Seems like a second dust storm hit the solar panels overnight! Our power has gone down to dangerous levels.',
+                  target: this.companion,
+                  exclamation: true,
+                },
+                {
+                  speaker: 'Maisha',
+                  text: 'We can turn off the Water Station for now since we have enough stored to last a while, and save up on emergency power!',
+                  target: this.player,
+                },
+                {
+                  speaker: 'Muntasir',
+                  text: "I'm gonna go outside and fix the panels up once you pause the water pump.",
+                  target: this.companion,
+                },
+                {
+                  speaker: 'Maisha',
+                  text: 'Use the Power Breaker Board to switch OFF only the Water Station for now.',
+                  target: this.player,
+                  isThought: true,
+                },
+              ],
+              () => {
+                this.transitioning = false;
+                this.createPowerPanelGuide('Turn off Water');
+              }
+            );
+          },
+        });
       });
       return;
     }
@@ -1529,8 +1550,6 @@ export class OutpostScene extends RoomScene {
     gameState.d3WaterSwitchOn = true;
     gameState.d4SafeModeOn = true;
 
-    this.game.events.emit('lifesupport:start-d5-moderate');
-
     if (!gameState.d5IntroDone) {
       gameState.d5IntroDone = true;
       gameState.saveCheckpoint('d5_storm_start');
@@ -1542,49 +1561,58 @@ export class OutpostScene extends RoomScene {
       this.companion.body_.setFlipX(false);
 
       this.transitioning = true;
-      this.time.delayedCall(350, () => {
-        this.game.events.emit('radiation:start-d5-decay');
-        this.dialogueBox.showSequence(
-          [
-            {
-              speaker: 'Muntasir',
-              text: 'Listen to that solar storm howling outside! Even with SAFE MODE protecting our electronics, gamma rays and solar particles are creeping through the bunker walls!',
-              target: this.companion,
-              exclamation: true,
-            },
-            {
-              speaker: 'Maisha',
-              text: 'Oxygen and water are draining normally as we breathe and drink, while our Radiation Meter is dipping. Whatever happens—DO NOT go outside through the Airlock today!',
-              target: this.player,
-            },
-            {
-              speaker: 'Muntasir',
-              text: "Agreed—EVA right now would be lethal! How do we shield our Bunks before tonight's storm wave?",
-              target: this.companion,
-            },
-            {
-              speaker: 'Maisha',
-              text: 'Let’s stack sealed bags of drinking water against our bunk walls! Hydrogen-rich H2O absorbs particle radiation—and because the water stays sealed, zero drinking water is wasted!',
-              target: this.player,
-            },
-            {
-              isFactReveal: true,
-              text: 'NASA Fact — Mars Solar Storm & Water-Bag Shielding: In May 2024, NASA Curiosity RAD recorded a Mars peak of 303.99 uGy/hr (vs 7.83 uGy/hr normal). Hydrogen-rich water slows cosmic & solar protons without wasting mass—astronauts can even drink the sealed shielding water later! (Refs: NASA OSDR RadLab Mars-May2024; NASA JPL)',
-            },
-            {
-              speaker: 'Maisha',
-              text: 'Walk over to the Bunks and deploy all 5 H2O shield bags right now!',
-              target: this.player,
-              isThought: true,
-            },
-          ],
-          () => {
-            this.transitioning = false;
-            this.createStationGuide('bed', 'Shield Bunks (Water Bags)', '#38bdf8');
-          }
-        );
+      this.time.delayedCall(260, () => {
+        if (!this.scene.isActive()) return;
+        this.game.events.emit('logbook:auto-open', {
+          day: 5,
+          onClose: () => {
+            if (!this.scene.isActive()) return;
+            this.game.events.emit('lifesupport:start-d5-moderate');
+            this.game.events.emit('radiation:start-d5-decay');
+            this.dialogueBox.showSequence(
+              [
+                {
+                  speaker: 'Muntasir',
+                  text: 'Listen to that solar storm howling outside! Even with SAFE MODE protecting our electronics, gamma rays and solar particles are creeping through the bunker walls!',
+                  target: this.companion,
+                  exclamation: true,
+                },
+                {
+                  speaker: 'Maisha',
+                  text: 'Oxygen and water are draining normally as we breathe and drink, while our Radiation Meter is dipping. Whatever happens—DO NOT go outside through the Airlock today!',
+                  target: this.player,
+                },
+                {
+                  speaker: 'Muntasir',
+                  text: "Agreed—EVA right now would be lethal! How do we shield our Bunks before tonight's storm wave?",
+                  target: this.companion,
+                },
+                {
+                  speaker: 'Maisha',
+                  text: 'Let’s stack sealed bags of drinking water against our bunk walls! Hydrogen-rich H2O absorbs particle radiation—and because the water stays sealed, zero drinking water is wasted!',
+                  target: this.player,
+                },
+                {
+                  isFactReveal: true,
+                  text: 'NASA Fact — Mars Solar Storm & Water-Bag Shielding: In May 2024, NASA Curiosity RAD recorded a Mars peak of 303.99 uGy/hr (vs 7.83 uGy/hr normal). Hydrogen-rich water slows cosmic & solar protons without wasting mass—astronauts can even drink the sealed shielding water later! (Refs: NASA OSDR RadLab Mars-May2024; NASA JPL)',
+                },
+                {
+                  speaker: 'Maisha',
+                  text: 'Walk over to the Bunks and deploy all 5 H2O shield bags right now!',
+                  target: this.player,
+                  isThought: true,
+                },
+              ],
+              () => {
+                this.transitioning = false;
+                this.createStationGuide('bed', 'Shield Bunks (Water Bags)', '#38bdf8');
+              }
+            );
+          },
+        });
       });
     } else {
+      this.game.events.emit('lifesupport:start-d5-moderate');
       const bedStation = this.stations.find((s) => s.def.id === 'bed');
       if (gameState.d5BunksBagged && bedStation) {
         bedStation.setWaterBagShield(true);
@@ -1672,47 +1700,54 @@ export class OutpostScene extends RoomScene {
       this.companion.body_.setFlipX(true);
 
       this.transitioning = true;
-      this.time.delayedCall(350, () => {
-        this.dialogueBox.showSequence(
-          [
-            {
-              speaker: 'Maisha',
-              text: 'Good morning! The solar storm roar outside has finally quieted down—what a relief after yesterday.',
-              target: this.companion,
-            },
-            {
-              speaker: 'Comms (NASA DSN)',
-              isRadio: true,
-              target: commsTarget,
-              text: '—SOLAR ADVISORY— The biggest part of the solar storm has passed, though extra space radiation is still reaching Mars. Work fast if you step outside!',
-            },
-            {
-              speaker: 'Muntasir',
-              text: 'Wait—we also have a huge problem inside! Our dry food rations are completely on the brink of finishing today!',
-              target: this.player,
-              exclamation: true,
-            },
-            {
-              speaker: 'Maisha',
-              text: 'Resupply from Earth takes months! Using our compact space-botany seeds from CSA and NASA OSDR research, we can assemble a closed-loop Greenhouse on the surface right now and grow fast crops!',
-              target: this.companion,
-            },
-            {
-              isFactReveal: true,
-              text: 'NASA & CSA Space Food Data: Astronauts need 1,900–3,200 kcal/day, and Earth deliveries are impossible on Mars. Hydroponic studies like Arabidopsis (NASA OSDR OSD-38, OSD-16, OSD-120), dwarf wheat, lettuce & radishes provide sustainable nutrition—even inspiring northern Earth farming! (Refs: CSA Food Facts; NASA OSDR OSD-38/16/120)',
-            },
-            {
-              speaker: 'Muntasir',
-              text: "Let's head out fast through the Airlock—every second outside counts on our Radiation Meter!",
-              target: this.player,
-              isThought: true,
-            },
-          ],
-          () => {
-            this.transitioning = false;
-            this.createStationGuide('airlock', 'Head Out: Build Greenhouse', '#4ade80');
-          }
-        );
+      this.time.delayedCall(260, () => {
+        if (!this.scene.isActive()) return;
+        this.game.events.emit('logbook:auto-open', {
+          day: 6,
+          onClose: () => {
+            if (!this.scene.isActive()) return;
+            this.dialogueBox.showSequence(
+              [
+                {
+                  speaker: 'Maisha',
+                  text: 'Good morning! The solar storm roar outside has finally quieted down—what a relief after yesterday.',
+                  target: this.companion,
+                },
+                {
+                  speaker: 'Comms (NASA DSN)',
+                  isRadio: true,
+                  target: commsTarget,
+                  text: '—SOLAR ADVISORY— The biggest part of the solar storm has passed, though extra space radiation is still reaching Mars. Work fast if you step outside!',
+                },
+                {
+                  speaker: 'Muntasir',
+                  text: 'Wait—we also have a huge problem inside! Our dry food rations are completely on the brink of finishing today!',
+                  target: this.player,
+                  exclamation: true,
+                },
+                {
+                  speaker: 'Maisha',
+                  text: 'Resupply from Earth takes months! Using our compact space-botany seeds from CSA and NASA OSDR research, we can assemble a closed-loop Greenhouse on the surface right now and grow fast crops!',
+                  target: this.companion,
+                },
+                {
+                  isFactReveal: true,
+                  text: 'NASA & CSA Space Food Data: Astronauts need 1,900–3,200 kcal/day, and Earth deliveries are impossible on Mars. Hydroponic studies like Arabidopsis (NASA OSDR OSD-38, OSD-16, OSD-120), dwarf wheat, lettuce & radishes provide sustainable nutrition—even inspiring northern Earth farming! (Refs: CSA Food Facts; NASA OSDR OSD-38/16/120)',
+                },
+                {
+                  speaker: 'Muntasir',
+                  text: "Let's head out fast through the Airlock—every second outside counts on our Radiation Meter!",
+                  target: this.player,
+                  isThought: true,
+                },
+              ],
+              () => {
+                this.transitioning = false;
+                this.createStationGuide('airlock', 'Head Out: Build Greenhouse', '#4ade80');
+              }
+            );
+          },
+        });
       });
       return;
     }
@@ -1777,40 +1812,47 @@ export class OutpostScene extends RoomScene {
       this.companion.body_.setFlipX(false);
 
       this.transitioning = true;
-      this.time.delayedCall(320, () => {
-        this.dialogueBox.showSequence(
-          [
-            {
-              speaker: 'Maisha',
-              text: 'Good morning!',
-              target: this.player,
-            },
-            {
-              speaker: 'Muntasir',
-              text: 'Today is our optimization day—let’s fix whatever we can so this base is completely self-sustaining!',
-              target: this.companion,
-            },
-            {
-              speaker: 'Maisha',
-              text: 'We have to deploy water bags around the Greenhouse and by the Ice Drilling Site.',
-              target: this.player,
-            },
-            {
-              speaker: 'Muntasir',
-              text: "Our Oxygen and Water are depleting! Let's first bring in fresh ice, because we won't have enough water for the shielding bags too.",
-              target: this.companion,
-            },
-            {
-              speaker: 'Maisha',
-              text: "Let's go! I'll drill fresh subsurface ice outside, and Muntasir can load it into our stations inside!",
-              target: this.player,
-            },
-          ],
-          () => {
-            this.transitioning = false;
-            this.createStationGuide('airlock', 'Head Out: Drill Ice', '#38bdf8');
-          }
-        );
+      this.time.delayedCall(260, () => {
+        if (!this.scene.isActive()) return;
+        this.game.events.emit('logbook:auto-open', {
+          day: 7,
+          onClose: () => {
+            if (!this.scene.isActive()) return;
+            this.dialogueBox.showSequence(
+              [
+                {
+                  speaker: 'Maisha',
+                  text: 'Good morning!',
+                  target: this.player,
+                },
+                {
+                  speaker: 'Muntasir',
+                  text: 'Today is our optimization day—let’s fix whatever we can so this base is completely self-sustaining!',
+                  target: this.companion,
+                },
+                {
+                  speaker: 'Maisha',
+                  text: 'We have to deploy water bags around the Greenhouse and by the Ice Drilling Site.',
+                  target: this.player,
+                },
+                {
+                  speaker: 'Muntasir',
+                  text: "Our Oxygen and Water are depleting! Let's first bring in fresh ice, because we won't have enough water for the shielding bags too.",
+                  target: this.companion,
+                },
+                {
+                  speaker: 'Maisha',
+                  text: "Let's go! I'll drill fresh subsurface ice outside, and Muntasir can load it into our stations inside!",
+                  target: this.player,
+                },
+              ],
+              () => {
+                this.transitioning = false;
+                this.createStationGuide('airlock', 'Head Out: Drill Ice', '#38bdf8');
+              }
+            );
+          },
+        });
       });
       return;
     }

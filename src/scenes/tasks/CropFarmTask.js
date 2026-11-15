@@ -67,7 +67,7 @@ export class CropFarmTask extends Phaser.Scene {
       this.add
         .text(0, -panelH / 2 + 27, this.isHarvest ? 'HARVEST MARS GREENHOUSE CROPS (4x4)' : 'PLANT HYDROPONIC SPACE CROPS (4x4)', {
           fontFamily: 'monospace',
-          fontSize: '15px',
+          fontSize: '17px',
           fontStyle: 'bold',
           color: '#ffffff',
         })
@@ -77,7 +77,7 @@ export class CropFarmTask extends Phaser.Scene {
     const closeBtn = this.add
       .text(panelW / 2 - 30, -panelH / 2 + 27, '[X]', {
         fontFamily: 'monospace',
-        fontSize: '16px',
+        fontSize: '18px',
         fontStyle: 'bold',
         color: '#fecaca',
       })
@@ -95,7 +95,7 @@ export class CropFarmTask extends Phaser.Scene {
           : 'STEP 1: USE THE GARDEN HOE TO TILL ALL 16 SOIL TILES (CLICK OR SWIPE)',
         {
           fontFamily: 'monospace',
-          fontSize: '12px',
+          fontSize: '14px',
           fontStyle: 'bold',
           color: '#ffd166',
         }
@@ -139,7 +139,7 @@ export class CropFarmTask extends Phaser.Scene {
           'NASA & CSA Space Food Fact: Astronauts grow fresh veggies like lettuce, wheat & radishes in hydroponic trays with water and plant food!',
           {
             fontFamily: 'monospace',
-            fontSize: '10px',
+            fontSize: '12px',
             color: '#94a3b8',
             align: 'center',
             wordWrap: { width: panelW - 44 },
@@ -161,7 +161,7 @@ export class CropFarmTask extends Phaser.Scene {
     this.plotHeader = this.add
       .text(plotCenterX, -138, this.isHarvest ? 'HARVESTED: 0 / 16' : 'HOED: 0 / 16   |   PLANTED: 0 / 16', {
         fontFamily: 'monospace',
-        fontSize: '11px',
+        fontSize: '13px',
         fontStyle: 'bold',
         color: '#a7f3d0',
       })
@@ -296,15 +296,15 @@ export class CropFarmTask extends Phaser.Scene {
     const hoeTitle = this.add
       .text(0, -24, '1. GARDEN HOE', {
         fontFamily: 'monospace',
-        fontSize: '12px',
+        fontSize: '14px',
         fontStyle: 'bold',
         color: '#e0f2fe',
       })
       .setOrigin(0.5);
     this.hoeSub = this.add
-      .text(0, 26, 'ACTIVE — CLICK OR SWIPE TILES', {
+      .text(0, 26, 'ACTIVE: CLICK/SWIPE TILES', {
         fontFamily: 'monospace',
-        fontSize: '9px',
+        fontSize: '11px',
         color: '#38bdf8',
       })
       .setOrigin(0.5);
@@ -339,7 +339,7 @@ export class CropFarmTask extends Phaser.Scene {
     const seedTitle = this.add
       .text(0, -28, '2. SEED CRATE', {
         fontFamily: 'monospace',
-        fontSize: '12px',
+        fontSize: '14px',
         fontStyle: 'bold',
         color: '#dcfce7',
       })
@@ -347,7 +347,7 @@ export class CropFarmTask extends Phaser.Scene {
     this.seedSub = this.add
       .text(0, 28, 'LOCKED — HOE ALL 16 FIRST', {
         fontFamily: 'monospace',
-        fontSize: '9px',
+        fontSize: '11px',
         color: '#94a3b8',
       })
       .setOrigin(0.5);
@@ -387,7 +387,7 @@ export class CropFarmTask extends Phaser.Scene {
     this.mistLabel = this.add
       .text(0, 0, '3. NUTRIENT MIST\n(Plant all 16 first)', {
         fontFamily: 'monospace',
-        fontSize: '11px',
+        fontSize: '13px',
         fontStyle: 'bold',
         color: '#cbd5e1',
         align: 'center',
@@ -441,7 +441,7 @@ export class CropFarmTask extends Phaser.Scene {
     this.crateLabel = this.add
       .text(0, 0, 'CREW RATION CRATE\n\n0 / 16 HARVESTED\n\nCLICK OR SWIPE\nCROPS ON PLOT', {
         fontFamily: 'monospace',
-        fontSize: '12px',
+        fontSize: '14px',
         fontStyle: 'bold',
         color: '#fef3c7',
         align: 'center',

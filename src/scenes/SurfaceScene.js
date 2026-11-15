@@ -441,7 +441,9 @@ export class SurfaceScene extends RoomScene {
 
       if (!gameState.tutorialMoveDone) {
         gameState.tutorialMoveDone = true;
-        this.game.events.emit('tutorial:move');
+        this.game.events.emit('tutorial:move', () => {
+          this.game.events.emit('logbook:auto-open', { day: 1 });
+        });
       }
     };
 

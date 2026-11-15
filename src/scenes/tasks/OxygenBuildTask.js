@@ -46,7 +46,7 @@ export class OxygenBuildTask extends Phaser.Scene {
       this.add
         .text(0, -panelH / 2 + 27, 'ASSEMBLE OXYGEN MAKER', {
           fontFamily: 'monospace',
-          fontSize: '16px',
+          fontSize: '18px',
           fontStyle: 'bold',
           color: '#ffffff',
         })
@@ -56,7 +56,7 @@ export class OxygenBuildTask extends Phaser.Scene {
     const closeBtn = this.add
       .text(panelW / 2 - 30, -panelH / 2 + 27, '[X]', {
         fontFamily: 'monospace',
-        fontSize: '16px',
+        fontSize: '18px',
         fontStyle: 'bold',
         color: '#fecaca',
       })
@@ -68,7 +68,7 @@ export class OxygenBuildTask extends Phaser.Scene {
     this.statusText = this.add
       .text(0, -panelH / 2 + 66, 'DRAG OR CLICK EACH MODULE INTO ITS BLUEPRINT SLOT', {
         fontFamily: 'monospace',
-        fontSize: '12px',
+        fontSize: '14px',
         fontStyle: 'bold',
         color: '#ffd166',
       })
@@ -104,7 +104,7 @@ export class OxygenBuildTask extends Phaser.Scene {
       const slotLabel = this.add
         .text(slotX, sy, isPlaced ? `✔ ${part.label}` : `DROP: ${part.label}`, {
           fontFamily: 'monospace',
-          fontSize: '11px',
+          fontSize: '13px',
           fontStyle: 'bold',
           color: isPlaced ? '#ffffff' : '#64748b',
         })
@@ -126,7 +126,7 @@ export class OxygenBuildTask extends Phaser.Scene {
         const text = this.add
           .text(0, 0, part.label, {
             fontFamily: 'monospace',
-            fontSize: '12px',
+            fontSize: '14px',
             fontStyle: 'bold',
             color: '#f8fafc',
           })
@@ -180,7 +180,7 @@ export class OxygenBuildTask extends Phaser.Scene {
     const cTitle = this.add
       .text(0, -76, 'OXYGEN MAKER ASSEMBLED!\nALLOCATE 40% POWER FOR ELECTROLYSIS?', {
         fontFamily: 'monospace',
-        fontSize: '15px',
+        fontSize: '17px',
         fontStyle: 'bold',
         align: 'center',
         lineSpacing: 6,
@@ -191,7 +191,7 @@ export class OxygenBuildTask extends Phaser.Scene {
     const cDesc = this.add
       .text(0, -18, 'Splitting water ice requires 40% power (Power: 100% -> 60%).\nOxygen will refill to 100%!', {
         fontFamily: 'monospace',
-        fontSize: '11px',
+        fontSize: '13px',
         align: 'center',
         lineSpacing: 4,
         color: '#cbd5e1',
@@ -247,7 +247,7 @@ export class OxygenBuildTask extends Phaser.Scene {
     const label = this.add
       .text(0, 0, text, {
         fontFamily: 'monospace',
-        fontSize: '13px',
+        fontSize: '15px',
         fontStyle: 'bold',
         color: '#ffffff',
       })
