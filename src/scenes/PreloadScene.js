@@ -135,6 +135,7 @@ export class PreloadScene extends Phaser.Scene {
     this.load.image('station-greenhouse', 'assets/sprites/greenhouse.png');
     this.load.image('station-water', 'assets/sprites/water-station.png');
     this.load.image('station-bunk', 'assets/sprites/bunk.png');
+    this.load.image('station-airlock', 'assets/sprites/airlock.png');
 
     // Final Logbook archival NASA photos
     this.load.image('logbook-mars1', 'assets/logbook/mars1.jpg');

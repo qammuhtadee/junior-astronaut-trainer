@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { DEPTH, INTERACT } from '../config/constants.js';
 
 const STATION_SPRITES = {
+  airlock: { key: 'station-airlock', scaleMul: 0.95 },
   oxygen_maker: { key: 'station-oxygen', scaleMul: 1.35 },
   power_panel: { key: 'station-power', scaleMul: 1.25 },
   reactor: { key: 'station-reactor', scaleMul: 1.35 },
@@ -9,7 +10,7 @@ const STATION_SPRITES = {
   ice_site: { key: 'station-ice', scaleMul: 1.0 },
   greenhouse: { key: 'station-greenhouse', scaleMul: 1.05 },
   water_station: { key: 'station-water', scaleMul: 1.0 },
-  bed: { key: 'station-bunk', scaleMul: 1.45 },
+  bed: { key: 'station-bunk', scaleMul: 1.5 },
 };
 
 /**
@@ -27,6 +28,9 @@ export class Station extends Phaser.GameObjects.Container {
     const spriteSpec = STATION_SPRITES[def.id];
     if (spriteSpec && scene.textures.exists(spriteSpec.key)) {
       const sprite = scene.add.image(0, 0, spriteSpec.key).setOrigin(0.5, 1);
+      if (def.flipX || (def.id === 'airlock' && scene.roomId === 'outpost')) {
+        sprite.setFlipX(true);
+      }
       const targetH = def.h * spriteSpec.scaleMul;
       sprite.setScale(targetH / sprite.height);
       this.sprite = sprite;

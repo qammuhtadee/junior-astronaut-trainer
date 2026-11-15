@@ -477,12 +477,15 @@ export class OutpostScene extends RoomScene {
       this.companion.body_.setFlipX(false);
 
       this.transitioning = true;
-      this.time.delayedCall(260, () => {
-        if (!this.scene.isActive()) return;
+      this.time.delayedCall(420, () => {
+        if (!this.sys || (!this.scene.isActive() && !this.scene.isPaused())) return;
         this.game.events.emit('logbook:auto-open', {
           day: 2,
           onClose: () => {
-            if (!this.scene.isActive()) return;
+            if (!this.sys || (!this.scene.isActive() && !this.scene.isPaused())) return;
+            if (this.scene.isPaused()) {
+              this.scene.resume();
+            }
             this.game.events.emit('power:start-dust-drain');
             this.dialogueBox.showSequence(
               [
@@ -767,12 +770,15 @@ export class OutpostScene extends RoomScene {
       this.companion.body_.setFlipX(false);
 
       this.transitioning = true;
-      this.time.delayedCall(260, () => {
-        if (!this.scene.isActive()) return;
+      this.time.delayedCall(420, () => {
+        if (!this.sys || (!this.scene.isActive() && !this.scene.isPaused())) return;
         this.game.events.emit('logbook:auto-open', {
           day: 3,
           onClose: () => {
-            if (!this.scene.isActive()) return;
+            if (!this.sys || (!this.scene.isActive() && !this.scene.isPaused())) return;
+            if (this.scene.isPaused()) {
+              this.scene.resume();
+            }
             this.dialogueBox.showSequence(
               [
                 {
@@ -1185,12 +1191,15 @@ export class OutpostScene extends RoomScene {
       this.companion.body_.setFlipX(false);
 
       this.transitioning = true;
-      this.time.delayedCall(260, () => {
-        if (!this.scene.isActive()) return;
+      this.time.delayedCall(420, () => {
+        if (!this.sys || (!this.scene.isActive() && !this.scene.isPaused())) return;
         this.game.events.emit('logbook:auto-open', {
           day: 4,
           onClose: () => {
-            if (!this.scene.isActive()) return;
+            if (!this.sys || (!this.scene.isActive() && !this.scene.isPaused())) return;
+            if (this.scene.isPaused()) {
+              this.scene.resume();
+            }
             this.game.events.emit('power:start-dust-drain');
             this.dialogueBox.showSequence(
               [
@@ -1500,7 +1509,8 @@ export class OutpostScene extends RoomScene {
     if (!st) return;
 
     const gx = st.def.x;
-    const gy = st.def.y - st.def.h - 32;
+    const topH = st.sprite ? st.sprite.displayHeight : st.def.h;
+    const gy = st.def.y - topH - 32;
     const guide = this.add.container(gx, gy).setDepth(900);
     const label = this.add
       .text(0, -18, labelText, {
@@ -1561,12 +1571,15 @@ export class OutpostScene extends RoomScene {
       this.companion.body_.setFlipX(false);
 
       this.transitioning = true;
-      this.time.delayedCall(260, () => {
-        if (!this.scene.isActive()) return;
+      this.time.delayedCall(420, () => {
+        if (!this.sys || (!this.scene.isActive() && !this.scene.isPaused())) return;
         this.game.events.emit('logbook:auto-open', {
           day: 5,
           onClose: () => {
-            if (!this.scene.isActive()) return;
+            if (!this.sys || (!this.scene.isActive() && !this.scene.isPaused())) return;
+            if (this.scene.isPaused()) {
+              this.scene.resume();
+            }
             this.game.events.emit('lifesupport:start-d5-moderate');
             this.game.events.emit('radiation:start-d5-decay');
             this.dialogueBox.showSequence(
@@ -1700,12 +1713,15 @@ export class OutpostScene extends RoomScene {
       this.companion.body_.setFlipX(true);
 
       this.transitioning = true;
-      this.time.delayedCall(260, () => {
-        if (!this.scene.isActive()) return;
+      this.time.delayedCall(420, () => {
+        if (!this.sys || (!this.scene.isActive() && !this.scene.isPaused())) return;
         this.game.events.emit('logbook:auto-open', {
           day: 6,
           onClose: () => {
-            if (!this.scene.isActive()) return;
+            if (!this.sys || (!this.scene.isActive() && !this.scene.isPaused())) return;
+            if (this.scene.isPaused()) {
+              this.scene.resume();
+            }
             this.dialogueBox.showSequence(
               [
                 {
@@ -1812,12 +1828,15 @@ export class OutpostScene extends RoomScene {
       this.companion.body_.setFlipX(false);
 
       this.transitioning = true;
-      this.time.delayedCall(260, () => {
-        if (!this.scene.isActive()) return;
+      this.time.delayedCall(420, () => {
+        if (!this.sys || (!this.scene.isActive() && !this.scene.isPaused())) return;
         this.game.events.emit('logbook:auto-open', {
           day: 7,
           onClose: () => {
-            if (!this.scene.isActive()) return;
+            if (!this.sys || (!this.scene.isActive() && !this.scene.isPaused())) return;
+            if (this.scene.isPaused()) {
+              this.scene.resume();
+            }
             this.dialogueBox.showSequence(
               [
                 {

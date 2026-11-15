@@ -229,9 +229,11 @@ export class LogbookModal extends Phaser.GameObjects.Container {
   pauseUnderlyingScenes() {
     this.pausedScenes = [];
     const ownKey = this.scene.scene.key;
+    const seen = new Set();
     this.scene.scene.manager.getScenes(true).forEach((s) => {
       const key = s.scene.key;
-      if (key !== SCENES.HUD && key !== ownKey) {
+      if (key !== SCENES.HUD && key !== ownKey && !seen.has(key)) {
+        seen.add(key);
         this.scene.scene.pause(key);
         this.pausedScenes.push(key);
       }
@@ -291,12 +293,13 @@ export class LogbookModal extends Phaser.GameObjects.Container {
     const cb = this.onCloseCallback;
     this.onCloseCallback = null;
 
-    this.scene.time.delayedCall(30, () => {
-      toResume.forEach((key) => {
-        if (this.scene?.scene) {
-          this.scene.scene.resume(key);
-        }
-      });
+    toResume.forEach((key) => {
+      if (this.scene?.scene) {
+        this.scene.scene.resume(key);
+      }
+    });
+
+    this.scene.time.delayedCall(50, () => {
       if (cb) cb();
     });
   }

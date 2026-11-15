@@ -1349,12 +1349,12 @@ export class HudScene extends Phaser.Scene {
       this.input.keyboard.off('keydown-DOWN', dismiss);
       overlay.destroy();
       if (pausedRoom) {
-        this.time.delayedCall(30, () => {
-          this.scene.resume(pausedRoom);
+        this.scene.resume(pausedRoom);
+        this.time.delayedCall(50, () => {
           if (onComplete) onComplete();
         });
       } else if (onComplete) {
-        this.time.delayedCall(30, onComplete);
+        this.time.delayedCall(50, onComplete);
       }
     };
 
