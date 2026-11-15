@@ -13,6 +13,10 @@ import { OxygenBuildTask } from './scenes/tasks/OxygenBuildTask.js';
 import { IceLoadTask } from './scenes/tasks/IceLoadTask.js';
 import { WaterBuildTask } from './scenes/tasks/WaterBuildTask.js';
 import { ReactorBuildTask } from './scenes/tasks/ReactorBuildTask.js';
+import { WaterBagShieldTask } from './scenes/tasks/WaterBagShieldTask.js';
+import { GreenhouseBuildTask } from './scenes/tasks/GreenhouseBuildTask.js';
+import { CropFarmTask } from './scenes/tasks/CropFarmTask.js';
+import { CelebrationScene } from './scenes/CelebrationScene.js';
 
 const game = new Phaser.Game({
   type: Phaser.AUTO,
@@ -39,6 +43,10 @@ const game = new Phaser.Game({
     IceLoadTask,
     WaterBuildTask,
     ReactorBuildTask,
+    WaterBagShieldTask,
+    GreenhouseBuildTask,
+    CropFarmTask,
+    CelebrationScene,
   ],
 });
 

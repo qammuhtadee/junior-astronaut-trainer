@@ -17,6 +17,7 @@ export const STATIONS = {
   surface: [
     { id: 'solar_panel', label: 'Solar array', x: 200, y: BACK, w: 160, h: 110, color: 0x2f4f8f, day: 1 },
     { id: 'ice_site', label: 'Ice drill site', x: 520, y: BACK, w: 120, h: 60, color: 0xdfe8f0, day: 2 },
+    { id: 'greenhouse', label: 'Greenhouse', x: 690, y: BACK, w: 140, h: 115, color: 0x22c55e, day: 6 },
     { id: 'reactor', label: 'Reactor', x: 860, y: BACK, w: 110, h: 150, color: 0x9a9a9a, day: 4 },
     { id: 'airlock', label: 'Airlock', x: GAME_WIDTH - 90, y: BACK, w: 90, h: 200, color: 0x8a8f98, leadsTo: 'outpost', day: 1 },
   ],

@@ -33,6 +33,10 @@ export class OutpostScene extends RoomScene {
     const waterStation = this.stations.find((s) => s.def.id === 'water_station');
     const bedStation = this.stations.find((s) => s.def.id === 'bed');
 
+    if (bedStation && (gameState.day >= 6 || (gameState.day === 5 && gameState.d5BunksBagged))) {
+      bedStation.setWaterBagShield(true);
+    }
+
     if (gameState.day === 1) {
       if (!gameState.solarDeployed) {
         // Visit 1: Pitch dark, no power panel or bunks visible yet
@@ -57,6 +61,12 @@ export class OutpostScene extends RoomScene {
       this.initDay3Outpost();
     } else if (gameState.day === 4) {
       this.initDay4Outpost();
+    } else if (gameState.day === 5) {
+      this.initDay5Outpost();
+    } else if (gameState.day === 6) {
+      this.initDay6Outpost();
+    } else if (gameState.day === 7) {
+      this.initDay7Outpost();
     } else {
       this.initStandardOutpost();
     }
@@ -71,6 +81,9 @@ export class OutpostScene extends RoomScene {
     this.game.events.on('d3:ox-ice-loaded', this.onDay3OxIceLoaded, this);
     this.game.events.on('d4:water-turned-off', this.onDay4WaterTurnedOff, this);
     this.game.events.on('d4:safe-mode-enabled', this.onDay4SafeModeEnabled, this);
+    this.game.events.on('d5:bunks-bagged', this.onDay5BunksBagged, this);
+    this.game.events.on('d7:water-ice-loaded', this.onDay7WaterIceLoaded, this);
+    this.game.events.on('d7:ox-ice-loaded', this.onDay7OxIceLoaded, this);
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.game.events.off('lights:restored', this.onLightsRestored, this);
@@ -83,6 +96,9 @@ export class OutpostScene extends RoomScene {
       this.game.events.off('d3:ox-ice-loaded', this.onDay3OxIceLoaded, this);
       this.game.events.off('d4:water-turned-off', this.onDay4WaterTurnedOff, this);
       this.game.events.off('d4:safe-mode-enabled', this.onDay4SafeModeEnabled, this);
+      this.game.events.off('d5:bunks-bagged', this.onDay5BunksBagged, this);
+      this.game.events.off('d7:water-ice-loaded', this.onDay7WaterIceLoaded, this);
+      this.game.events.off('d7:ox-ice-loaded', this.onDay7OxIceLoaded, this);
       if (this.drainTimer) this.drainTimer.remove();
     });
   }
@@ -1206,8 +1222,8 @@ export class OutpostScene extends RoomScene {
       gameState.d3WaterSwitchOn = true;
       this.syncLightsLayer();
 
-      // Supply reliable nuclear power without artificially altering Water reserve
-      gameState.setMeters({ power: 100 });
+      // Supply reliable nuclear power & keep Radiation Meter visible without altering Water reserve
+      gameState.setMeters({ power: 100, radiation: 100 });
       this.ensureCommsStation();
 
       if (!gameState.d4CommsDone) {
@@ -1415,6 +1431,392 @@ export class OutpostScene extends RoomScene {
         ],
         () => {
           this.muntasirRestAtBunks();
+        }
+      );
+    });
+  }
+
+  createStationGuide(stationId, labelText, bgColor = '#38bdf8') {
+    this.clearOutpostStationGuide();
+    const st = this.stations.find((s) => s.def.id === stationId);
+    if (!st) return;
+
+    const gx = st.def.x;
+    const gy = st.def.y - st.def.h - 32;
+    const guide = this.add.container(gx, gy).setDepth(900);
+    const label = this.add
+      .text(0, -18, labelText, {
+        fontFamily: 'monospace',
+        fontSize: '12px',
+        fontStyle: 'bold',
+        color: '#0f172a',
+        backgroundColor: bgColor,
+        padding: { x: 8, y: 3 },
+      })
+      .setOrigin(0.5);
+    const arrow = this.add
+      .text(0, 4, '▼', {
+        fontFamily: 'monospace',
+        fontSize: '20px',
+        color: bgColor,
+      })
+      .setOrigin(0.5);
+    guide.add([label, arrow]);
+    this.tweens.add({
+      targets: guide,
+      y: gy + 10,
+      duration: 550,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+    this.outpostStationGuide = guide;
+  }
+
+  clearOutpostStationGuide() {
+    if (this.outpostStationGuide) {
+      this.outpostStationGuide.destroy();
+      this.outpostStationGuide = null;
+    }
+  }
+
+  // ==========================================
+  // DAY 5: SOLAR STORM SHELTER & WATER-BAG BUNKS
+  // ==========================================
+  initDay5Outpost() {
+    if (this.darknessLayer) this.darknessLayer.setVisible(false);
+    this.ensureCommsStation();
+
+    gameState.habLightsOn = true;
+    gameState.d2OxSwitchOn = true;
+    gameState.d3WaterSwitchOn = true;
+    gameState.d4SafeModeOn = true;
+
+    this.game.events.emit('lifesupport:start-d5-moderate');
+
+    if (!gameState.d5IntroDone) {
+      gameState.d5IntroDone = true;
+      gameState.saveCheckpoint('d5_storm_start');
+
+      this.companion = new Astronaut(this, 500, LANE.top + 42, {
+        name: 'Muntasir',
+        color: COLORS.muntasir,
+      });
+      this.companion.body_.setFlipX(false);
+
+      this.transitioning = true;
+      this.time.delayedCall(350, () => {
+        this.game.events.emit('radiation:start-d5-decay');
+        this.dialogueBox.showSequence(
+          [
+            {
+              speaker: 'Muntasir',
+              text: 'Listen to that solar storm howling outside! Even with SAFE MODE protecting our electronics, gamma rays and solar particles are creeping through the bunker walls!',
+              target: this.companion,
+              exclamation: true,
+            },
+            {
+              speaker: 'Maisha',
+              text: 'Oxygen and water are draining normally as we breathe and drink, while our Radiation Meter is dipping. Whatever happens—DO NOT go outside through the Airlock today!',
+              target: this.player,
+            },
+            {
+              speaker: 'Muntasir',
+              text: "Agreed—EVA right now would be lethal! How do we shield our Bunks before tonight's storm wave?",
+              target: this.companion,
+            },
+            {
+              speaker: 'Maisha',
+              text: 'Let’s stack sealed bags of drinking water against our bunk walls! Hydrogen-rich H2O absorbs particle radiation—and because the water stays sealed, zero drinking water is wasted!',
+              target: this.player,
+            },
+            {
+              isFactReveal: true,
+              text: 'NASA Fact — Mars Solar Storm & Water-Bag Shielding: In May 2024, NASA Curiosity RAD recorded a Mars peak of 303.99 uGy/hr (vs 7.83 uGy/hr normal). Hydrogen-rich water slows cosmic & solar protons without wasting mass—astronauts can even drink the sealed shielding water later! (Refs: NASA OSDR RadLab Mars-May2024; NASA JPL)',
+            },
+            {
+              speaker: 'Maisha',
+              text: 'Walk over to the Bunks and deploy all 5 H2O shield bags right now!',
+              target: this.player,
+              isThought: true,
+            },
+          ],
+          () => {
+            this.transitioning = false;
+            this.createStationGuide('bed', 'Shield Bunks (Water Bags)', '#38bdf8');
+          }
+        );
+      });
+    } else if (!gameState.d5BunksBagged) {
+      this.companion = new Astronaut(this, 500, LANE.top + 42, {
+        name: 'Muntasir',
+        color: COLORS.muntasir,
+      });
+      this.companion.body_.setFlipX(false);
+      this.game.events.emit('radiation:start-d5-decay');
+      this.createStationGuide('bed', 'Shield Bunks (Water Bags)', '#38bdf8');
+    }
+  }
+
+  onDay5BunksBagged() {
+    this.clearOutpostStationGuide();
+    const bedStation = this.stations.find((s) => s.def.id === 'bed');
+    if (bedStation) bedStation.setWaterBagShield(true);
+
+    if (gameState.d5EveningDone) return;
+    gameState.d5EveningDone = true;
+
+    this.transitioning = true;
+    this.time.delayedCall(280, () => {
+      this.dialogueBox.showSequence(
+        [
+          {
+            speaker: 'Muntasir',
+            text: 'All 5 drinkable H2O bags are locked into our sleeping walls—look, our bunk Radiation Protection stabilized right at 95%!',
+            target: this.companion || this.player,
+          },
+          {
+            isFactReveal: true,
+            text: 'NASA Fact — Low-Dose Radiation Biology (OSD-360): Even small cumulative radiation doses caused measurable tissue responses 1–4 months later in space studies—making bunk H2O shielding vital whenever solar storms hit Mars. (Refs: NASA OSDR Study OSD-360)',
+          },
+          {
+            speaker: 'Maisha',
+            text: 'Safe Mode stays locked for tonight so circuits stay safe, and our shielded bunks are ready. Rest at the Bunks until tomorrow!',
+            target: this.player,
+          },
+        ],
+        () => {
+          this.muntasirRestAtBunks();
+        }
+      );
+    });
+  }
+
+  // ==========================================
+  // DAY 6: FOOD CRISIS & RADIATION SHOWER COMMS
+  // ==========================================
+  initDay6Outpost() {
+    if (this.darknessLayer) this.darknessLayer.setVisible(false);
+    this.ensureCommsStation();
+
+    const commsTarget = { x: 235, y: LANE.top + 8 };
+
+    if (!gameState.d6IntroDone) {
+      gameState.d6IntroDone = true;
+      gameState.activeAstronaut = 'muntasir';
+      this.player.setIdentity('Muntasir', COLORS.muntasir);
+
+      this.companion = new Astronaut(this, 500, LANE.top + 42, {
+        name: 'Maisha',
+        color: COLORS.maisha,
+      });
+      this.companion.body_.setFlipX(true);
+
+      this.transitioning = true;
+      this.time.delayedCall(350, () => {
+        this.dialogueBox.showSequence(
+          [
+            {
+              speaker: 'Maisha',
+              text: 'Good morning! The solar storm roar outside has finally quieted down—what a relief after yesterday.',
+              target: this.companion,
+            },
+            {
+              speaker: 'Comms (NASA DSN)',
+              isRadio: true,
+              target: commsTarget,
+              text: '—SOLAR ADVISORY— Main flare peak has subsided, but an elevated particle radiation shower (12.47–21.08 uGy/hr bursts) persists on the Martian surface. Work fast on any EVA!',
+            },
+            {
+              speaker: 'Muntasir',
+              text: 'Wait—we also have a huge problem inside! Our dry food rations are completely on the brink of finishing today!',
+              target: this.player,
+              exclamation: true,
+            },
+            {
+              speaker: 'Maisha',
+              text: 'Resupply from Earth takes months! Using our compact space-botany seeds from CSA and NASA OSDR research, we can assemble a closed-loop Greenhouse on the surface right now and grow fast crops!',
+              target: this.companion,
+            },
+            {
+              isFactReveal: true,
+              text: 'NASA & CSA Space Food Data: Astronauts need 1,900–3,200 kcal/day, and Earth deliveries are impossible on Mars. Hydroponic studies like Arabidopsis (NASA OSDR OSD-38, OSD-16, OSD-120), dwarf wheat, lettuce & radishes provide sustainable nutrition—even inspiring northern Earth farming! (Refs: CSA Food Facts; NASA OSDR OSD-38/16/120)',
+            },
+            {
+              speaker: 'Muntasir',
+              text: "Let's head out fast through the Airlock—every second outside counts on our Radiation Meter!",
+              target: this.player,
+              isThought: true,
+            },
+          ],
+          () => {
+            this.transitioning = false;
+            this.createStationGuide('airlock', 'Head Out: Build Greenhouse', '#4ade80');
+          }
+        );
+      });
+      return;
+    }
+
+    if (gameState.d6CropsPlanted && !gameState.d6EveningDone) {
+      gameState.d6EveningDone = true;
+      this.companion = new Astronaut(this, 500, LANE.top + 42, {
+        name: 'Muntasir',
+        color: COLORS.muntasir,
+      });
+      this.companion.body_.setFlipX(false);
+
+      this.transitioning = true;
+      this.time.delayedCall(320, () => {
+        this.dialogueBox.showSequence(
+          [
+            {
+              speaker: 'Muntasir',
+              text: 'The radiation outside now is lethal—we have to do something about it before harvesting.',
+              target: this.companion,
+            },
+            {
+              speaker: 'Maisha',
+              text: 'I think tomorrow we can deploy some water bags around the greenhouses just like we did with our bunks!',
+              target: this.player,
+            },
+            {
+              speaker: 'Muntasir',
+              text: 'Hmm, water is liquid and can act like particle-slowing walls so our workstations will stay shielded the day after.',
+              target: this.companion,
+            },
+            {
+              speaker: 'Maisha',
+              text: "Let's sleep for today and recover inside!",
+              target: this.player,
+            },
+          ],
+          () => {
+            this.muntasirRestAtBunks();
+          }
+        );
+      });
+    }
+  }
+
+  // ==========================================
+  // DAY 7: OPTIMIZATION, ICE REFILL & WATER BAGS
+  // ==========================================
+  initDay7Outpost() {
+    if (this.darknessLayer) this.darknessLayer.setVisible(false);
+    this.ensureCommsStation();
+
+    if (!gameState.d7IntroDone) {
+      gameState.d7IntroDone = true;
+      gameState.activeAstronaut = 'maisha';
+      this.player.setIdentity('Maisha', COLORS.maisha);
+
+      this.companion = new Astronaut(this, 500, LANE.top + 42, {
+        name: 'Muntasir',
+        color: COLORS.muntasir,
+      });
+      this.companion.body_.setFlipX(false);
+
+      this.transitioning = true;
+      this.time.delayedCall(320, () => {
+        this.dialogueBox.showSequence(
+          [
+            {
+              speaker: 'Maisha',
+              text: 'Good morning!',
+              target: this.player,
+            },
+            {
+              speaker: 'Muntasir',
+              text: 'Today is our optimization day—let’s fix whatever we can so this base is completely self-sustaining!',
+              target: this.companion,
+            },
+            {
+              speaker: 'Maisha',
+              text: 'We have to deploy water bags around the Greenhouse and by the Ice Drilling Site.',
+              target: this.player,
+            },
+            {
+              speaker: 'Muntasir',
+              text: "Our Oxygen and Water are depleting! Let's first bring in fresh ice, because we won't have enough water for the shielding bags too.",
+              target: this.companion,
+            },
+            {
+              speaker: 'Maisha',
+              text: "Let's go! I'll drill fresh subsurface ice outside, and Muntasir can load it into our stations inside!",
+              target: this.player,
+            },
+          ],
+          () => {
+            this.transitioning = false;
+            this.createStationGuide('airlock', 'Head Out: Drill Ice', '#38bdf8');
+          }
+        );
+      });
+      return;
+    }
+
+    if (gameState.d7IceDrilled && !gameState.d7OxIceLoaded) {
+      // Maisha hands ice over at the Airlock; Muntasir loads both stations inside to 100%
+      gameState.activeAstronaut = 'muntasir';
+      this.player.setIdentity('Muntasir', COLORS.muntasir);
+      this.companion = new Astronaut(this, 500, LANE.top + 42, {
+        name: 'Maisha',
+        color: COLORS.maisha,
+      });
+      this.companion.body_.setFlipX(true);
+
+      if (!gameState.d7ReturnInsideIntroDone) {
+        gameState.d7ReturnInsideIntroDone = true;
+        this.transitioning = true;
+        this.time.delayedCall(280, () => {
+          this.dialogueBox.showSequence(
+            [
+              {
+                speaker: 'Maisha',
+                text: 'Here are the fresh ice cores from outside, Muntasir! Load them into our Water Station and Oxygen Maker to refill both to 100%!',
+                target: this.companion,
+              },
+            ],
+            () => {
+              this.transitioning = false;
+              this.createStationGuide('water_station', 'Load Ice -> 100% Water', '#38bdf8');
+            }
+          );
+        });
+      } else if (!gameState.d7WaterIceLoaded) {
+        this.createStationGuide('water_station', 'Load Ice -> 100% Water', '#38bdf8');
+      } else {
+        this.createStationGuide('oxygen_maker', 'Load Ice -> 100% Oxygen', '#6fc3df');
+      }
+      return;
+    }
+
+    if (gameState.d7OxIceLoaded) {
+      this.createStationGuide('airlock', 'Head Out: Shields & Harvest', '#4ade80');
+    }
+  }
+
+  onDay7WaterIceLoaded() {
+    this.createStationGuide('oxygen_maker', 'Load Ice -> 100% Oxygen', '#6fc3df');
+    this.game.events.emit('toast', 'Water at 100%! Now load remaining ice into the Oxygen Maker.');
+  }
+
+  onDay7OxIceLoaded() {
+    this.clearOutpostStationGuide();
+    this.transitioning = true;
+    this.time.delayedCall(280, () => {
+      this.dialogueBox.showSequence(
+        [
+          {
+            speaker: 'Muntasir',
+            text: "Oxygen and Water are both back at 100%! Let's now deploy the water bags outside around the Ice Site and Greenhouse, and then we can harvest the food and call it a day!",
+            target: this.player,
+          },
+        ],
+        () => {
+          this.transitioning = false;
+          this.createStationGuide('airlock', 'Head Out: Deploy Shields & Harvest', '#4ade80');
         }
       );
     });

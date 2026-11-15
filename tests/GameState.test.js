@@ -20,9 +20,9 @@ describe('GameState', () => {
     expect(gs.meters.power).toBe(60);
   });
 
-  it('caps radiation protection at 95', () => {
+  it('caps radiation protection at 100', () => {
     gs.setMeters({ radiation: 120 });
-    expect(gs.meters.radiation).toBe(95);
+    expect(gs.meters.radiation).toBe(100);
   });
 
   it('flags radiation below 30', () => {
@@ -185,5 +185,47 @@ describe('Day 3 & Day 4 GameState flags and checkpoints', () => {
     expect(gameState.meters.water).toBe(64);
     expect(gameState.d4CommsDone).toBe(true);
     expect(gameState.d4SafeModeOn).toBe(false);
+  });
+});
+
+describe('Day 4 Geiger & Days 5-7 GameState flags and checkpoints', () => {
+  it('initializes Day 4 radiation at 100 and resets Day 5-7 flags cleanly', async () => {
+    const { gameState } = await import('../src/state/GameState.js');
+    gameState.reset();
+    expect(gameState.d5IntroDone).toBe(false);
+    expect(gameState.d5BunksBagged).toBe(false);
+    expect(gameState.d6IntroDone).toBe(false);
+    expect(gameState.d6GreenhouseBuilt).toBe(false);
+    expect(gameState.d6SwappedToMaisha).toBe(false);
+    expect(gameState.d6CropsPlanted).toBe(false);
+    expect(gameState.d7IntroDone).toBe(false);
+    expect(gameState.d7IceDrilled).toBe(false);
+    expect(gameState.d7WaterIceLoaded).toBe(false);
+    expect(gameState.d7OxIceLoaded).toBe(false);
+    expect(gameState.d7IceSiteBagged).toBe(false);
+    expect(gameState.d7GreenhouseBagged).toBe(false);
+    expect(gameState.d7CropsHarvested).toBe(false);
+
+    gameState.goTo('d4_reactor');
+    expect(gameState.meters.radiation).toBe(100);
+  });
+
+  it('saves and restores Day 6 crew-swap checkpoint (d6_after_greenhouse)', async () => {
+    const { gameState } = await import('../src/state/GameState.js');
+    gameState.reset();
+    gameState.goTo('d6_morning');
+    gameState.d6GreenhouseBuilt = true;
+    gameState.d6SwappedToMaisha = false;
+    gameState.setMeters({ radiation: 52 });
+    gameState.saveCheckpoint('d6_after_greenhouse');
+
+    // Simulate non-canon refusal to swap crew
+    gameState.setMeters({ radiation: 15 });
+    expect(gameState.failureReason()).toBe('radiation_low');
+
+    expect(gameState.restoreCheckpoint('d6_after_greenhouse')).toBe(true);
+    expect(gameState.meters.radiation).toBe(52);
+    expect(gameState.d6GreenhouseBuilt).toBe(true);
+    expect(gameState.d6SwappedToMaisha).toBe(false);
   });
 });

@@ -171,6 +171,45 @@ export class RoomScene extends Phaser.Scene {
             return;
           }
         }
+      } else if (gameState.day === 5) {
+        gameState.setMeters({ radiation: 20 });
+        this.game.events.emit('warning:show', {
+          text: 'DANGER: Severe solar particle storm radiation is hitting the surface! Stay sheltered inside and deploy water bags around your Bunks.',
+          rewindEvent: 'checkpoint:rewind-d5-storm',
+        });
+        return;
+      } else if (gameState.day === 6) {
+        if (this.roomId === 'outpost' && gameState.d6CropsPlanted) {
+          this.game.events.emit('toast', 'Radiation outside is lethal—rest in the Bunks for tonight!');
+          return;
+        }
+        if (this.roomId === 'surface' && (!gameState.d6GreenhouseBuilt || !gameState.d6CropsPlanted)) {
+          this.game.events.emit(
+            'toast',
+            !gameState.d6GreenhouseBuilt
+              ? 'Assemble the Mars Greenhouse quickly before returning!'
+              : 'Have Maisha finish planting the crops before going back inside!'
+          );
+          return;
+        }
+      } else if (gameState.day === 7) {
+        if (this.roomId === 'outpost' && gameState.d7IceDrilled && !gameState.d7OxIceLoaded) {
+          this.game.events.emit('toast', 'Load fresh ice into the Water Station and Oxygen Maker inside first!');
+          return;
+        }
+        if (this.roomId === 'surface') {
+          if (!gameState.d7IceDrilled) {
+            this.game.events.emit('toast', 'Drill fresh Martian ice outside first!');
+            return;
+          }
+          if (
+            gameState.d7OxIceLoaded &&
+            (!gameState.d7IceSiteBagged || !gameState.d7GreenhouseBagged || !gameState.d7CropsHarvested)
+          ) {
+            this.game.events.emit('toast', 'Finish deploying both Water-Bag Shields and harvesting crops outside!');
+            return;
+          }
+        }
       }
       return this.goThroughAirlock(def.leadsTo);
     }
@@ -242,8 +281,59 @@ export class RoomScene extends Phaser.Scene {
         return;
       }
 
-      if (gameState.day >= 4) {
+      if (gameState.day >= 4 && gameState.day < 7) {
         this.game.events.emit('toast', 'No ice harvesting needed today.');
+        return;
+      }
+
+      if (gameState.day === 7) {
+        if (!gameState.d7IceDrilled) {
+          this.scene.pause();
+          this.scene.launch('IceDrillTask');
+        } else if (!gameState.d7OxIceLoaded) {
+          this.game.events.emit('toast', 'Take the ice inside first so Muntasir can refill Water & Oxygen!');
+        } else if (!gameState.d7IceSiteBagged) {
+          this.scene.pause();
+          this.scene.launch('WaterBagShieldTask', { mode: 'ice_site' });
+        } else {
+          this.game.events.emit('toast', 'Ice Drill Site is protected with drinkable H2O bags!');
+        }
+        return;
+      }
+    }
+
+    if (def.id === 'greenhouse') {
+      if (gameState.day === 6) {
+        if (!gameState.d6GreenhouseBuilt) {
+          this.scene.pause();
+          this.scene.launch('GreenhouseBuildTask');
+        } else if (!gameState.d6SwappedToMaisha) {
+          this.game.events.emit('d6:prompt-swap');
+        } else if (!gameState.d6CropsPlanted) {
+          this.scene.pause();
+          this.scene.launch('CropFarmTask', { mode: 'plant' });
+        } else {
+          this.game.events.emit('toast', 'Crops are seeded and germinating inside the Greenhouse!');
+        }
+        return;
+      }
+
+      if (gameState.day === 7) {
+        if (!gameState.d7IceDrilled) {
+          this.game.events.emit('toast', 'Drill fresh Martian ice at the Ice Site first!');
+        } else if (!gameState.d7OxIceLoaded) {
+          this.game.events.emit('toast', 'Load ice inside to restore Water and Oxygen to 100% first!');
+        } else if (!gameState.d7IceSiteBagged) {
+          this.game.events.emit('toast', 'Deploy Water-Bag Radiation Shields at the Ice Drill Site first!');
+        } else if (!gameState.d7GreenhouseBagged) {
+          this.scene.pause();
+          this.scene.launch('WaterBagShieldTask', { mode: 'greenhouse' });
+        } else if (!gameState.d7CropsHarvested) {
+          this.scene.pause();
+          this.scene.launch('CropFarmTask', { mode: 'harvest' });
+        } else {
+          this.game.events.emit('toast', 'Fresh crops harvested!');
+        }
         return;
       }
     }
@@ -260,6 +350,18 @@ export class RoomScene extends Phaser.Scene {
           this.scene.launch('IceLoadTask', { mode: 'water' });
         } else {
           this.game.events.emit('toast', 'Water Station is online and purifying Martian water.');
+        }
+        return;
+      }
+
+      if (gameState.day === 7) {
+        if (!gameState.d7IceDrilled) {
+          this.game.events.emit('toast', 'Maisha needs to drill fresh subsurface ice outside first!');
+        } else if (!gameState.d7WaterIceLoaded) {
+          this.scene.pause();
+          this.scene.launch('IceLoadTask', { mode: 'd7_water' });
+        } else {
+          this.game.events.emit('toast', 'Water reserve restored cleanly to 100%!');
         }
         return;
       }
@@ -315,6 +417,20 @@ export class RoomScene extends Phaser.Scene {
         return;
       }
 
+      if (gameState.day === 7) {
+        if (!gameState.d7IceDrilled) {
+          this.game.events.emit('toast', 'Drill fresh subsurface ice outside first!');
+        } else if (!gameState.d7WaterIceLoaded) {
+          this.game.events.emit('toast', 'Refill the Water Station with ice first!');
+        } else if (!gameState.d7OxIceLoaded) {
+          this.scene.pause();
+          this.scene.launch('IceLoadTask', { mode: 'd7_oxygen' });
+        } else {
+          this.game.events.emit('toast', 'Oxygen reserve restored cleanly to 100%!');
+        }
+        return;
+      }
+
       if (gameState.day >= 4) {
         this.game.events.emit('toast', 'Oxygen Maker is operating continuously.');
         return;
@@ -322,6 +438,10 @@ export class RoomScene extends Phaser.Scene {
     }
 
     if (def.id === 'power_panel') {
+      if (gameState.day >= 5) {
+        this.game.events.emit('toast', 'SAFE MODE is locked ON — power circuits remain surge-protected!');
+        return;
+      }
       if (gameState.day === 4 && gameState.d4WaterTurnedOff) {
         if (gameState.d4CommsDone && !gameState.d4SafeModeOn) {
           this.scene.pause();
@@ -342,6 +462,11 @@ export class RoomScene extends Phaser.Scene {
     }
 
     if (def.id === 'bed') {
+      if (gameState.day === 5 && !gameState.d5BunksBagged) {
+        this.scene.pause();
+        this.scene.launch('WaterBagShieldTask', { mode: 'bunks' });
+        return;
+      }
       this.handleSleep();
       return;
     }
@@ -520,18 +645,57 @@ export class RoomScene extends Phaser.Scene {
       }
 
       this.runSleepTransition(
-        'END OF SOL 4\n\nOvernight, the severe solar storm sweeps across Mars—but SAFE MODE shields every circuit while Kilopower keeps oxygen, water, and thermal systems alive!\n\nMISSION PHASE COMPLETE',
+        'END OF SOL 4\n\nOvernight, the severe solar storm sweeps across Mars—SAFE MODE shields every circuit while Kilopower keeps oxygen and thermal loops alive!\n\nSOL 5 BEGINS',
         () => {
           gameState.nightDrainActive = false;
           gameState.habLightsOn = true;
           gameState.d2OxSwitchOn = true;
           gameState.d3WaterSwitchOn = true;
-          gameState.setMeters({ power: 100, oxygen: 100 });
-          this.transitioning = false;
+          gameState.d4SafeModeOn = true;
+          const prevW = gameState.meters.water;
+          gameState.goTo('d5_storm');
+          if (prevW !== null && prevW < gameState.meters.water) {
+            gameState.setMeters({ water: prevW });
+          }
+          gameState.activeAstronaut = 'maisha';
           this.scene.restart();
         },
         true
       );
+    } else if (gameState.day === 5) {
+      if (!gameState.d5BunksBagged) {
+        this.game.events.emit('toast', 'Deploy 5 sealed H2O Shield Bags around the Bunks first!');
+        return;
+      }
+      this.game.events.emit('radiation:stop-d5-decay');
+      this.game.events.emit('lifesupport:stop-d5-moderate');
+
+      this.runSleepTransition(
+        'END OF SOL 5\n\nProtected behind sealed water-bag walls and SAFE MODE electronics, the crew sleeps safely through the storm!\n\nSOL 6 BEGINS',
+        () => {
+          gameState.goTo('d6_morning');
+          gameState.activeAstronaut = 'muntasir';
+          this.scene.restart();
+        },
+        false
+      );
+    } else if (gameState.day === 6) {
+      if (!gameState.d6CropsPlanted) {
+        this.game.events.emit('toast', 'Build the Greenhouse and seed space crops outside first!');
+        return;
+      }
+
+      this.runSleepTransition(
+        'END OF SOL 6\n\nMuntasir rests away radiation fatigue indoors while Maisha’s new hydroponic seeds begin sprouting outside...\n\nSOL 7 BEGINS',
+        () => {
+          gameState.goTo('d7_final');
+          gameState.activeAstronaut = 'maisha';
+          this.scene.restart();
+        },
+        false
+      );
+    } else if (gameState.day === 7) {
+      this.game.events.emit('toast', 'Complete all Sol 7 optimization tasks (Ice -> Water/O2 -> Shields -> Harvest)!');
     }
   }
 

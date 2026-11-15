@@ -80,4 +80,11 @@ export class Astronaut extends Phaser.GameObjects.Container {
   syncDepth() {
     this.setDepth(DEPTH.WORLD_MIN + this.y);
   }
+
+  /** Switch visual suit color & nametag when rotating crew (e.g. Muntasir -> Maisha). */
+  setIdentity(name, color) {
+    this.name = name;
+    if (this.body_) this.body_.setTint(color);
+    if (this.tag) this.tag.setText(name);
+  }
 }

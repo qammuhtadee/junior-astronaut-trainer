@@ -77,6 +77,36 @@ export class GameState {
     this.d4SafeModeOn = false;
     this.d4SafeModeDone = false;
 
+    // Day 5: Solar storm continues inside, water-bag bunk shielding, moderate O2/Water decay
+    this.d5IntroDone = false;
+    this.d5BunksBagged = false;
+    this.d5BagCount = 0;
+    this.d5EveningDone = false;
+
+    // Day 6: Food shortage, surface radiation clock, greenhouse build, radiation sickness & crew swap, crop planting
+    this.d6IntroDone = false;
+    this.d6SurfaceIntroDone = false;
+    this.d6GreenhousePlacedParts = {};
+    this.d6GreenhouseBuilt = false;
+    this.d6SicknessShown = false;
+    this.d6SwappedToMaisha = false;
+    this.d6CropsPlanted = false;
+    this.d6PlantedCount = 0;
+    this.d6EveningDone = false;
+
+    // Day 7: Optimization day (ice drill -> load water & O2 to 100% -> 2 water-bag shields -> harvest food -> celebration)
+    this.d7IntroDone = false;
+    this.d7IceDrilled = false;
+    this.d7DrillDepth = 0;
+    this.d7ReturnInsideIntroDone = false;
+    this.d7WaterIceCount = 0;
+    this.d7WaterIceLoaded = false;
+    this.d7OxIceCount = 0;
+    this.d7OxIceLoaded = false;
+    this.d7IceSiteBagged = false;
+    this.d7GreenhouseBagged = false;
+    this.d7CropsHarvested = false;
+
     this.snapshots = {};
 
     // Logbook & one-time tutorial flags

@@ -192,11 +192,14 @@ export class IceDrillTask extends Phaser.Scene {
   }
 
   getDepth() {
+    if (gameState.day === 7) return gameState.d7DrillDepth || 0;
     return (gameState.day === 3 ? gameState.d3DrillDepth : gameState.d2DrillDepth) || 0;
   }
 
   setDepthValue(v) {
-    if (gameState.day === 3) {
+    if (gameState.day === 7) {
+      gameState.d7DrillDepth = v;
+    } else if (gameState.day === 3) {
       gameState.d3DrillDepth = v;
     } else {
       gameState.d2DrillDepth = v;
@@ -284,7 +287,10 @@ export class IceDrillTask extends Phaser.Scene {
   onReachedIce() {
     if (this.completed) return;
     this.completed = true;
-    if (gameState.day === 3) {
+    if (gameState.day === 7) {
+      gameState.d7DrillDepth = 100;
+      gameState.d7IceDrilled = true;
+    } else if (gameState.day === 3) {
       gameState.d3DrillDepth = 100;
       gameState.d3IceDrilled = true;
     } else {
@@ -315,7 +321,9 @@ export class IceDrillTask extends Phaser.Scene {
         const activeRoom = gameState.room === 'surface' ? 'Surface' : 'Outpost';
         this.scene.resume(activeRoom);
         if (wasCompleted) {
-          this.game.events.emit(gameState.day === 3 ? 'd3:ice-drilled' : 'd2:ice-drilled');
+          const ev =
+            gameState.day === 7 ? 'd7:ice-drilled' : gameState.day === 3 ? 'd3:ice-drilled' : 'd2:ice-drilled';
+          this.game.events.emit(ev);
         }
       },
     });

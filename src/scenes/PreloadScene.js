@@ -130,6 +130,9 @@ export class PreloadScene extends Phaser.Scene {
       frameHeight: 129,
     });
     this.load.image('station-oxygen', 'assets/sprites/oxygen-maker.png');
+    this.load.image('station-power', 'assets/sprites/power-panel.png');
+    this.load.image('station-reactor', 'assets/sprites/reactor.png');
+    this.load.image('station-solar', 'assets/sprites/solar-panel.png');
 
     this.load.audio('bgm-main', 'assets/audio/bgm/main-theme.mp3');
     this.load.audio('bgm-day1', 'assets/audio/bgm/day1.mp3');

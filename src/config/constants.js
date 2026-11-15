@@ -34,6 +34,7 @@ export const SCENES = Object.freeze({
   OUTPOST: 'Outpost',
   SURFACE: 'Surface',
   HUD: 'Hud',
+  CELEBRATION: 'Celebration',
 });
 
 /** Render layers. Actors inside the lane use their feet Y as depth (Y-sorting), which is always between these. */

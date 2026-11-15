@@ -31,32 +31,32 @@ export const METER_SCRIPT = [
   // Day 4
   { id: 'd4_morning', day: 4, label: 'Morning recharge', meters: M(40, 100, 95, null) },
   { id: 'd4_dust', day: 4, label: 'Dust, then cleaned', from: M(30, 100, 95, null), meters: M(40, 100, 95, null) },
-  { id: 'd4_reactor', day: 4, label: 'Reactor built, shield placed', meters: M(100, 100, 95, 90), checkpoint: true },
+  { id: 'd4_reactor', day: 4, label: 'Reactor built, Geiger check', meters: M(100, 100, 95, 100), checkpoint: true },
   { id: 'd4_clog', day: 4, label: 'Vent and pipe clog', meters: M(100, 75, 90, 90), checkpoint: true },
   { id: 'd4_vent_fixed', day: 4, label: 'Vent fixed first', meters: M(100, 100, 90, 55) },
   { id: 'd4_wrong_pipe_first', day: 4, label: 'Pipe fixed first', meters: M(100, 30, 95, 55), wrong: true },
   { id: 'd4_wrong_both', day: 4, label: 'Both attempted', meters: M(100, 100, 100, 20), wrong: true },
-  { id: 'd4_safe_mode', day: 4, label: 'Safe mode, night rest', meters: M(100, 100, 85, 75) },
+  { id: 'd4_safe_mode', day: 4, label: 'Safe mode, night rest', meters: M(100, 100, 85, 100) },
   // Day 5
-  { id: 'd5_storm', day: 5, label: 'Storm begins', meters: M(100, 100, 80, 75), checkpoint: true },
-  { id: 'd5_shelter', day: 5, label: 'Water-bag shelter built', meters: M(100, 100, 80, 70), checkpoint: true },
+  { id: 'd5_storm', day: 5, label: 'Storm begins', meters: M(100, 96, 90, 88), checkpoint: true },
+  { id: 'd5_shelter', day: 5, label: 'Water-bag shelter built', meters: M(100, 88, 82, 95), checkpoint: true },
   { id: 'd5_wrong_outside', day: 5, label: 'Went outside in storm', meters: M(100, 100, 80, 0), wrong: true },
-  { id: 'd5_pipe_cleared', day: 5, label: 'Storm ends, pipe cleared', meters: M(100, 100, 90, 70) },
-  { id: 'd5_recycler', day: 5, label: 'Recycler built', meters: M(100, 100, 100, 70), checkpoint: true },
-  { id: 'd5_night', day: 5, label: 'Night rest, ice low', meters: M(100, 80, 100, 85) },
+  { id: 'd5_pipe_cleared', day: 5, label: 'Storm ends, pipe cleared', meters: M(100, 90, 85, 95) },
+  { id: 'd5_recycler', day: 5, label: 'Recycler built', meters: M(100, 90, 85, 95), checkpoint: true },
+  { id: 'd5_night', day: 5, label: 'Night rest, ice low', meters: M(100, 82, 76, 95) },
   // Day 6
-  { id: 'd6_morning', day: 6, label: 'Ice almost gone', meters: M(100, 70, 100, 85), checkpoint: true },
+  { id: 'd6_morning', day: 6, label: 'Food shortage & radiation shower', meters: M(100, 78, 72, 95), checkpoint: true },
   { id: 'd6_rover_shield', day: 6, label: 'Rover shield built', meters: M(100, 70, 100, 85), checkpoint: true },
   { id: 'd6_mining', day: 6, label: 'Shielded mining trip', meters: M(100, 70, 100, 76) },
   { id: 'd6_wrong_unshielded', day: 6, label: 'Unshielded mining trip', meters: M(100, 70, 100, 25), wrong: true },
   { id: 'd6_ice_loaded', day: 6, label: 'Ice loaded', meters: M(100, 100, 100, 76) },
   { id: 'd6_rest', day: 6, label: 'Rest inside', meters: M(100, 100, 100, 90) },
   // Day 7
-  { id: 'd7_final', day: 7, label: 'Final state', meters: M(100, 100, 100, 90) },
+  { id: 'd7_final', day: 7, label: 'Optimization day', meters: M(100, 65, 55, 90) },
 ];
 
 export const METER_KEYS = ['power', 'oxygen', 'water', 'radiation'];
-export const RADIATION_MAX = 95; // Mars always has natural radiation
+export const RADIATION_MAX = 100; // Day 4 baseline introduces meter at 100% safe
 export const RADIATION_REWIND_BELOW = 30;
 
 export const stepById = Object.fromEntries(METER_SCRIPT.map((s) => [s.id, s]));

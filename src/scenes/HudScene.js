@@ -114,6 +114,17 @@ export class HudScene extends Phaser.Scene {
     this.game.events.on('checkpoint:rewind-d3-water', this.onRewindD3Water, this);
     this.game.events.on('checkpoint:rewind-d3-night', this.onRewindD3Night, this);
     this.game.events.on('checkpoint:rewind-d4-safemode', this.onRewindD4SafeMode, this);
+    this.game.events.on('checkpoint:rewind-d5-storm', this.onRewindD5Storm, this);
+    this.game.events.on('checkpoint:rewind-d6-surface', this.onRewindD6Surface, this);
+    this.game.events.on('checkpoint:rewind-d6-swap', this.onRewindD6Swap, this);
+    this.game.events.on('radiation:start-d5-decay', this.startD5RadiationDecay, this);
+    this.game.events.on('radiation:stop-d5-decay', this.stopD5RadiationDecay, this);
+    this.game.events.on('lifesupport:start-d5-moderate', this.startD5ModerateDecay, this);
+    this.game.events.on('lifesupport:stop-d5-moderate', this.stopD5ModerateDecay, this);
+    this.game.events.on('radiation:start-d6-surface', this.startD6SurfaceRadiation, this);
+    this.game.events.on('radiation:stop-d6-surface', this.stopD6SurfaceRadiation, this);
+    this.game.events.on('radiation:start-d7-surface', this.startD7SurfaceRadiation, this);
+    this.game.events.on('radiation:stop-d7-surface', this.stopD7SurfaceRadiation, this);
     this.game.events.on('power:gradual-charge', this.startGradualPowerCharge, this);
     this.game.events.on('power:gradual-charge-from', this.startGradualPowerFromCurrent, this);
     this.game.events.on('power:start-night-drain', this.startNightDrain, this);
@@ -150,6 +161,17 @@ export class HudScene extends Phaser.Scene {
       this.game.events.off('checkpoint:rewind-d3-water', this.onRewindD3Water, this);
       this.game.events.off('checkpoint:rewind-d3-night', this.onRewindD3Night, this);
       this.game.events.off('checkpoint:rewind-d4-safemode', this.onRewindD4SafeMode, this);
+      this.game.events.off('checkpoint:rewind-d5-storm', this.onRewindD5Storm, this);
+      this.game.events.off('checkpoint:rewind-d6-surface', this.onRewindD6Surface, this);
+      this.game.events.off('checkpoint:rewind-d6-swap', this.onRewindD6Swap, this);
+      this.game.events.off('radiation:start-d5-decay', this.startD5RadiationDecay, this);
+      this.game.events.off('radiation:stop-d5-decay', this.stopD5RadiationDecay, this);
+      this.game.events.off('lifesupport:start-d5-moderate', this.startD5ModerateDecay, this);
+      this.game.events.off('lifesupport:stop-d5-moderate', this.stopD5ModerateDecay, this);
+      this.game.events.off('radiation:start-d6-surface', this.startD6SurfaceRadiation, this);
+      this.game.events.off('radiation:stop-d6-surface', this.stopD6SurfaceRadiation, this);
+      this.game.events.off('radiation:start-d7-surface', this.startD7SurfaceRadiation, this);
+      this.game.events.off('radiation:stop-d7-surface', this.stopD7SurfaceRadiation, this);
       this.game.events.off('power:gradual-charge', this.startGradualPowerCharge, this);
       this.game.events.off('power:gradual-charge-from', this.startGradualPowerFromCurrent, this);
       this.game.events.off('power:start-night-drain', this.startNightDrain, this);
@@ -174,6 +196,12 @@ export class HudScene extends Phaser.Scene {
       this.stopRapidWaterDrain();
       this.stopDay4WaterDecay();
       this.stopInitialPowerCharge();
+      this.stopD5RadiationDecay();
+      this.stopD5ModerateDecay();
+      this.stopD6SurfaceRadiation();
+      this.stopD7SurfaceRadiation();
+      const stormBgm = this.sound.get('sfx-storm');
+      if (stormBgm?.isPlaying) stormBgm.stop();
       this.factCard?.stopTypingSound();
     });
 
@@ -181,7 +209,28 @@ export class HudScene extends Phaser.Scene {
   }
 
   syncDayBgm() {
-    const dayKey = `bgm-day${gameState.day}`;
+    if (gameState.day === 5) {
+      ['bgm-main', 'bgm-day1', 'bgm-day2', 'bgm-day3', 'bgm-day4'].forEach((k) => {
+        const s = this.sound.get(k);
+        if (s?.isPlaying) s.stop();
+      });
+      if (!this.cache.audio.exists('sfx-storm')) return;
+      const stormSound = this.sound.get('sfx-storm');
+      if (this.currentBgmKey === 'sfx-storm' && stormSound?.isPlaying) return;
+      if (stormSound) {
+        if (!stormSound.isPlaying) stormSound.play({ loop: true, volume: 0.42 });
+      } else {
+        this.sound.add('sfx-storm', { loop: true, volume: 0.42 }).play();
+      }
+      this.currentBgmKey = 'sfx-storm';
+      return;
+    }
+
+    const stormPlaying = this.sound.get('sfx-storm');
+    if (stormPlaying?.isPlaying) stormPlaying.stop();
+
+    const dayKey =
+      gameState.day === 6 ? 'bgm-main' : gameState.day >= 7 ? 'bgm-day4' : `bgm-day${gameState.day}`;
     const targetKey = this.cache.audio.exists(dayKey) ? dayKey : 'bgm-main';
     if (!this.cache.audio.exists(targetKey)) return;
 
@@ -433,6 +482,220 @@ export class HudScene extends Phaser.Scene {
     this.scene.launch('PowerPanelTask', { autoSetDay4SafeMode: true });
   }
 
+  onRewindD5Storm() {
+    this.warningCard.hide();
+    this.stopD5RadiationDecay();
+
+    if (!gameState.restoreCheckpoint('d5_storm_start')) {
+      gameState.d5BunksBagged = false;
+      gameState.setMeters({ power: 100, oxygen: 92, water: 86, radiation: 88 });
+    }
+    gameState.room = 'outpost';
+    gameState.activeAstronaut = 'maisha';
+
+    if (this.scene.isActive(SCENES.OUTPOST)) {
+      this.scene.stop(SCENES.OUTPOST);
+    }
+    if (this.scene.isActive(SCENES.SURFACE)) {
+      this.scene.stop(SCENES.SURFACE);
+    }
+    this.scene.start(SCENES.OUTPOST);
+    this.startD5RadiationDecay();
+  }
+
+  onRewindD6Surface() {
+    this.warningCard.hide();
+    this.stopD6SurfaceRadiation();
+
+    if (!gameState.restoreCheckpoint('d6_surface_entry')) {
+      gameState.d6GreenhouseBuilt = false;
+      gameState.d6GreenhousePlacedParts = {};
+      gameState.d6SwappedToMaisha = false;
+      gameState.d6CropsPlanted = false;
+      gameState.setMeters({ radiation: 95 });
+    }
+    gameState.room = 'surface';
+    gameState.activeAstronaut = 'muntasir';
+
+    if (this.scene.isActive('GreenhouseBuildTask')) this.scene.stop('GreenhouseBuildTask');
+    if (this.scene.isActive('CropFarmTask')) this.scene.stop('CropFarmTask');
+    if (this.scene.isActive(SCENES.SURFACE)) {
+      this.scene.stop(SCENES.SURFACE);
+    }
+    this.scene.start(SCENES.SURFACE);
+  }
+
+  onRewindD6Swap() {
+    this.warningCard.hide();
+    this.stopD6SurfaceRadiation();
+
+    if (!gameState.restoreCheckpoint('d6_after_greenhouse')) {
+      gameState.d6GreenhouseBuilt = true;
+      gameState.d6SwappedToMaisha = false;
+      gameState.d6CropsPlanted = false;
+      gameState.setMeters({ radiation: 52 });
+    }
+    gameState.room = 'surface';
+    gameState.activeAstronaut = 'muntasir';
+
+    if (this.scene.isActive('CropFarmTask')) this.scene.stop('CropFarmTask');
+    if (this.scene.isActive(SCENES.SURFACE)) {
+      this.scene.resume(SCENES.SURFACE);
+    } else {
+      this.scene.start(SCENES.SURFACE);
+    }
+    this.time.delayedCall(120, () => this.game.events.emit('d6:prompt-swap'));
+  }
+
+  startD5RadiationDecay() {
+    if (gameState.day !== 5 || gameState.d5BunksBagged) return;
+    this.radiationMeter?.setShaking(true);
+    if (this.d5RadEvent) {
+      this.d5RadEvent.remove();
+      this.d5RadEvent = null;
+    }
+
+    this.d5RadEvent = this.time.addEvent({
+      delay: 2500,
+      loop: true,
+      callback: () => {
+        if (gameState.day !== 5 || gameState.d5BunksBagged) {
+          this.stopD5RadiationDecay();
+          return;
+        }
+        const cur = gameState.meters.radiation ?? 88;
+        const next = Math.max(0, cur - 1);
+        gameState.setMeters({ radiation: next });
+        if (next <= 30) {
+          this.stopD5RadiationDecay();
+          this.warningCard.show({
+            text: 'CRITICAL: Solar particle & gamma rays penetrated unshielded bunks! Place sealed water bags around the Bunks.',
+            rewindEvent: 'checkpoint:rewind-d5-storm',
+          });
+        }
+      },
+    });
+  }
+
+  stopD5RadiationDecay() {
+    if (this.d5RadEvent) {
+      this.d5RadEvent.remove();
+      this.d5RadEvent = null;
+    }
+    this.radiationMeter?.setShaking(false);
+  }
+
+  startD5ModerateDecay() {
+    if (gameState.day !== 5) return;
+    if (this.d5OxDecayEvent) this.d5OxDecayEvent.remove();
+    if (this.d5WaterDecayEvent) this.d5WaterDecayEvent.remove();
+
+    this.d5OxDecayEvent = this.time.addEvent({
+      delay: 4500,
+      loop: true,
+      callback: () => {
+        if (gameState.day !== 5) {
+          this.stopD5ModerateDecay();
+          return;
+        }
+        const curOx = gameState.meters.oxygen ?? 96;
+        if (curOx > 78) gameState.setMeters({ oxygen: curOx - 1 });
+      },
+    });
+
+    this.d5WaterDecayEvent = this.time.addEvent({
+      delay: 4000,
+      loop: true,
+      callback: () => {
+        if (gameState.day !== 5) {
+          this.stopD5ModerateDecay();
+          return;
+        }
+        const curW = gameState.meters.water ?? 90;
+        if (curW > 74) gameState.setMeters({ water: curW - 1 });
+      },
+    });
+  }
+
+  stopD5ModerateDecay() {
+    if (this.d5OxDecayEvent) {
+      this.d5OxDecayEvent.remove();
+      this.d5OxDecayEvent = null;
+    }
+    if (this.d5WaterDecayEvent) {
+      this.d5WaterDecayEvent.remove();
+      this.d5WaterDecayEvent = null;
+    }
+  }
+
+  startD6SurfaceRadiation() {
+    if (gameState.day !== 6 || gameState.room !== 'surface') return;
+    this.radiationMeter?.setShaking(true);
+    if (this.d6RadEvent) {
+      this.d6RadEvent.remove();
+      this.d6RadEvent = null;
+    }
+
+    this.d6RadEvent = this.time.addEvent({
+      delay: 1100,
+      loop: true,
+      callback: () => {
+        if (gameState.day !== 6 || gameState.room !== 'surface' || gameState.d6CropsPlanted) {
+          this.stopD6SurfaceRadiation();
+          return;
+        }
+        const cur = gameState.meters.radiation ?? 95;
+        const next = Math.max(0, cur - 1);
+        gameState.setMeters({ radiation: next });
+        if (next <= 30) {
+          this.stopD6SurfaceRadiation();
+          this.warningCard.show({
+            text: 'RADIATION DANGER: Extended outdoor exposure reached lethal dose limits! Rotate crew or rewind!',
+            rewindEvent: gameState.d6GreenhouseBuilt ? 'checkpoint:rewind-d6-swap' : 'checkpoint:rewind-d6-surface',
+          });
+        }
+      },
+    });
+  }
+
+  stopD6SurfaceRadiation() {
+    if (this.d6RadEvent) {
+      this.d6RadEvent.remove();
+      this.d6RadEvent = null;
+    }
+    this.radiationMeter?.setShaking(false);
+  }
+
+  startD7SurfaceRadiation() {
+    if (gameState.day !== 7 || gameState.room !== 'surface' || gameState.d7GreenhouseBagged) return;
+    this.radiationMeter?.setShaking(true);
+    if (this.d7RadEvent) {
+      this.d7RadEvent.remove();
+      this.d7RadEvent = null;
+    }
+
+    this.d7RadEvent = this.time.addEvent({
+      delay: 2400,
+      loop: true,
+      callback: () => {
+        if (gameState.day !== 7 || gameState.room !== 'surface' || gameState.d7GreenhouseBagged) {
+          this.stopD7SurfaceRadiation();
+          return;
+        }
+        const cur = gameState.meters.radiation ?? 90;
+        if (cur > 55) gameState.setMeters({ radiation: cur - 1 });
+      },
+    });
+  }
+
+  stopD7SurfaceRadiation() {
+    if (this.d7RadEvent) {
+      this.d7RadEvent.remove();
+      this.d7RadEvent = null;
+    }
+    this.radiationMeter?.setShaking(false);
+  }
+
   startDustDrain() {
     this.powerMeter.setShaking(true);
     if (this.dustDrainEvent) return;
@@ -583,7 +846,10 @@ export class HudScene extends Phaser.Scene {
       delay: 40,
       loop: true,
       callback: () => {
-        if ((gameState.day !== 2 && gameState.day !== 3 && gameState.day !== 4) || !gameState.d2OxSwitchOn) {
+        if (
+          (gameState.day !== 2 && gameState.day !== 3 && gameState.day !== 4 && gameState.day !== 7) ||
+          !gameState.d2OxSwitchOn
+        ) {
           this.oxygenChargeEvent.remove();
           this.oxygenChargeEvent = null;
           return;
@@ -612,7 +878,7 @@ export class HudScene extends Phaser.Scene {
       delay: 40,
       loop: true,
       callback: () => {
-        if ((gameState.day !== 3 && gameState.day !== 4) || !gameState.d3WaterSwitchOn) {
+        if ((gameState.day !== 3 && gameState.day !== 4 && gameState.day !== 7) || !gameState.d3WaterSwitchOn) {
           this.waterChargeEvent.remove();
           this.waterChargeEvent = null;
           return;

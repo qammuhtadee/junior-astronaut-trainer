@@ -39,8 +39,26 @@ export class SurfaceScene extends RoomScene {
     }
 
     const iceStation = this.stations.find((s) => s.def.id === 'ice_site');
-    if (iceStation && (gameState.day < 2 || gameState.day >= 4 || (gameState.day === 2 && !gameState.d2PanelCleaned))) {
+    if (
+      iceStation &&
+      (gameState.day < 2 ||
+        (gameState.day >= 4 && gameState.day < 7) ||
+        (gameState.day === 2 && !gameState.d2PanelCleaned))
+    ) {
       iceStation.setVisible(false);
+    }
+    if (iceStation && gameState.day === 7 && gameState.d7IceSiteBagged) {
+      iceStation.setWaterBagShield(true);
+    }
+
+    const ghStation = this.stations.find((s) => s.def.id === 'greenhouse');
+    if (ghStation) {
+      if (gameState.day < 6 || (gameState.day === 6 && !gameState.d6GreenhouseBuilt)) {
+        ghStation.setVisible(false);
+      }
+      if (gameState.day === 7 && gameState.d7GreenhouseBagged) {
+        ghStation.setWaterBagShield(true);
+      }
     }
 
     const reactorStation = this.stations.find((s) => s.def.id === 'reactor');
@@ -55,6 +73,13 @@ export class SurfaceScene extends RoomScene {
     this.game.events.on('d4:panel-cleaned', this.onDay4PanelCleaned, this);
     this.game.events.on('d4:panel-aligned', this.onDay4PanelAligned, this);
     this.game.events.on('d4:reactor-built', this.onDay4ReactorBuilt, this);
+    this.game.events.on('d6:greenhouse-built', this.onDay6GreenhouseBuilt, this);
+    this.game.events.on('d6:crops-planted', this.onDay6CropsPlanted, this);
+    this.game.events.on('d6:prompt-swap', this.showDay6SwapChoice, this);
+    this.game.events.on('d7:ice-drilled', this.onDay7IceDrilled, this);
+    this.game.events.on('d7:ice-bagged', this.onDay7IceBagged, this);
+    this.game.events.on('d7:greenhouse-bagged', this.onDay7GreenhouseBagged, this);
+    this.game.events.on('d7:crops-harvested', this.onDay7CropsHarvested, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.game.events.off('solar:aligned', this.runPowerChargeUp, this);
       this.game.events.off('d2:panel-cleaned', this.onDay2PanelCleaned, this);
@@ -63,6 +88,13 @@ export class SurfaceScene extends RoomScene {
       this.game.events.off('d4:panel-cleaned', this.onDay4PanelCleaned, this);
       this.game.events.off('d4:panel-aligned', this.onDay4PanelAligned, this);
       this.game.events.off('d4:reactor-built', this.onDay4ReactorBuilt, this);
+      this.game.events.off('d6:greenhouse-built', this.onDay6GreenhouseBuilt, this);
+      this.game.events.off('d6:crops-planted', this.onDay6CropsPlanted, this);
+      this.game.events.off('d6:prompt-swap', this.showDay6SwapChoice, this);
+      this.game.events.off('d7:ice-drilled', this.onDay7IceDrilled, this);
+      this.game.events.off('d7:ice-bagged', this.onDay7IceBagged, this);
+      this.game.events.off('d7:greenhouse-bagged', this.onDay7GreenhouseBagged, this);
+      this.game.events.off('d7:crops-harvested', this.onDay7CropsHarvested, this);
       if (this.landingSound) {
         this.landingSound.stop();
         this.landingSound.destroy();
@@ -80,6 +112,10 @@ export class SurfaceScene extends RoomScene {
       this.initDay3Surface();
     } else if (gameState.day === 4) {
       this.initDay4Surface();
+    } else if (gameState.day === 6) {
+      this.initDay6Surface();
+    } else if (gameState.day === 7) {
+      this.initDay7Surface();
     } else {
       this.initSurfacePostCrash();
     }
@@ -1113,6 +1149,10 @@ export class SurfaceScene extends RoomScene {
 
     this.transitioning = true;
     this.time.delayedCall(350, () => {
+      // Introduce the Geiger counter readout + Radiation Meter at 100% (safe Martian background)
+      gameState.setMeters({ power: 100, radiation: 100 });
+      this.createGeigerBadge('GEIGER: 7.83 uGy/hr (SAFE — 100%)', 0x50fa7b);
+
       this.dialogueBox.showSequence(
         [
           {
@@ -1121,16 +1161,455 @@ export class SurfaceScene extends RoomScene {
             target: this.player,
           },
           {
+            speaker: 'Muntasir',
+            text: "Wait—hear that faint clicking on our reactor's built-in Geiger counter? Is Mars radioactive right now?",
+            target: this.player,
+            exclamation: true,
+          },
+          {
             speaker: 'Maisha',
-            text: "I'm pretty tired after today. Let's head back inside to our bunks!",
+            text: "Don't worry! That's just Mars's normal natural background radiation—about 7.83 micrograys per hour (0.188 mGy/day). I've brought up our Radiation Safety Meter at a full 100% safe level so we can monitor any spikes!",
+            target: this.companion,
+          },
+          {
+            isFactReveal: true,
+            text: 'NASA Fact — Mars Surface Background Radiation: Measurements from NASA Curiosity MSL-RAD (274,998 archived readings in NASA OSDR RadLab) show an average Mars surface background of ~7.83 uGy/hr (0.188 mGy/day)—totally non-lethal over short EVAs, though astronauts track cumulative exposure closely. (Refs: NASA OSDR RadLab / Curiosity MSL-RAD)',
+          },
+          {
+            speaker: 'Maisha',
+            text: "Since our Radiation Meter is steady at 100% and we're safe right now, let's head back inside to check our console and get some rest!",
             target: this.companion,
           },
         ],
         () => {
           this.transitioning = false;
-          this.game.events.emit('toast', 'Kilopower Reactor online! Return inside through the Airlock.');
+          this.game.events.emit('toast', 'Kilopower Reactor online & Radiation Meter active (100% Safe)! Return inside.');
         }
       );
+    });
+  }
+
+  createGeigerBadge(text, strokeColor = 0x50fa7b) {
+    if (this.geigerBadge) {
+      this.geigerBadge.destroy();
+      this.geigerBadge = null;
+    }
+    const c = this.add.container(GAME_WIDTH / 2, 160).setDepth(1600);
+    const bg = this.add.graphics();
+    bg.fillStyle(0x0f172a, 0.92);
+    bg.fillRoundedRect(-200, -16, 400, 32, 8);
+    bg.lineStyle(2, strokeColor, 0.95);
+    bg.strokeRoundedRect(-200, -16, 400, 32, 8);
+    const lbl = this.add
+      .text(0, 0, text, {
+        fontFamily: 'monospace',
+        fontSize: '12px',
+        fontStyle: 'bold',
+        color: '#86efac',
+      })
+      .setOrigin(0.5);
+    c.add([bg, lbl]);
+    this.geigerBadge = c;
+  }
+
+  // ==========================================
+  // DAY 6: MARS GREENHOUSE & CREW ROTATION
+  // ==========================================
+  initDay6Surface() {
+    this.cameras.main.scrollX = 0;
+
+    ['solar_panel', 'reactor'].forEach((id) => {
+      const st = this.stations.find((s) => s.def.id === id);
+      if (st) st.setVisible(true);
+    });
+    const iceStation = this.stations.find((s) => s.def.id === 'ice_site');
+    if (iceStation) iceStation.setVisible(false);
+
+    const ghStation = this.stations.find((s) => s.def.id === 'greenhouse');
+    if (ghStation) {
+      ghStation.setVisible(!!gameState.d6GreenhouseBuilt);
+    }
+
+    this.createGeigerBadge('GEIGER ALERT: 21.08 uGy/hr — LIMIT EVA TIME!', 0xfbbf24);
+
+    if (!gameState.d6GreenhouseBuilt) {
+      this.createSurfaceGuide(ghStation, 'Build Greenhouse', 0x22c55e, true);
+    } else if (gameState.d6SwappedToMaisha && !gameState.d6CropsPlanted) {
+      this.createSurfaceGuide(ghStation, 'Plant Crops', 0x4ade80, false);
+    }
+
+    if (!gameState.d6SurfaceIntroDone) {
+      gameState.d6SurfaceIntroDone = true;
+      gameState.saveCheckpoint('d6_surface_entry');
+      this.transitioning = true;
+      this.time.delayedCall(250, () => {
+        this.dialogueBox.showSequence(
+          [
+            {
+              speaker: 'Muntasir',
+              text: "The Geiger counter is climbing fast out here! Let's hurry to the Greenhouse plot, assemble the dome quickly, and minimize our exposure!",
+              target: this.player,
+            },
+          ],
+          () => {
+            this.transitioning = false;
+            this.game.events.emit('radiation:start-d6-surface');
+          }
+        );
+      });
+    } else if (!gameState.d6CropsPlanted) {
+      this.game.events.emit('radiation:start-d6-surface');
+      if (gameState.d6GreenhouseBuilt && !gameState.d6SwappedToMaisha) {
+        this.time.delayedCall(250, () => this.showDay6SwapChoice());
+      }
+    }
+  }
+
+  createSurfaceGuide(station, labelText, colorHex = 0x22c55e, dotted = false) {
+    if (!station) return;
+    station.allowBuildInteract = dotted;
+    station.customPromptLabel = labelText;
+
+    if (this.surfaceDottedBox) {
+      this.surfaceDottedBox.destroy();
+      this.surfaceDottedBox = null;
+    }
+    if (this.surfaceGuide) {
+      this.surfaceGuide.destroy();
+      this.surfaceGuide = null;
+    }
+
+    const { x, y, w, h } = station.def;
+    const by = y - h;
+    if (dotted) {
+      this.surfaceDottedBox = this.add.graphics().setDepth(DEPTH.WORLD_MIN + y - 1);
+      this.surfaceDottedBox.fillStyle(colorHex, 0.16);
+      this.surfaceDottedBox.fillRect(x - w / 2, by, w, h);
+      this.drawDashedRect(this.surfaceDottedBox, x - w / 2, by, w, h, colorHex, 3, 8, 6);
+    }
+
+    const guide = this.add.container(x, by - 34).setDepth(900);
+    const label = this.add
+      .text(0, -18, labelText, {
+        fontFamily: 'monospace',
+        fontSize: '13px',
+        fontStyle: 'bold',
+        color: '#0f172a',
+        backgroundColor: colorHex === 0x38bdf8 ? '#38bdf8' : '#4ade80',
+        padding: { x: 8, y: 3 },
+      })
+      .setOrigin(0.5);
+    const arrow = this.add
+      .text(0, 4, '▼', {
+        fontFamily: 'monospace',
+        fontSize: '20px',
+        color: colorHex === 0x38bdf8 ? '#7dd3fc' : '#86efac',
+      })
+      .setOrigin(0.5);
+    guide.add([label, arrow]);
+    this.tweens.add({
+      targets: guide,
+      y: by - 24,
+      duration: 550,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+    this.surfaceGuide = guide;
+  }
+
+  clearSurfaceGuide() {
+    if (this.surfaceDottedBox) {
+      this.surfaceDottedBox.destroy();
+      this.surfaceDottedBox = null;
+    }
+    if (this.surfaceGuide) {
+      this.surfaceGuide.destroy();
+      this.surfaceGuide = null;
+    }
+  }
+
+  onDay6GreenhouseBuilt() {
+    this.clearSurfaceGuide();
+    this.game.events.emit('radiation:stop-d6-surface');
+
+    const ghStation = this.stations.find((s) => s.def.id === 'greenhouse');
+    if (ghStation) {
+      ghStation.setVisible(true);
+      ghStation.allowBuildInteract = false;
+      ghStation.customPromptLabel = 'Plant Space Crops';
+    }
+
+    gameState.setMeters({ radiation: 52 });
+    gameState.saveCheckpoint('d6_after_greenhouse');
+
+    if (!this.companion) {
+      this.companion = new Astronaut(this, GAME_WIDTH - 120, LANE.top + 48, {
+        name: 'Maisha',
+        color: COLORS.maisha,
+      });
+    }
+
+    this.transitioning = true;
+    this.walkActorTo(this.companion, 820, LANE.top + 52, 310, () => {
+      this.companion.body_.setFlipX(true);
+      this.dialogueBox.showSequence(
+        [
+          {
+            speaker: 'Muntasir',
+            text: "Ugh... the greenhouse frame is up, but my radiation dosimeter is flashing red! I'm feeling dizzy from radiation sickness!",
+            target: this.player,
+            exclamation: true,
+          },
+          {
+            speaker: 'Maisha',
+            text: "Stop right there, Muntasir! Your exposure dropped to half—if you stay out to farm the seeds, it will hit dangerous biological limits. Let's swap shifts right now!",
+            target: this.companion,
+          },
+        ],
+        () => {
+          this.showDay6SwapChoice();
+        }
+      );
+    });
+  }
+
+  showDay6SwapChoice() {
+    if (this.swapModal) {
+      this.swapModal.destroy();
+      this.swapModal = null;
+    }
+    this.transitioning = true;
+    this.game.events.emit('radiation:stop-d6-surface');
+
+    const cx = GAME_WIDTH / 2;
+    const cy = GAME_HEIGHT / 2;
+    const modal = this.add.container(cx, cy).setDepth(2300);
+
+    const dim = this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.72).setInteractive();
+    const panel = this.add.graphics();
+    panel.fillStyle(0x0f172a, 0.97);
+    panel.fillRoundedRect(-280, -145, 560, 290, 14);
+    panel.lineStyle(3, 0xfbbf24, 1);
+    panel.strokeRoundedRect(-280, -145, 560, 290, 14);
+
+    const title = this.add
+      .text(0, -104, 'CREW RADIATION EXPOSURE CHOICE', {
+        fontFamily: 'monospace',
+        fontSize: '17px',
+        fontStyle: 'bold',
+        color: '#ffd166',
+      })
+      .setOrigin(0.5);
+
+    const desc = this.add
+      .text(
+        0,
+        -48,
+        "Muntasir's Radiation Meter dropped to 52% while assembling the greenhouse.\nWho should farm and seed the hydroponic crops now?",
+        {
+          fontFamily: 'monospace',
+          fontSize: '12px',
+          align: 'center',
+          lineSpacing: 5,
+          color: '#e2e8f0',
+          wordWrap: { width: 510 },
+        }
+      )
+      .setOrigin(0.5);
+
+    // Choice 1 (Canon): Swap with Maisha
+    const swapBtnBg = this.add.rectangle(0, 28, 440, 44, 0x16a34a, 1).setStrokeStyle(2, 0x86efac, 1);
+    const swapBtnTxt = this.add
+      .text(0, 28, 'SWAP WITH MAISHA (ROTATE EXPOSURE & FARM CROPS)', {
+        fontFamily: 'monospace',
+        fontSize: '12px',
+        fontStyle: 'bold',
+        color: '#ffffff',
+      })
+      .setOrigin(0.5);
+    const swapZone = this.add
+      .zone(0, 28, 440, 44)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerdown', () => {
+        modal.destroy();
+        this.swapModal = null;
+        this.executeSwapToMaisha();
+      });
+
+    // Choice 2 (Non-canon): Stay as Muntasir -> Rewind
+    const stayBtnBg = this.add.rectangle(0, 88, 440, 44, 0x991b1b, 1).setStrokeStyle(2, 0xf87171, 1);
+    const stayBtnTxt = this.add
+      .text(0, 88, 'KEEP WORKING AS MUNTASIR (IGNORE RADIATION ALERT)', {
+        fontFamily: 'monospace',
+        fontSize: '12px',
+        fontStyle: 'bold',
+        color: '#fecaca',
+      })
+      .setOrigin(0.5);
+    const stayZone = this.add
+      .zone(0, 88, 440, 44)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerdown', () => {
+        modal.destroy();
+        this.swapModal = null;
+        gameState.setMeters({ radiation: 15 });
+        this.transitioning = false;
+        this.game.events.emit('warning:show', {
+          text: 'RADIATION SICKNESS: Pushing Muntasir past safe dose limits risks severe radiation injury! Rewind and swap with Maisha to rotate crew exposure.',
+          rewindEvent: 'checkpoint:rewind-d6-swap',
+        });
+      });
+
+    modal.add([dim, panel, title, desc, swapBtnBg, swapBtnTxt, swapZone, stayBtnBg, stayBtnTxt, stayZone]);
+    this.swapModal = modal;
+  }
+
+  executeSwapToMaisha() {
+    gameState.activeAstronaut = 'maisha';
+    gameState.d6SwappedToMaisha = true;
+    gameState.setMeters({ radiation: 85 });
+
+    this.player.setIdentity('Maisha', COLORS.maisha);
+    if (!this.companion) {
+      this.companion = new Astronaut(this, this.player.x + 80, this.player.y + 8, {
+        name: 'Muntasir',
+        color: COLORS.muntasir,
+      });
+    } else {
+      this.companion.setIdentity('Muntasir', COLORS.muntasir);
+    }
+
+    const ghStation = this.stations.find((s) => s.def.id === 'greenhouse');
+    this.createSurfaceGuide(ghStation, 'Plant Crops', 0x4ade80, false);
+
+    this.walkActorTo(this.companion, GAME_WIDTH - 135, LANE.top + 38, 300, () => {
+      if (this.companion) {
+        this.companion.setVisible(false);
+      }
+      this.transitioning = false;
+      this.game.events.emit('radiation:start-d6-surface');
+      this.game.events.emit('toast', 'Crew rotated! Maisha is active—plant the space crops quickly!');
+    });
+  }
+
+  onDay6CropsPlanted() {
+    this.clearSurfaceGuide();
+    this.game.events.emit('radiation:stop-d6-surface');
+
+    const ghStation = this.stations.find((s) => s.def.id === 'greenhouse');
+    if (ghStation) {
+      ghStation.customPromptLabel = 'Greenhouse (Crops Seeding)';
+    }
+
+    this.transitioning = true;
+    this.time.delayedCall(250, () => {
+      this.dialogueBox.showSequence(
+        [
+          {
+            speaker: 'Maisha',
+            text: 'All 4 space-crop varieties are seeded and misting! Let’s get back inside the bunker right now before the solar shower climbs any higher.',
+            target: this.player,
+            isThought: true,
+          },
+        ],
+        () => {
+          this.transitioning = false;
+          this.game.events.emit('toast', 'Crops planted! Return inside through the Airlock.');
+        }
+      );
+    });
+  }
+
+  // ==========================================
+  // DAY 7: OPTIMIZATION, WATER-BAG SHIELDS & HARVEST
+  // ==========================================
+  initDay7Surface() {
+    this.cameras.main.scrollX = 0;
+
+    ['solar_panel', 'reactor', 'ice_site', 'greenhouse'].forEach((id) => {
+      const st = this.stations.find((s) => s.def.id === id);
+      if (st) st.setVisible(true);
+    });
+
+    const iceStation = this.stations.find((s) => s.def.id === 'ice_site');
+    const ghStation = this.stations.find((s) => s.def.id === 'greenhouse');
+    if (iceStation && gameState.d7IceSiteBagged) iceStation.setWaterBagShield(true);
+    if (ghStation && gameState.d7GreenhouseBagged) ghStation.setWaterBagShield(true);
+
+    if (gameState.d7OxIceLoaded && !gameState.d7GreenhouseBagged) {
+      this.game.events.emit('radiation:start-d7-surface');
+    }
+    this.updateDay7SurfaceGuides();
+  }
+
+  updateDay7SurfaceGuides() {
+    this.clearSurfaceGuide();
+    const iceStation = this.stations.find((s) => s.def.id === 'ice_site');
+    const ghStation = this.stations.find((s) => s.def.id === 'greenhouse');
+
+    if (!gameState.d7IceDrilled) {
+      this.createSurfaceGuide(iceStation, 'Drill Ice First', 0x38bdf8, false);
+    } else if (!gameState.d7OxIceLoaded) {
+      if (iceStation) iceStation.customPromptLabel = 'Ice Ready — Head Inside!';
+    } else if (!gameState.d7IceSiteBagged) {
+      this.createSurfaceGuide(iceStation, 'Shield Ice Site (Water Bags)', 0x38bdf8, false);
+    } else if (!gameState.d7GreenhouseBagged) {
+      this.createSurfaceGuide(ghStation, 'Shield Greenhouse (Water Bags)', 0x38bdf8, false);
+    } else if (!gameState.d7CropsHarvested) {
+      this.createSurfaceGuide(ghStation, 'Harvest Fresh Crops!', 0x4ade80, false);
+    }
+  }
+
+  onDay7IceDrilled() {
+    this.updateDay7SurfaceGuides();
+    this.transitioning = true;
+    this.time.delayedCall(250, () => {
+      this.dialogueBox.showSequence(
+        [
+          {
+            speaker: 'Maisha',
+            text: 'Fresh ice core harvested! I’ll pass these ice crates inside so Muntasir can top up our Water and Oxygen tanks to 100% before we deploy the shielding bags.',
+            target: this.player,
+            isThought: true,
+          },
+        ],
+        () => {
+          this.transitioning = false;
+          this.game.events.emit('toast', 'Ice drilled! Head inside through the Airlock to refill Water & O2.');
+        }
+      );
+    });
+  }
+
+  onDay7IceBagged() {
+    const iceStation = this.stations.find((s) => s.def.id === 'ice_site');
+    if (iceStation) {
+      iceStation.setWaterBagShield(true);
+      iceStation.customPromptLabel = 'Ice Drill Site (Shielded)';
+    }
+    this.updateDay7SurfaceGuides();
+    this.game.events.emit('toast', 'Ice Drill Site shielded! Now deploy water bags around the Greenhouse.');
+  }
+
+  onDay7GreenhouseBagged() {
+    const ghStation = this.stations.find((s) => s.def.id === 'greenhouse');
+    if (ghStation) {
+      ghStation.setWaterBagShield(true);
+    }
+    this.updateDay7SurfaceGuides();
+    this.game.events.emit('toast', 'Greenhouse shielded (Radiation 95%)! Harvest the fresh crops now!');
+  }
+
+  onDay7CropsHarvested() {
+    this.clearSurfaceGuide();
+    this.game.events.emit('radiation:stop-d7-surface');
+    this.transitioning = true;
+    this.time.delayedCall(450, () => {
+      this.cameras.main.fadeOut(650, 0, 0, 0);
+      this.cameras.main.once('camerafadeoutcomplete', () => {
+        this.scene.start(SCENES.CELEBRATION);
+      });
     });
   }
 
