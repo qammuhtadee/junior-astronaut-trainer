@@ -827,6 +827,11 @@ export class RoomScene extends Phaser.Scene {
   goThroughAirlock(targetRoom) {
     this.transitioning = true;
     this.game.events.emit('prompt', null);
+    this.game.events.emit('warning:hide');
+    const fromD5SurfaceReturn = this.roomId === 'surface' && targetRoom === 'outpost' && gameState.day === 5;
+    if (fromD5SurfaceReturn) {
+      this.game.events.emit('radiation:stop-d5-surface-storm');
+    }
 
     const airlockVol = gameState.getEffectiveVolume('sfx', 0.65);
     if (airlockVol > 0 && this.cache.audio.exists('sfx-airlock')) {
@@ -852,7 +857,12 @@ export class RoomScene extends Phaser.Scene {
       const spawnX = isLeftDoor ? door.x + 85 : door.x - 85;
       const spawnY = door.y + 35;
       const facingLeft = !isLeftDoor;
-      this.scene.start(ROOM_TO_SCENE[targetRoom], { spawnX, spawnY, facingLeft });
+      this.scene.start(ROOM_TO_SCENE[targetRoom], {
+        spawnX,
+        spawnY,
+        facingLeft,
+        fromD5SurfaceReturn,
+      });
     });
   }
 

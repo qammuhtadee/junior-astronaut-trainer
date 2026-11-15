@@ -134,6 +134,7 @@ export class PreloadScene extends Phaser.Scene {
     this.load.image('station-ice', 'assets/sprites/ice-pile.png');
     this.load.image('station-greenhouse', 'assets/sprites/greenhouse.png');
     this.load.image('station-water', 'assets/sprites/water-station.png');
+    this.load.image('station-bunk', 'assets/sprites/bunk.png');
 
     this.load.audio('bgm-main', 'assets/audio/bgm/main-theme.mp3');
     this.load.audio('bgm-day1', 'assets/audio/bgm/day1.mp3');

@@ -1265,6 +1265,9 @@ export class SurfaceScene extends RoomScene {
       callback: spawnStreak,
     });
 
+    const airlockStation = this.stations.find((s) => s.def.id === 'airlock');
+    this.createSurfaceGuide(airlockStation, 'Get Inside: Shelter!', 0xfbbf24, false);
+
     this.cameras.main.shake(450, 0.005);
     this.game.events.emit('radiation:start-d5-surface-storm');
 
@@ -1281,10 +1284,7 @@ export class SurfaceScene extends RoomScene {
         ],
         () => {
           if (!this.scene.isActive() || this.transitioning) return;
-          this.game.events.emit('warning:show', {
-            text: 'SOLAR STORM OUTSIDE! Radiation protection is dropping steadily. Rewind to rush back inside the sheltered Outpost!',
-            rewindEvent: 'checkpoint:rewind-d5-storm',
-          });
+          this.game.events.emit('toast', 'Head back inside through the Airlock to shelter from the solar storm!');
         }
       );
     });

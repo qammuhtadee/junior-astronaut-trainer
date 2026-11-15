@@ -1593,10 +1593,14 @@ export class OutpostScene extends RoomScene {
       const radTarget = gameState.d5BunksBagged ? 95 : 88;
       const shouldRecharge =
         this.sceneData?.fromD5StormRewind ||
+        this.sceneData?.fromD5SurfaceReturn ||
         (gameState.meters.radiation !== null && gameState.meters.radiation < radTarget);
 
       if (shouldRecharge) {
         this.game.events.emit('radiation:gradual-charge', radTarget);
+        if (this.sceneData?.fromD5SurfaceReturn) {
+          this.game.events.emit('toast', 'Back inside the sheltered Outpost! Suit radiation shield recharging...');
+        }
       }
 
       if (!gameState.d5BunksBagged) {
@@ -1606,13 +1610,7 @@ export class OutpostScene extends RoomScene {
         });
         this.companion.body_.setFlipX(false);
         this.createStationGuide('bed', 'Shield Bunks (Water Bags)', '#38bdf8');
-        if (shouldRecharge) {
-          this.time.delayedCall(3500, () => {
-            if (this.scene.isActive() && !gameState.d5BunksBagged) {
-              this.game.events.emit('radiation:start-d5-decay');
-            }
-          });
-        } else {
+        if (!shouldRecharge) {
           this.game.events.emit('radiation:start-d5-decay');
         }
       }

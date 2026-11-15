@@ -9,6 +9,7 @@ const STATION_SPRITES = {
   ice_site: { key: 'station-ice', scaleMul: 1.0 },
   greenhouse: { key: 'station-greenhouse', scaleMul: 1.05 },
   water_station: { key: 'station-water', scaleMul: 1.0 },
+  bed: { key: 'station-bunk', scaleMul: 1.45 },
 };
 
 /**
