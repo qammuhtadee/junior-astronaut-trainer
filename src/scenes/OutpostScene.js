@@ -17,6 +17,7 @@ export class OutpostScene extends RoomScene {
 
   create(data = {}) {
     super.create(data);
+    this.sceneData = data;
 
     this.oxDottedBox = null;
     this.oxBuildGuide = null;
@@ -274,18 +275,23 @@ export class OutpostScene extends RoomScene {
       this.powerGuide = null;
     }
 
-    // Highlight box around the power panel
+    // Highlight box scaled directly to the Power Panel sprite bounds
+    const sprW = pp.sprite ? pp.sprite.displayWidth : pp.def.w * 1.25;
+    const sprH = pp.sprite ? pp.sprite.displayHeight : pp.def.h * 1.25;
+    const boxW = sprW + 10;
+    const boxH = sprH + 10;
+
     this.powerHighlight = this.add.graphics().setDepth(850);
     this.powerHighlight.lineStyle(3, 0xffd166, 0.95);
     this.powerHighlight.strokeRect(
-      pp.def.x - pp.def.w / 2 - 6,
-      pp.def.y - pp.def.h - 6,
-      pp.def.w + 12,
-      pp.def.h + 12
+      pp.def.x - boxW / 2,
+      pp.def.y - boxH + 5,
+      boxW,
+      boxH
     );
 
     // Indication arrow on the Power Panel
-    this.powerGuide = this.add.container(pp.def.x, pp.def.y - pp.def.h - 32).setDepth(900);
+    this.powerGuide = this.add.container(pp.def.x, pp.def.y - sprH - 28).setDepth(900);
     const label = this.add
       .text(0, -22, labelText, {
         fontFamily: 'monospace',
@@ -310,7 +316,7 @@ export class OutpostScene extends RoomScene {
 
     this.tweens.add({
       targets: this.powerGuide,
-      y: pp.def.y - pp.def.h - 46,
+      y: pp.def.y - sprH - 42,
       duration: 550,
       yoyo: true,
       repeat: -1,
@@ -1120,8 +1126,6 @@ export class OutpostScene extends RoomScene {
             text: 'Nighttime is hitting again, and the power is going out faster now with both Water and Oxygen life support active.',
             target: this.player,
             onStart: () => {
-              const curWater = gameState.meters.water ?? 100;
-              gameState.setMeters({ power: 40, oxygen: 100, water: curWater });
               this.startNightDrain();
               gameState.saveCheckpoint('d3_night_ready');
             },
@@ -1580,14 +1584,38 @@ export class OutpostScene extends RoomScene {
           }
         );
       });
-    } else if (!gameState.d5BunksBagged) {
-      this.companion = new Astronaut(this, 500, LANE.top + 42, {
-        name: 'Muntasir',
-        color: COLORS.muntasir,
-      });
-      this.companion.body_.setFlipX(false);
-      this.game.events.emit('radiation:start-d5-decay');
-      this.createStationGuide('bed', 'Shield Bunks (Water Bags)', '#38bdf8');
+    } else {
+      const bedStation = this.stations.find((s) => s.def.id === 'bed');
+      if (gameState.d5BunksBagged && bedStation) {
+        bedStation.setWaterBagShield(true);
+      }
+
+      const radTarget = gameState.d5BunksBagged ? 95 : 88;
+      const shouldRecharge =
+        this.sceneData?.fromD5StormRewind ||
+        (gameState.meters.radiation !== null && gameState.meters.radiation < radTarget);
+
+      if (shouldRecharge) {
+        this.game.events.emit('radiation:gradual-charge', radTarget);
+      }
+
+      if (!gameState.d5BunksBagged) {
+        this.companion = new Astronaut(this, 500, LANE.top + 42, {
+          name: 'Muntasir',
+          color: COLORS.muntasir,
+        });
+        this.companion.body_.setFlipX(false);
+        this.createStationGuide('bed', 'Shield Bunks (Water Bags)', '#38bdf8');
+        if (shouldRecharge) {
+          this.time.delayedCall(3500, () => {
+            if (this.scene.isActive() && !gameState.d5BunksBagged) {
+              this.game.events.emit('radiation:start-d5-decay');
+            }
+          });
+        } else {
+          this.game.events.emit('radiation:start-d5-decay');
+        }
+      }
     }
   }
 
@@ -1658,7 +1686,7 @@ export class OutpostScene extends RoomScene {
               speaker: 'Comms (NASA DSN)',
               isRadio: true,
               target: commsTarget,
-              text: '—SOLAR ADVISORY— Main flare peak has subsided, but an elevated particle radiation shower (12.47–21.08 uGy/hr bursts) persists on the Martian surface. Work fast on any EVA!',
+              text: '—SOLAR ADVISORY— The biggest part of the solar storm has passed, though extra space radiation is still reaching Mars. Work fast if you step outside!',
             },
             {
               speaker: 'Muntasir',

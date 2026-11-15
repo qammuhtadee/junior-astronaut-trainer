@@ -171,12 +171,6 @@ export class RoomScene extends Phaser.Scene {
             return;
           }
         }
-      } else if (gameState.day === 5) {
-        gameState.setMeters({ radiation: 20 });
-        this.game.events.emit('warning:show', {
-          text: 'DANGER: Severe solar particle storm radiation is hitting the surface! Stay sheltered inside and deploy water bags around your Bunks.',
-          rewindEvent: 'checkpoint:rewind-d5-storm',
-        });
         return;
       } else if (gameState.day === 6) {
         if (this.roomId === 'outpost' && gameState.d6CropsPlanted) {
@@ -231,6 +225,10 @@ export class RoomScene extends Phaser.Scene {
       }
 
       if (gameState.day === 4) {
+        if (!gameState.d4WaterTurnedOff) {
+          this.game.events.emit('toast', 'Pause the Water Station at the Power Panel inside first!');
+          return;
+        }
         if (!gameState.d4PanelCleaned) {
           this.scene.pause();
           this.scene.launch('SolarCleanTask');
@@ -240,6 +238,16 @@ export class RoomScene extends Phaser.Scene {
         } else {
           this.game.events.emit('toast', 'Solar array repaired, though Martian sunlight alone remains weak.');
         }
+        return;
+      }
+
+      if (gameState.day >= 5) {
+        this.game.events.emit(
+          'toast',
+          gameState.day === 5
+            ? 'Solar array is offline during the solar storm—Kilopower reactor is powering the habitat!'
+            : 'Kilopower Reactor is providing full habitat power.'
+        );
         return;
       }
 
@@ -303,6 +311,11 @@ export class RoomScene extends Phaser.Scene {
     }
 
     if (def.id === 'greenhouse') {
+      if (gameState.day < 6) {
+        this.game.events.emit('toast', 'No Greenhouse built yet.');
+        return;
+      }
+
       if (gameState.day === 6) {
         if (!gameState.d6GreenhouseBuilt) {
           this.scene.pause();
@@ -339,6 +352,11 @@ export class RoomScene extends Phaser.Scene {
     }
 
     if (def.id === 'water_station') {
+      if (gameState.day < 3) {
+        this.game.events.emit('toast', 'Water Station has not been salvaged yet.');
+        return;
+      }
+
       if (gameState.day === 3) {
         if (!gameState.d3IceDrilled) {
           this.game.events.emit('toast', 'Drill Martian ice outside first!');
@@ -378,6 +396,11 @@ export class RoomScene extends Phaser.Scene {
     }
 
     if (def.id === 'reactor') {
+      if (gameState.day < 4) {
+        this.game.events.emit('toast', 'No reactor assembly needed yet.');
+        return;
+      }
+
       if (gameState.day === 4) {
         if (!gameState.d4PanelCleaned || !gameState.d4PanelAligned) {
           this.game.events.emit('toast', 'Clean and realign the solar panels first!');
@@ -389,11 +412,21 @@ export class RoomScene extends Phaser.Scene {
         }
         return;
       }
+
+      this.game.events.emit('toast', 'Kilopower Reactor online—delivering continuous nuclear power!');
+      return;
     }
 
     if (def.id === 'oxygen_maker') {
+      if (gameState.day < 2) {
+        this.game.events.emit('toast', 'Oxygen Maker has not been built yet.');
+        return;
+      }
+
       if (gameState.day === 2) {
-        if (!gameState.d2OxBuilt) {
+        if (!gameState.d2PanelCleaned || !gameState.d2IceDrilled) {
+          this.game.events.emit('toast', 'Clean the solar array and drill Martian ice outside first!');
+        } else if (!gameState.d2OxBuilt) {
           this.scene.pause();
           this.scene.launch('OxygenBuildTask');
         } else if (!gameState.d2OxLoaded) {
@@ -440,6 +473,30 @@ export class RoomScene extends Phaser.Scene {
     if (def.id === 'power_panel') {
       if (gameState.day >= 5) {
         this.game.events.emit('toast', 'SAFE MODE is locked ON — power circuits remain surge-protected!');
+        return;
+      }
+      if (gameState.day === 1 && !gameState.solarAligned) {
+        this.game.events.emit('toast', 'Unfurl and align the solar panel outside first!');
+        return;
+      }
+      if (gameState.day === 2 && (!gameState.d2OxBuilt || !gameState.d2OxLoaded)) {
+        this.game.events.emit(
+          'toast',
+          !gameState.d2OxBuilt
+            ? 'Build the Oxygen Maker first!'
+            : 'Load Martian ice into the Oxygen Maker first!'
+        );
+        return;
+      }
+      if (
+        gameState.day === 3 &&
+        (!gameState.d3IceDrilled || !gameState.d3WaterBuilt || !gameState.d3WaterIceLoaded || !gameState.d3OxIceLoaded)
+      ) {
+        let msg = 'Load the remaining ice into the Oxygen Maker first!';
+        if (!gameState.d3IceDrilled) msg = 'Drill Martian ice outside first!';
+        else if (!gameState.d3WaterBuilt) msg = 'Build the Water Station first!';
+        else if (!gameState.d3WaterIceLoaded) msg = 'Load ice into the Water Station first!';
+        this.game.events.emit('toast', msg);
         return;
       }
       if (gameState.day === 4 && gameState.d4WaterTurnedOff) {
@@ -505,8 +562,37 @@ export class RoomScene extends Phaser.Scene {
     });
   }
 
+  promptPowerPanelReminder(text, toastFallback) {
+    if (this.createStationGuide) {
+      this.createStationGuide('power_panel', 'Adjust Power Panel', '#fbbf24');
+    }
+    const speaker = gameState.activeAstronaut === 'maisha' ? 'Muntasir' : 'Maisha';
+    if (this.dialogueBox && !this.transitioning) {
+      this.transitioning = true;
+      this.dialogueBox.showSequence(
+        [
+          {
+            speaker,
+            text,
+            target: this.companion || this.player,
+          },
+        ],
+        () => {
+          this.transitioning = false;
+        }
+      );
+    } else {
+      this.game.events.emit('toast', toastFallback);
+    }
+  }
+
   handleSleep() {
     if (gameState.day === 1) {
+      if (!gameState.solarAligned) {
+        this.game.events.emit('toast', 'Unfurl and align the solar panel outside first!');
+        return;
+      }
+
       if (!gameState.habLightsOn) {
         if (!gameState.lightsIntroDone) {
           this.game.events.emit('toast', 'Turn on the lights at the Power Panel first!');
@@ -543,19 +629,18 @@ export class RoomScene extends Phaser.Scene {
       }
 
       if (!gameState.d2OxSwitchOn) {
-        this.game.events.emit('warning:show', {
-          text: 'Oxygen Maker is OFF and oxygen is dropping! Flip OXYGEN back ON at the Power Panel or rewind before sleeping.',
-          rewindEvent: 'checkpoint:rewind-d2-night',
-        });
+        this.promptPowerPanelReminder(
+          'Hold on! Our Oxygen Maker is switched OFF right now. Go to the Power Panel and flip OXYGEN back ON before we sleep!',
+          'Flip OXYGEN back ON at the Power Panel before sleeping!'
+        );
         return;
       }
 
       if (gameState.habLightsOn) {
-        gameState.setMeters({ power: 0 });
-        this.game.events.emit('warning:show', {
-          text: 'Leaving the lights on overnight with the Oxygen Maker running drained the battery to 0%! Turn off the lights at the Power Panel before sleeping.',
-          rewindEvent: 'checkpoint:rewind-d2-night',
-        });
+        this.promptPowerPanelReminder(
+          'Wait—the habitat lights are still on! Running the lights and the Oxygen Maker together will drain our battery overnight. Go turn OFF only the Lights at the Power Panel first!',
+          'Turn OFF only the Lights at the Power Panel before sleeping!'
+        );
         return;
       }
 
@@ -588,19 +673,18 @@ export class RoomScene extends Phaser.Scene {
       }
 
       if (!gameState.d2OxSwitchOn || !gameState.d3WaterSwitchOn) {
-        this.game.events.emit('warning:show', {
-          text: 'Life support systems (Oxygen & Water) must remain active overnight! Rewind and keep both life support switches ON.',
-          rewindEvent: 'checkpoint:rewind-d3-night',
-        });
+        this.promptPowerPanelReminder(
+          'Hold on! Both our Oxygen Maker and Water Station must stay ON tonight so we have clean air and water. Head to the Power Panel and switch them back ON!',
+          'Keep both OXYGEN and WATER switches ON at the Power Panel!'
+        );
         return;
       }
 
       if (gameState.habLightsOn) {
-        gameState.setMeters({ power: 30 });
-        this.game.events.emit('warning:show', {
-          text: 'Leaving the lights on overnight with Oxygen and Water running drops battery power into the danger zone (30%)! Turn off only the lights at the Power Panel before sleeping.',
-          rewindEvent: 'checkpoint:rewind-d3-night',
-        });
+        this.promptPowerPanelReminder(
+          'Wait—the habitat lights are still on! Let us switch OFF only the Lights at the Power Panel first so we save power overnight!',
+          'Turn OFF only the Lights at the Power Panel before sleeping!'
+        );
         return;
       }
 
@@ -719,27 +803,13 @@ export class RoomScene extends Phaser.Scene {
       .setAlpha(0)
       .setDepth(3001);
 
-    let stormSound = null;
-    const stopStorm = () => {
-      if (stormSound) {
-        stormSound.stop();
-        this.sound.remove(stormSound);
-        stormSound = null;
-      }
-    };
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, stopStorm);
-
     this.tweens.add({
       targets: overlay,
       fillAlpha: 1,
       duration: 800,
       onComplete: () => {
-        if (playStorm && this.cache.audio.exists('sfx-storm')) {
-          const stormVol = gameState.getEffectiveVolume('sfx', 0.5);
-          if (stormVol > 0) {
-            stormSound = this.sound.add('sfx-storm', { loop: true, volume: stormVol });
-            stormSound.play();
-          }
+        if (playStorm) {
+          this.game.events.emit('storm:transition-play', 5600);
         }
         this.tweens.add({
           targets: sleepText,
@@ -748,8 +818,6 @@ export class RoomScene extends Phaser.Scene {
           hold: 2600,
           yoyo: true,
           onComplete: () => {
-            this.events.off(Phaser.Scenes.Events.SHUTDOWN, stopStorm);
-            stopStorm();
             onDone();
           },
         });

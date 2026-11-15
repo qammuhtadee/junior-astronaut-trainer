@@ -16,29 +16,25 @@ export class CelebrationScene extends Phaser.Scene {
   create() {
     this.cameras.main.fadeIn(600, 0, 0, 0);
 
-    // Background Mars surface + horizon
-    this.add.image(0, 0, 'bg-surface').setOrigin(0).setDepth(DEPTH.BACKGROUND);
+    // Background habitat outpost interior
+    if (this.textures.exists('bg-outpost')) {
+      this.add.image(0, 0, 'bg-outpost').setOrigin(0).setDisplaySize(GAME_WIDTH, GAME_HEIGHT).setDepth(DEPTH.BACKGROUND);
+    }
 
-    // Outpost silhouette + deployed stations cleanly rendered on the celebration stage
+    // Interior life-support stations cleanly rendered on the celebration stage
     const backY = LANE.top + 10;
-    if (this.textures.exists('station-solar')) {
-      const solar = this.add.image(190, backY, 'station-solar').setOrigin(0.5, 1).setDepth(DEPTH.WORLD_MIN + 10);
-      solar.setScale(145 / solar.height);
+    if (this.textures.exists('station-power')) {
+      const power = this.add.image(380, backY, 'station-power').setOrigin(0.5, 1).setDepth(DEPTH.WORLD_MIN + 10);
+      power.setScale(120 / power.height);
     }
-    if (this.textures.exists('station-reactor')) {
-      const reactor = this.add.image(360, backY, 'station-reactor').setOrigin(0.5, 1).setDepth(DEPTH.WORLD_MIN + 10);
-      reactor.setScale(205 / reactor.height);
+    if (this.textures.exists('station-oxygen')) {
+      const oxygen = this.add.image(625, backY, 'station-oxygen').setOrigin(0.5, 1).setDepth(DEPTH.WORLD_MIN + 10);
+      oxygen.setScale(128 / oxygen.height);
     }
-
-    // Shielded Greenhouse dome placeholder
-    const ghGfx = this.add.graphics().setDepth(DEPTH.WORLD_MIN + 12);
-    ghGfx.fillStyle(0x334155, 1).fillRoundedRect(830, backY - 26, 150, 26, 6);
-    ghGfx.fillStyle(0x22c55e, 0.35).fillRoundedRect(838, backY - 110, 134, 86, { tl: 44, tr: 44, bl: 4, br: 4 });
-    ghGfx.lineStyle(2.5, 0x4ade80, 0.9).strokeRoundedRect(838, backY - 110, 134, 86, { tl: 44, tr: 44, bl: 4, br: 4 });
-    // H2O Shield bags around Greenhouse
-    [846, 876, 905, 934, 964].forEach((bx) => {
-      ghGfx.fillStyle(0x38bdf8, 0.8).fillRoundedRect(bx - 12, backY - 14, 24, 14, 5);
-    });
+    if (this.textures.exists('station-water')) {
+      const water = this.add.image(870, backY, 'station-water').setOrigin(0.5, 1).setDepth(DEPTH.WORLD_MIN + 10);
+      water.setScale(96 / water.height);
+    }
 
     // Astronauts center stage
     this.muntasir = new Astronaut(this, GAME_WIDTH / 2 - 90, LANE.top + 80, {
@@ -185,6 +181,7 @@ export class CelebrationScene extends Phaser.Scene {
       .on('pointerover', () => btnBg.setFillStyle(0x22c55e, 1))
       .on('pointerout', () => btnBg.setFillStyle(0x16a34a, 1))
       .on('pointerdown', () => {
+        this.sound.stopAll();
         gameState.reset();
         this.scene.stop(SCENES.HUD);
         this.scene.start(SCENES.INTRO);

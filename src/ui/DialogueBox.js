@@ -17,8 +17,8 @@ export class DialogueBox extends Phaser.GameObjects.Container {
     this.justClosed = false;
     this.setDepth(1500);
 
-    this.boxWidth = 460;
-    this.boxHeight = 110;
+    this.boxWidth = 496;
+    this.boxHeight = 114;
     this.isTyping = false;
     this.currentLine = null;
     this.sequence = [];
@@ -223,7 +223,7 @@ export class DialogueBox extends Phaser.GameObjects.Container {
 
   popExclamation(targetX, targetY, onComplete) {
     const mark = this.scene.add
-      .text(targetX, targetY - 140, '!', {
+      .text(targetX, targetY - 165, '!', {
         fontFamily: 'monospace',
         fontSize: '32px',
         fontStyle: 'bold',
@@ -238,7 +238,7 @@ export class DialogueBox extends Phaser.GameObjects.Container {
     this.scene.tweens.add({
       targets: mark,
       scale: 1.3,
-      y: targetY - 155,
+      y: targetY - 180,
       duration: 250,
       ease: 'Back.easeOut',
       onComplete: () => {
@@ -267,6 +267,16 @@ export class DialogueBox extends Phaser.GameObjects.Container {
     const isThought = !!line.isThought;
     const speaker = line.speaker || 'Radio';
 
+    const wrapWidth = isRadio ? this.boxWidth - 122 : this.boxWidth - 40;
+    this.dialogueText.setX(isRadio ? 102 : 20);
+    this.dialogueText.setStyle({ wordWrap: { width: wrapWidth } });
+    // Pre-measure full line height so the bubble never overflows or clips text
+    this.dialogueText.setText(line.text || '');
+    const measuredH = Math.max(40, Math.ceil(this.dialogueText.height));
+    this.dialogueText.setText('');
+    this.boxHeight = Math.max(112, measuredH + 62);
+    this.nextIndicator.setPosition(this.boxWidth - 18, this.boxHeight - 10);
+
     const camLeft = this.scene.cameras.main.scrollX;
     let bx = camLeft + GAME_WIDTH / 2 - this.boxWidth / 2;
     let by = 130;
@@ -278,24 +288,21 @@ export class DialogueBox extends Phaser.GameObjects.Container {
           camLeft + 30,
           camLeft + GAME_WIDTH - this.boxWidth - 30
         );
-        by = Math.max(20, line.target.y - this.boxHeight - 135);
+        by = Math.max(14, line.target.y - this.boxHeight - 172);
 
         // Show Muntasir holding the radio sprite
         this.heldRadio.setPosition(line.target.x + 26, line.target.y - 56);
         this.heldRadio.setVisible(true);
         this.heldRadio.play('anim-radio');
       }
+      this.radioSprite.setPosition(52, Math.max(54, this.boxHeight / 2));
       this.radioSprite.setVisible(true);
       this.radioSprite.play('anim-radio');
-      this.dialogueText.setX(100);
-      this.dialogueText.setStyle({ wordWrap: { width: this.boxWidth - 120 } });
     } else {
       this.radioSprite.setVisible(false);
       this.radioSprite.stop();
       this.heldRadio.setVisible(false);
       this.heldRadio.stop();
-      this.dialogueText.setX(20);
-      this.dialogueText.setStyle({ wordWrap: { width: this.boxWidth - 40 } });
 
       if (line.target) {
         bx = Phaser.Math.Clamp(
@@ -303,7 +310,7 @@ export class DialogueBox extends Phaser.GameObjects.Container {
           camLeft + 30,
           camLeft + GAME_WIDTH - this.boxWidth - 30
         );
-        by = Math.max(20, line.target.y - this.boxHeight - 135);
+        by = Math.max(14, line.target.y - this.boxHeight - 172);
       }
     }
 
@@ -399,45 +406,47 @@ export class DialogueBox extends Phaser.GameObjects.Container {
   startLineAudio(isRadio, isThought, speaker = '') {
     this.stopLineAudio();
     if (isRadio) {
-      const vol = gameState.getEffectiveVolume('sfx', 0.55);
-      if (vol <= 0 || !this.scene?.cache?.audio?.exists('sfx-radio')) return;
-      if (this.radioSound && (this.radioSound.pendingRemove || !this.radioSound.currentConfig)) {
-        this.radioSound = null;
-      }
-      if (!this.radioSound) {
-        this.radioSound = this.scene.sound.add('sfx-radio', { loop: true, volume: vol });
-      }
-      this.radioSound.play({ loop: true, volume: vol });
-      if (this.radioSound.isPlaying && typeof this.radioSound.setSeek === 'function') {
-        try {
+      try {
+        const vol = gameState.getEffectiveVolume('sfx', 0.55);
+        if (vol <= 0 || !this.scene?.cache?.audio?.exists('sfx-radio')) return;
+        if (this.radioSound && (this.radioSound.pendingRemove || !this.radioSound.currentConfig)) {
+          this.scene.sound.remove(this.radioSound);
+          this.radioSound = null;
+        }
+        if (!this.radioSound) {
+          this.radioSound = this.scene.sound.add('sfx-radio', { loop: true, volume: vol });
+        }
+        this.radioSound.play({ loop: true, volume: vol });
+        if (this.radioSound?.isPlaying && this.radioSound.currentConfig && typeof this.radioSound.setSeek === 'function') {
           this.radioSound.setSeek(22);
-        } catch (_e) {}
-      }
+        }
+      } catch (_e) {}
       return;
     }
 
-    const baseVol = isThought ? 0.38 : 0.52;
-    const vol = gameState.getEffectiveVolume('talking', baseVol);
-    if (vol <= 0 || !this.scene?.cache?.audio?.exists('voice-talk')) return;
+    try {
+      const baseVol = isThought ? 0.38 : 0.52;
+      const vol = gameState.getEffectiveVolume('talking', baseVol);
+      if (vol <= 0 || !this.scene?.cache?.audio?.exists('voice-talk')) return;
 
-    if (this.talkSound && (this.talkSound.pendingRemove || !this.talkSound.currentConfig)) {
-      this.talkSound = null;
-    }
-    if (!this.talkSound) {
-      this.talkSound = this.scene.sound.add('voice-talk', { loop: true, volume: vol });
-    }
-    this.talkTurnCount = (this.talkTurnCount ?? 0) + 1;
-    const isMaisha = speaker.toLowerCase().includes('maisha');
-    const maleOffsets = [0.2, 5.2, 10.5, 19.0, 26.5, 37.0, 54.0];
-    const femaleOffsets = [73.2, 79.5, 86.0, 94.5, 104.0, 115.0, 127.0];
-    const pool = isMaisha ? femaleOffsets : maleOffsets;
-    const seek = pool[this.talkTurnCount % pool.length];
-    this.talkSound.play({ loop: true, volume: vol });
-    if (this.talkSound.isPlaying && typeof this.talkSound.setSeek === 'function') {
-      try {
+      if (this.talkSound && (this.talkSound.pendingRemove || !this.talkSound.currentConfig)) {
+        this.scene.sound.remove(this.talkSound);
+        this.talkSound = null;
+      }
+      if (!this.talkSound) {
+        this.talkSound = this.scene.sound.add('voice-talk', { loop: true, volume: vol });
+      }
+      this.talkTurnCount = (this.talkTurnCount ?? 0) + 1;
+      const isMaisha = speaker.toLowerCase().includes('maisha');
+      const maleOffsets = [0.2, 5.2, 10.5, 19.0, 26.5, 37.0, 54.0];
+      const femaleOffsets = [73.2, 79.5, 86.0, 94.5, 104.0, 115.0, 127.0];
+      const pool = isMaisha ? femaleOffsets : maleOffsets;
+      const seek = pool[this.talkTurnCount % pool.length];
+      this.talkSound.play({ loop: true, volume: vol });
+      if (this.talkSound?.isPlaying && this.talkSound.currentConfig && typeof this.talkSound.setSeek === 'function') {
         this.talkSound.setSeek(seek);
-      } catch (_e) {}
-    }
+      }
+    } catch (_e) {}
   }
 
   stopLineAudio() {

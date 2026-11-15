@@ -317,20 +317,19 @@ This file extracts **verbatim** all character dialogues, thought bubbles (`[Thou
   > "Fact: At ~43% of Earth's sunlight, Martian solar power delivers under 1 kW on dusty days and 0 kW at night. NASA's Kilopower nuclear reactor produces 10–40 kW non-stop—40 kW powers ~33 average American homes (U.S. EIA avg ~1.2 kW/home)!"
 
 ### 4.4 After Building Kilopower Reactor (Mars Surface)
-*Source: `src/scenes/SurfaceScene.js` (`onDay4ReactorBuilt`, L1163–1195)*
+*Source: `src/scenes/SurfaceScene.js` (`onDay4ReactorBuilt`, L1176–1215)*
 
-- **Geiger Badge** (`L1163`): `GEIGER: 7.83 uGy/hr (SAFE — 100%)`
 - **Muntasir** *(Speaking)*:
-  > "We now have continuous power all the time—without worrying about dust storms, nighttime darkness, or growing equipment demands as our survival needs expand!"
+  > "Awesome! Now we have steady power day and night—even during dust storms or when we add more equipment!"
 - **Muntasir** `[!]` *(Speaking)*:
-  > "Wait—hear that faint clicking on our reactor's built-in Geiger counter? Is Mars radioactive right now?"
+  > "Hey Maisha, I've been wondering—since Mars barely has an atmosphere, is space radiation dangerous for us out here?"
 - **Maisha** *(Speaking)*:
-  > "Don't worry! That's just Mars's normal natural background radiation—about 7.83 micrograys per hour (0.188 mGy/day). I've brought up our Radiation Safety Meter at a full 100% safe level so we can monitor any spikes!"
+  > "Normally only tiny amounts of space radiation reach the ground here, which will not hurt us right away. Too much radiation at once can cause radiation sickness, though, so we still have to be careful when solar storms happen!"
 - **Inline Fact Reveal** `[Fact Reveal]`:
-  > "NASA Fact — Mars Surface Background Radiation: Measurements from NASA Curiosity MSL-RAD (274,998 archived readings in NASA OSDR RadLab) show an average Mars surface background of ~7.83 uGy/hr (0.188 mGy/day)—totally non-lethal over short EVAs, though astronauts track cumulative exposure closely. (Refs: NASA OSDR RadLab / Curiosity MSL-RAD)"
+  > "NASA Fact — Space Radiation & Astronaut Safety: Mars has a very thin atmosphere and no magnetic shield like Earth to block invisible space rays. Quiet days are safe, but big bursts of radiation can cause radiation sickness—so NASA tracks exposure closely to keep astronauts healthy. (Refs: NASA OSDR RadLab / Curiosity MSL-RAD)"
 - **Maisha** *(Speaking)*:
-  > "Since our Radiation Meter is steady at 100% and we're safe right now, let's head back inside to check our console and get some rest!"
-- **Toast** (`L1195`):
+  > "Everything looks calm on the surface right now, so let us head back inside to check the radio console and get some rest!"
+- **Toast**:
   > "Kilopower Reactor online & Radiation Meter active (100% Safe)! Return inside."
 
 ### 4.5 Deep Space Comms Alert & Solar Storm Explanation (Inside Outpost)
@@ -450,7 +449,7 @@ This file extracts **verbatim** all character dialogues, thought bubbles (`[Thou
 - **Maisha** *(Speaking)*:
   > "Good morning! The solar storm roar outside has finally quieted down—what a relief after yesterday."
 - **Comms (NASA DSN)** `[Radio]`:
-  > "—SOLAR ADVISORY— Main flare peak has subsided, but an elevated particle radiation shower (12.47–21.08 uGy/hr bursts) persists on the Martian surface. Work fast on any EVA!"
+  > "—SOLAR ADVISORY— The biggest part of the solar storm has passed, though extra space radiation is still reaching Mars. Work fast if you step outside!"
 - **Muntasir** `[!]` *(Speaking)*:
   > "Wait—we also have a huge problem inside! Our dry food rations are completely on the brink of finishing today!"
 - **Maisha** *(Speaking)*:
@@ -461,11 +460,10 @@ This file extracts **verbatim** all character dialogues, thought bubbles (`[Thou
   > "Let's head out fast through the Airlock—every second outside counts on our Radiation Meter!"
 
 ### 6.2 Stepping Outside to Mars Surface (Muntasir)
-*Source: `src/scenes/SurfaceScene.js` (`initDay6Surface`, L1247, L1260–1267)*
+*Source: `src/scenes/SurfaceScene.js` (`initDay6Surface`, L1320–1370)*
 
-- **Geiger Badge** (`L1247`): `GEIGER ALERT: 21.08 uGy/hr — LIMIT EVA TIME!`
 - **Muntasir** *(Speaking)*:
-  > "The Geiger counter is climbing fast out here! Let's hurry to the Greenhouse plot, assemble the dome quickly, and minimize our exposure!"
+  > "Extra space radiation is still reaching the surface out here! Let's hurry to the Greenhouse spot, build the dome fast, and stay safe!"
 
 ### 6.3 After Assembling the Greenhouse & Crew Swap Choice (Mars Surface)
 *Source: `src/scenes/SurfaceScene.js` (`onDay6GreenhouseBuilt`, L1370–1383; `showDay6SwapChoice`, L1411–1475; `executeSwapToMaisha`, L1506)*

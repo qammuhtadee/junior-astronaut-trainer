@@ -6,6 +6,7 @@ import { FactCard } from '../ui/FactCard.js';
 import { WarningCard } from '../ui/WarningCard.js';
 import { LogbookModal } from '../ui/LogbookModal.js';
 import { matchLogbookEntry } from '../data/logbookData.js';
+import { RewindManager } from '../systems/RewindManager.js';
 
 /**
  * Always-on overlay scene: capsule pill meters, "Press SPACE" prompt, day badge.
@@ -122,6 +123,10 @@ export class HudScene extends Phaser.Scene {
     this.game.events.on('checkpoint:rewind-d6-swap', this.onRewindD6Swap, this);
     this.game.events.on('radiation:start-d5-decay', this.startD5RadiationDecay, this);
     this.game.events.on('radiation:stop-d5-decay', this.stopD5RadiationDecay, this);
+    this.game.events.on('radiation:start-d5-surface-storm', this.startD5SurfaceRadiation, this);
+    this.game.events.on('radiation:stop-d5-surface-storm', this.stopD5SurfaceRadiation, this);
+    this.game.events.on('radiation:gradual-charge', this.startRadiationCharge, this);
+    this.game.events.on('storm:transition-play', this.playTransitionStorm, this);
     this.game.events.on('lifesupport:start-d5-moderate', this.startD5ModerateDecay, this);
     this.game.events.on('lifesupport:stop-d5-moderate', this.stopD5ModerateDecay, this);
     this.game.events.on('radiation:start-d6-surface', this.startD6SurfaceRadiation, this);
@@ -169,6 +174,10 @@ export class HudScene extends Phaser.Scene {
       this.game.events.off('checkpoint:rewind-d6-swap', this.onRewindD6Swap, this);
       this.game.events.off('radiation:start-d5-decay', this.startD5RadiationDecay, this);
       this.game.events.off('radiation:stop-d5-decay', this.stopD5RadiationDecay, this);
+      this.game.events.off('radiation:start-d5-surface-storm', this.startD5SurfaceRadiation, this);
+      this.game.events.off('radiation:stop-d5-surface-storm', this.stopD5SurfaceRadiation, this);
+      this.game.events.off('radiation:gradual-charge', this.startRadiationCharge, this);
+      this.game.events.off('storm:transition-play', this.playTransitionStorm, this);
       this.game.events.off('lifesupport:start-d5-moderate', this.startD5ModerateDecay, this);
       this.game.events.off('lifesupport:stop-d5-moderate', this.stopD5ModerateDecay, this);
       this.game.events.off('radiation:start-d6-surface', this.startD6SurfaceRadiation, this);
@@ -200,6 +209,8 @@ export class HudScene extends Phaser.Scene {
       this.stopDay4WaterDecay();
       this.stopInitialPowerCharge();
       this.stopD5RadiationDecay();
+      this.stopD5SurfaceRadiation();
+      this.stopRadiationCharge();
       this.stopD5ModerateDecay();
       this.stopD6SurfaceRadiation();
       this.stopD7SurfaceRadiation();
@@ -275,8 +286,12 @@ export class HudScene extends Phaser.Scene {
       return;
     }
 
-    const stormPlaying = this.getValidSound('sfx-storm');
-    if (stormPlaying?.isPlaying) stormPlaying.stop();
+    if (!this.transitionStormActive) {
+      const stormPlaying = this.getValidSound('sfx-storm');
+      if (stormPlaying?.isPlaying && this.currentBgmKey === 'sfx-storm') {
+        stormPlaying.stop();
+      }
+    }
 
     const dayKey =
       gameState.day === 6 ? 'bgm-main' : gameState.day >= 7 ? 'bgm-day4' : `bgm-day${gameState.day}`;
@@ -285,11 +300,14 @@ export class HudScene extends Phaser.Scene {
 
     const bgmVol = gameState.getEffectiveVolume('music', 0.35);
     const curSound = this.getValidSound(targetKey);
-    if (this.currentBgmKey === targetKey && curSound?.isPlaying) {
-      curSound.setVolume(bgmVol);
+
+    // Play each day's backtrack at most ONCE per Sol (no replay on room transitions or loop)
+    if (gameState.playedBgmDays?.has(gameState.day)) {
+      if (curSound?.isPlaying) curSound.setVolume(bgmVol);
       return;
     }
 
+    gameState.playedBgmDays?.add(gameState.day);
     ['bgm-main', 'bgm-day1', 'bgm-day2', 'bgm-day3', 'bgm-day4'].forEach((k) => {
       if (k === targetKey) return;
       const s = this.getValidSound(k);
@@ -297,12 +315,50 @@ export class HudScene extends Phaser.Scene {
     });
 
     if (curSound) {
-      if (!curSound.isPlaying) curSound.play({ loop: true, volume: bgmVol });
+      if (!curSound.isPlaying) curSound.play({ loop: false, volume: bgmVol });
       else curSound.setVolume(bgmVol);
     } else {
-      this.sound.add(targetKey, { loop: true, volume: bgmVol }).play();
+      this.sound.add(targetKey, { loop: false, volume: bgmVol }).play();
     }
     this.currentBgmKey = targetKey;
+  }
+
+  /** Play storm transition audio across night transitions and fade it out smoothly into morning. */
+  playTransitionStorm(durationMs = 5400) {
+    if (!this.cache.audio.exists('sfx-storm')) return;
+    const stormVol = gameState.getEffectiveVolume('sfx', 0.52);
+    if (stormVol <= 0) return;
+
+    if (this.transitionStormTween) {
+      this.transitionStormTween.stop();
+      this.transitionStormTween = null;
+    }
+    this.transitionStormActive = true;
+
+    let s = this.getValidSound('sfx-storm');
+    if (s?.isPlaying) s.stop();
+    if (!s) {
+      s = this.sound.add('sfx-storm', { loop: true, volume: stormVol });
+    }
+    s.play({ loop: true, volume: stormVol });
+
+    this.time.delayedCall(Math.max(1200, durationMs - 2200), () => {
+      if (!s || s.pendingRemove) {
+        this.transitionStormActive = false;
+        return;
+      }
+      this.transitionStormTween = this.tweens.add({
+        targets: s,
+        volume: 0,
+        duration: 2400,
+        ease: 'Sine.easeOut',
+        onComplete: () => {
+          this.transitionStormActive = false;
+          this.transitionStormTween = null;
+          if (gameState.day !== 5 && s?.isPlaying) s.stop();
+        },
+      });
+    });
   }
 
   refresh() {
@@ -368,237 +424,109 @@ export class HudScene extends Phaser.Scene {
   }
 
   onRewindLightsCheckpoint() {
-    this.warningCard.hide();
-    this.stopInitialPowerCharge();
-
-    // Restore lights-off checkpoint state without resetting drained battery power back to 100%
-    gameState.habLightsOn = false;
-
-    if (this.scene.isActive('PowerPanelTask')) {
-      this.scene.stop('PowerPanelTask');
-    }
-
-    this.game.events.emit('lights:turned-off', { silentWarning: true });
-
-    if (this.scene.isActive(SCENES.OUTPOST)) {
-      this.scene.pause(SCENES.OUTPOST);
-    }
-
-    this.scene.launch('PowerPanelTask', { autoTurnOnLight: true });
+    RewindManager.rewindLightsCheckpoint(this);
   }
 
   onRewindD2Oxygen() {
-    this.stopRapidOxygenDrain();
-    this.warningCard.hide();
-    if (this.oxygenChargeEvent) {
-      this.oxygenChargeEvent.remove();
-      this.oxygenChargeEvent = null;
-    }
-
-    // Restore d2_ice_drilled checkpoint (Power: 100%, Oxygen: 20%) and keep assembled parts
-    gameState.d2OxBuilt = false;
-    gameState.d2OxLoaded = false;
-    gameState.d2OxSwitchOn = true;
-    gameState.d2OxPlacedParts = { hopper: true, electrolysis: true, valve: true };
-    gameState.stepId = 'd2_ice_drilled';
-    gameState.checkpointId = 'd2_ice_drilled';
-    gameState.setMeters({ power: 100, oxygen: 20 });
-
-    if (this.scene.isActive('OxygenBuildTask')) {
-      this.scene.stop('OxygenBuildTask');
-    }
-    if (this.scene.isActive(SCENES.OUTPOST)) {
-      this.scene.pause(SCENES.OUTPOST);
-    }
-
-    this.scene.launch('OxygenBuildTask');
+    RewindManager.rewindD2Oxygen(this);
   }
 
   onRewindD2Night() {
-    this.stopRapidOxygenDrain();
-    this.warningCard.hide();
-    if (this.oxygenChargeEvent) {
-      this.oxygenChargeEvent.remove();
-      this.oxygenChargeEvent = null;
-    }
-
-    // Time-travel rewind back to snapshot saved right before evening switch decisions
-    const restored = gameState.restoreCheckpoint('d2_night_ready');
-    if (!restored) {
-      gameState.d2OxBuilt = true;
-      gameState.d2OxLoaded = true;
-      gameState.d2OxSwitchOn = true;
-      gameState.habLightsOn = true;
-      gameState.d2NightModeSet = false;
-      gameState.setMeters({ power: 60, oxygen: 100 });
-    }
-    this.game.events.emit('lights:sync');
-
-    if (this.scene.isActive('PowerPanelTask')) {
-      this.scene.stop('PowerPanelTask');
-    }
-    if (this.scene.isActive(SCENES.OUTPOST)) {
-      this.scene.pause(SCENES.OUTPOST);
-    }
-
-    this.scene.launch('PowerPanelTask', { autoSetDay2Night: true });
+    RewindManager.rewindD2Night(this);
   }
 
   onRewindD3Water() {
-    this.stopRapidWaterDrain();
-    this.warningCard.hide();
-    if (this.waterChargeEvent) {
-      this.waterChargeEvent.remove();
-      this.waterChargeEvent = null;
-    }
-
-    const restored = gameState.restoreCheckpoint('d3_before_water_build');
-    if (!restored) {
-      gameState.setMeters({ power: 60, oxygen: 100, water: 15 });
-    }
-    gameState.d3WaterBuilt = false;
-    gameState.d3WaterSwitchOn = false;
-    gameState.d3WaterPlacedParts = {
-      inlet_hopper: true,
-      heater_coil: true,
-      sediment_trap: true,
-      charcoal_bed: true,
-      clean_spigot: true,
-    };
-
-    if (this.scene.isActive('WaterBuildTask')) {
-      this.scene.stop('WaterBuildTask');
-    }
-    if (this.scene.isActive(SCENES.OUTPOST)) {
-      this.scene.pause(SCENES.OUTPOST);
-    }
-
-    this.scene.launch('WaterBuildTask');
+    RewindManager.rewindD3Water(this);
   }
 
   onRewindD3Night() {
-    this.stopRapidOxygenDrain();
-    this.stopRapidWaterDrain();
-    this.warningCard.hide();
-    if (this.oxygenChargeEvent) {
-      this.oxygenChargeEvent.remove();
-      this.oxygenChargeEvent = null;
-    }
-    if (this.waterChargeEvent) {
-      this.waterChargeEvent.remove();
-      this.waterChargeEvent = null;
-    }
-
-    const restored = gameState.restoreCheckpoint('d3_night_ready');
-    if (!restored) {
-      gameState.habLightsOn = true;
-      gameState.d2OxSwitchOn = true;
-      gameState.d3WaterSwitchOn = true;
-      gameState.d3LightsTurnedOffOnce = false;
-      gameState.d3NightModeSet = false;
-      gameState.setMeters({ power: 40, oxygen: 100, water: 100 });
-    }
-    this.startNightDrain();
-    this.game.events.emit('lights:sync');
-
-    if (this.scene.isActive('PowerPanelTask')) {
-      this.scene.stop('PowerPanelTask');
-    }
-    if (this.scene.isActive(SCENES.OUTPOST)) {
-      this.scene.pause(SCENES.OUTPOST);
-    }
-
-    this.scene.launch('PowerPanelTask', { autoSetDay3Night: true });
+    RewindManager.rewindD3Night(this);
   }
 
   onRewindD4SafeMode() {
-    this.warningCard.hide();
-    const restored = gameState.restoreCheckpoint('d4_before_safe_mode');
-    if (!restored) {
-      gameState.d4SafeModeOn = false;
-      gameState.d4SafeModeDone = false;
-      gameState.d4CommsDone = true;
-      gameState.d3WaterSwitchOn = true;
-      gameState.d2OxSwitchOn = true;
-      gameState.habLightsOn = true;
-      gameState.setMeters({ power: 100 });
-    }
-    this.game.events.emit('power:safe-mode-changed', false);
-    this.game.events.emit('lights:sync');
-
-    if (this.scene.isActive('PowerPanelTask')) {
-      this.scene.stop('PowerPanelTask');
-    }
-    if (this.scene.isActive(SCENES.OUTPOST)) {
-      this.scene.pause(SCENES.OUTPOST);
-    }
-
-    this.scene.launch('PowerPanelTask', { autoSetDay4SafeMode: true });
+    RewindManager.rewindD4SafeMode(this);
   }
 
   onRewindD5Storm() {
-    this.warningCard.hide();
-    this.stopD5RadiationDecay();
-
-    if (!gameState.restoreCheckpoint('d5_storm_start')) {
-      gameState.d5BunksBagged = false;
-      gameState.setMeters({ power: 100, oxygen: 92, water: 86, radiation: 88 });
-    }
-    gameState.room = 'outpost';
-    gameState.activeAstronaut = 'maisha';
-
-    if (this.scene.isActive(SCENES.OUTPOST)) {
-      this.scene.stop(SCENES.OUTPOST);
-    }
-    if (this.scene.isActive(SCENES.SURFACE)) {
-      this.scene.stop(SCENES.SURFACE);
-    }
-    this.scene.start(SCENES.OUTPOST);
-    this.startD5RadiationDecay();
+    RewindManager.rewindD5Storm(this);
   }
 
   onRewindD6Surface() {
-    this.warningCard.hide();
-    this.stopD6SurfaceRadiation();
-
-    if (!gameState.restoreCheckpoint('d6_surface_entry')) {
-      gameState.d6GreenhouseBuilt = false;
-      gameState.d6GreenhousePlacedParts = {};
-      gameState.d6SwappedToMaisha = false;
-      gameState.d6CropsPlanted = false;
-      gameState.setMeters({ radiation: 95 });
-    }
-    gameState.room = 'surface';
-    gameState.activeAstronaut = 'muntasir';
-
-    if (this.scene.isActive('GreenhouseBuildTask')) this.scene.stop('GreenhouseBuildTask');
-    if (this.scene.isActive('CropFarmTask')) this.scene.stop('CropFarmTask');
-    if (this.scene.isActive(SCENES.SURFACE)) {
-      this.scene.stop(SCENES.SURFACE);
-    }
-    this.scene.start(SCENES.SURFACE);
+    RewindManager.rewindD6Surface(this);
   }
 
   onRewindD6Swap() {
-    this.warningCard.hide();
-    this.stopD6SurfaceRadiation();
+    RewindManager.rewindD6Swap(this);
+  }
 
-    if (!gameState.restoreCheckpoint('d6_after_greenhouse')) {
-      gameState.d6GreenhouseBuilt = true;
-      gameState.d6SwappedToMaisha = false;
-      gameState.d6CropsPlanted = false;
-      gameState.setMeters({ radiation: 52 });
+  startD5SurfaceRadiation() {
+    if (gameState.day !== 5 || gameState.room !== 'surface') return;
+    this.stopRadiationCharge();
+    this.radiationMeter?.setShaking(true);
+    if (this.d5SurfaceRadEvent) {
+      this.d5SurfaceRadEvent.remove();
+      this.d5SurfaceRadEvent = null;
     }
-    gameState.room = 'surface';
-    gameState.activeAstronaut = 'muntasir';
 
-    if (this.scene.isActive('CropFarmTask')) this.scene.stop('CropFarmTask');
-    if (this.scene.isActive(SCENES.SURFACE)) {
-      this.scene.resume(SCENES.SURFACE);
-    } else {
-      this.scene.start(SCENES.SURFACE);
+    this.d5SurfaceRadEvent = this.time.addEvent({
+      delay: 190,
+      loop: true,
+      callback: () => {
+        if (gameState.day !== 5 || gameState.room !== 'surface') {
+          this.stopD5SurfaceRadiation();
+          return;
+        }
+        const cur = gameState.meters.radiation ?? 88;
+        const next = Math.max(15, cur - 1);
+        gameState.setMeters({ radiation: next });
+        if (next <= 35 && !this.warningCard.visible) {
+          this.warningCard.show({
+            text: 'DANGER: Solar storm radiation on the surface is falling rapidly! Rewind now so Maisha rushes back inside the shelter.',
+            rewindEvent: 'checkpoint:rewind-d5-storm',
+          });
+        }
+        if (next <= 15) {
+          this.stopD5SurfaceRadiation();
+        }
+      },
+    });
+  }
+
+  stopD5SurfaceRadiation() {
+    if (this.d5SurfaceRadEvent) {
+      this.d5SurfaceRadEvent.remove();
+      this.d5SurfaceRadEvent = null;
     }
-    this.time.delayedCall(120, () => this.game.events.emit('d6:prompt-swap'));
+    this.radiationMeter?.setShaking(false);
+  }
+
+  startRadiationCharge(targetVal = 88) {
+    this.stopD5SurfaceRadiation();
+    this.stopRadiationCharge();
+    const goal = typeof targetVal === 'number' ? targetVal : gameState.d5BunksBagged ? 95 : 88;
+
+    this.radChargeEvent = this.time.addEvent({
+      delay: 85,
+      loop: true,
+      callback: () => {
+        const cur = gameState.meters.radiation ?? 40;
+        if (cur >= goal) {
+          this.stopRadiationCharge();
+          if (gameState.day === 5 && !gameState.d5BunksBagged) {
+            this.startD5RadiationDecay();
+          }
+          return;
+        }
+        gameState.setMeters({ radiation: Math.min(goal, cur + 2) });
+      },
+    });
+  }
+
+  stopRadiationCharge() {
+    if (this.radChargeEvent) {
+      this.radChargeEvent.remove();
+      this.radChargeEvent = null;
+    }
   }
 
   startD5RadiationDecay() {
@@ -897,7 +825,7 @@ export class HudScene extends Phaser.Scene {
     let current = gameState.meters.oxygen ?? 20;
 
     this.oxygenChargeEvent = this.time.addEvent({
-      delay: 40,
+      delay: 140,
       loop: true,
       callback: () => {
         if (
@@ -908,7 +836,7 @@ export class HudScene extends Phaser.Scene {
           this.oxygenChargeEvent = null;
           return;
         }
-        current = Math.min(100, current + 2);
+        current = Math.min(100, current + 1);
         gameState.setMeters({ oxygen: current });
         if (current >= 100) {
           this.oxygenChargeEvent.remove();
@@ -929,7 +857,7 @@ export class HudScene extends Phaser.Scene {
     let current = gameState.meters.water ?? 10;
 
     this.waterChargeEvent = this.time.addEvent({
-      delay: 40,
+      delay: 140,
       loop: true,
       callback: () => {
         if ((gameState.day !== 3 && gameState.day !== 4 && gameState.day !== 7) || !gameState.d3WaterSwitchOn) {
@@ -937,7 +865,7 @@ export class HudScene extends Phaser.Scene {
           this.waterChargeEvent = null;
           return;
         }
-        current = Math.min(100, current + 2);
+        current = Math.min(100, current + 1);
         gameState.setMeters({ water: current });
         if (current >= 100) {
           this.waterChargeEvent.remove();

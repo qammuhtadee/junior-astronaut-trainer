@@ -447,8 +447,10 @@ export class LogbookModal extends Phaser.GameObjects.Container {
   }
 
   playPageSound() {
+    const vol = gameState.getEffectiveVolume('sfx', 0.6);
+    if (vol <= 0) return;
     if (this.scene.cache.audio.exists('sfx-page')) {
-      this.scene.sound.play('sfx-page', { volume: 0.6 });
+      this.scene.sound.play('sfx-page', { volume: vol });
     }
   }
 

@@ -80,6 +80,7 @@ export class SurfaceScene extends RoomScene {
     this.game.events.on('d7:ice-bagged', this.onDay7IceBagged, this);
     this.game.events.on('d7:greenhouse-bagged', this.onDay7GreenhouseBagged, this);
     this.game.events.on('d7:crops-harvested', this.onDay7CropsHarvested, this);
+    this.game.events.on('d5:autonomous-return', this.onDay5AutonomousReturn, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.game.events.off('solar:aligned', this.runPowerChargeUp, this);
       this.game.events.off('d2:panel-cleaned', this.onDay2PanelCleaned, this);
@@ -95,6 +96,8 @@ export class SurfaceScene extends RoomScene {
       this.game.events.off('d7:ice-bagged', this.onDay7IceBagged, this);
       this.game.events.off('d7:greenhouse-bagged', this.onDay7GreenhouseBagged, this);
       this.game.events.off('d7:crops-harvested', this.onDay7CropsHarvested, this);
+      this.game.events.off('d5:autonomous-return', this.onDay5AutonomousReturn, this);
+      this.game.events.emit('radiation:stop-d5-surface-storm');
       if (this.landingSound) {
         this.landingSound.stop();
         this.sound.remove(this.landingSound);
@@ -112,6 +115,8 @@ export class SurfaceScene extends RoomScene {
       this.initDay3Surface();
     } else if (gameState.day === 4) {
       this.initDay4Surface();
+    } else if (gameState.day === 5) {
+      this.initDay5Surface();
     } else if (gameState.day === 6) {
       this.initDay6Surface();
     } else if (gameState.day === 7) {
@@ -175,8 +180,13 @@ export class SurfaceScene extends RoomScene {
     this.landingSound = null;
     const landVol = gameState.getEffectiveVolume('sfx', 0.65);
     if (landVol > 0 && this.cache.audio.exists('sfx-landing')) {
-      this.landingSound = this.sound.add('sfx-landing', { volume: landVol });
-      this.landingSound.play({ seek: 4, volume: landVol });
+      try {
+        this.landingSound = this.sound.add('sfx-landing', { volume: landVol });
+        this.landingSound.play({ volume: landVol });
+        if (this.landingSound?.isPlaying && this.landingSound.currentConfig && typeof this.landingSound.setSeek === 'function') {
+          this.landingSound.setSeek(4);
+        }
+      } catch (_e) {}
     }
 
     // Diagonal crash into Martian soil, straightening horizontally
@@ -620,22 +630,28 @@ export class SurfaceScene extends RoomScene {
       this.solarCleanGuide = null;
     }
 
-    const { x, y, w, h } = solarStation.def;
-    const left = x - w / 2;
-    const top = y - h;
+    const { x, y } = solarStation.def;
+    const sprW = solarStation.sprite ? solarStation.sprite.displayWidth : solarStation.def.w * 1.35;
+    const sprH = solarStation.sprite ? solarStation.sprite.displayHeight : solarStation.def.h * 1.35;
+    // The blue solar panel cells occupy the upper angled panel face above the two support legs:
+    const panelW = sprW * 0.78;
+    const panelH = sprH * 0.68;
+    const left = x - panelW * 0.44;
+    const top = y - sprH * 0.94;
 
     const dustGfx = this.add.graphics().setDepth(solarStation.depth + 1);
-    dustGfx.fillStyle(0x9a3412, 0.72);
-    dustGfx.fillRect(left + 4, top + 4, w - 8, h - 8);
-    dustGfx.fillStyle(0xc2410c, 0.78);
-    dustGfx.fillCircle(left + w * 0.25, top + h * 0.4, 22);
-    dustGfx.fillCircle(left + w * 0.65, top + h * 0.55, 26);
-    dustGfx.fillCircle(left + w * 0.45, top + h * 0.3, 18);
-    dustGfx.fillStyle(0x7c2d12, 0.7);
-    dustGfx.fillCircle(left + w * 0.8, top + h * 0.32, 16);
+    dustGfx.fillStyle(0x9a3412, 0.74);
+    dustGfx.fillRoundedRect(left + 4, top + 6, panelW - 8, panelH - 8, 6);
+    dustGfx.fillStyle(0xc2410c, 0.8);
+    dustGfx.fillCircle(left + panelW * 0.25, top + panelH * 0.38, 22);
+    dustGfx.fillCircle(left + panelW * 0.65, top + panelH * 0.55, 25);
+    dustGfx.fillCircle(left + panelW * 0.46, top + panelH * 0.3, 18);
+    dustGfx.fillStyle(0x7c2d12, 0.72);
+    dustGfx.fillCircle(left + panelW * 0.8, top + panelH * 0.34, 16);
     this.solarDustOverlay = dustGfx;
 
-    const guide = this.add.container(x, top - 34).setDepth(1300);
+    const guideTop = y - sprH;
+    const guide = this.add.container(x, guideTop - 28).setDepth(1300);
     const label = this.add
       .text(0, -18, 'Clean Solar Panel', {
         fontFamily: 'monospace',
@@ -656,7 +672,7 @@ export class SurfaceScene extends RoomScene {
     guide.add([label, arrow]);
     this.tweens.add({
       targets: guide,
-      y: top - 24,
+      y: guideTop - 18,
       duration: 600,
       yoyo: true,
       repeat: -1,
@@ -1158,35 +1174,34 @@ export class SurfaceScene extends RoomScene {
 
     this.transitioning = true;
     this.time.delayedCall(350, () => {
-      // Introduce the Geiger counter readout + Radiation Meter at 100% (safe Martian background)
+      // Unlock Radiation Shield Meter at 100% (calm Martian conditions after reactor build)
       gameState.setMeters({ power: 100, radiation: 100 });
-      this.createGeigerBadge('GEIGER: 7.83 uGy/hr (SAFE — 100%)', 0x50fa7b);
 
       this.dialogueBox.showSequence(
         [
           {
             speaker: 'Muntasir',
-            text: 'We now have continuous power all the time—without worrying about dust storms, nighttime darkness, or growing equipment demands as our survival needs expand!',
+            text: 'Awesome! Now we have steady power day and night—even during dust storms or when we add more equipment!',
             target: this.player,
           },
           {
             speaker: 'Muntasir',
-            text: "Wait—hear that faint clicking on our reactor's built-in Geiger counter? Is Mars radioactive right now?",
+            text: "Hey Maisha, I've been wondering—since Mars barely has an atmosphere, is space radiation dangerous for us out here?",
             target: this.player,
             exclamation: true,
           },
           {
             speaker: 'Maisha',
-            text: "Don't worry! That's just Mars's normal natural background radiation—about 7.83 micrograys per hour (0.188 mGy/day). I've brought up our Radiation Safety Meter at a full 100% safe level so we can monitor any spikes!",
+            text: 'Normally only tiny amounts of space radiation reach the ground here, which will not hurt us right away. Too much radiation at once can cause radiation sickness, though, so we still have to be careful when solar storms happen!',
             target: this.companion,
           },
           {
             isFactReveal: true,
-            text: 'NASA Fact — Mars Surface Background Radiation: Measurements from NASA Curiosity MSL-RAD (274,998 archived readings in NASA OSDR RadLab) show an average Mars surface background of ~7.83 uGy/hr (0.188 mGy/day)—totally non-lethal over short EVAs, though astronauts track cumulative exposure closely. (Refs: NASA OSDR RadLab / Curiosity MSL-RAD)',
+            text: 'NASA Fact — Space Radiation & Astronaut Safety: Mars has a very thin atmosphere and no magnetic shield like Earth to block invisible space rays. Quiet days are safe, but big bursts of radiation can cause radiation sickness—so NASA tracks exposure closely to keep astronauts healthy. (Refs: NASA OSDR RadLab / Curiosity MSL-RAD)',
           },
           {
             speaker: 'Maisha',
-            text: "Since our Radiation Meter is steady at 100% and we're safe right now, let's head back inside to check our console and get some rest!",
+            text: 'Everything looks calm on the surface right now, so let us head back inside to check the radio console and get some rest!',
             target: this.companion,
           },
         ],
@@ -1203,27 +1218,104 @@ export class SurfaceScene extends RoomScene {
     });
   }
 
-  createGeigerBadge(text, strokeColor = 0x50fa7b) {
-    if (this.geigerBadge) {
-      this.geigerBadge.destroy();
-      this.geigerBadge = null;
+  // ==========================================
+  // DAY 5: SOLAR STORM SURFACE EXPOSURE
+  // ==========================================
+  initDay5Surface() {
+    this.cameras.main.scrollX = 0;
+
+    ['solar_panel', 'reactor'].forEach((id) => {
+      const st = this.stations.find((s) => s.def.id === id);
+      if (st) st.setVisible(true);
+    });
+    ['ice_site', 'greenhouse'].forEach((id) => {
+      const st = this.stations.find((s) => s.def.id === id);
+      if (st) st.setVisible(false);
+    });
+
+    // Intense amber solar-particle storm haze & streaking particles
+    this.add
+      .rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0xb45309, 0.28)
+      .setOrigin(0)
+      .setScrollFactor(0)
+      .setDepth(950);
+
+    const spawnStreak = () => {
+      if (!this.scene.isActive()) return;
+      const y = Phaser.Math.Between(60, GAME_HEIGHT - 60);
+      const w = Phaser.Math.Between(70, 170);
+      const streak = this.add
+        .rectangle(GAME_WIDTH + 80, y, w, 2, 0xfcd34d, 0.55)
+        .setScrollFactor(0)
+        .setDepth(951);
+      this.tweens.add({
+        targets: streak,
+        x: -180,
+        duration: Phaser.Math.Between(360, 620),
+        ease: 'Linear',
+        onComplete: () => streak.destroy(),
+      });
+    };
+    for (let i = 0; i < 6; i += 1) {
+      this.time.delayedCall(i * 75, spawnStreak);
     }
-    const c = this.add.container(GAME_WIDTH / 2, 160).setDepth(1600);
-    const bg = this.add.graphics();
-    bg.fillStyle(0x0f172a, 0.92);
-    bg.fillRoundedRect(-200, -16, 400, 32, 8);
-    bg.lineStyle(2, strokeColor, 0.95);
-    bg.strokeRoundedRect(-200, -16, 400, 32, 8);
-    const lbl = this.add
-      .text(0, 0, text, {
-        fontFamily: 'monospace',
-        fontSize: '12px',
-        fontStyle: 'bold',
-        color: '#86efac',
-      })
-      .setOrigin(0.5);
-    c.add([bg, lbl]);
-    this.geigerBadge = c;
+    this.d5WindTimer = this.time.addEvent({
+      delay: 110,
+      loop: true,
+      callback: spawnStreak,
+    });
+
+    this.cameras.main.shake(450, 0.005);
+    this.game.events.emit('radiation:start-d5-surface-storm');
+
+    this.time.delayedCall(400, () => {
+      if (!this.scene.isActive() || this.transitioning) return;
+      this.dialogueBox.showSequence(
+        [
+          {
+            speaker: gameState.activeAstronaut === 'muntasir' ? 'Muntasir' : 'Maisha',
+            text: 'Whoa! This solar storm is intense—our suit radiation shield is dropping fast out here! We have to head straight back inside!',
+            target: this.player,
+            exclamation: true,
+          },
+        ],
+        () => {
+          if (!this.scene.isActive() || this.transitioning) return;
+          this.game.events.emit('warning:show', {
+            text: 'SOLAR STORM OUTSIDE! Radiation protection is dropping steadily. Rewind to rush back inside the sheltered Outpost!',
+            rewindEvent: 'checkpoint:rewind-d5-storm',
+          });
+        }
+      );
+    });
+  }
+
+  onDay5AutonomousReturn() {
+    if (!this.scene.isActive() || this.transitioning) return;
+    this.transitioning = true;
+    this.game.events.emit('prompt', null);
+    this.game.events.emit('warning:hide');
+    this.game.events.emit('radiation:stop-d5-surface-storm');
+    if (this.d5WindTimer) {
+      this.d5WindTimer.remove(false);
+      this.d5WindTimer = null;
+    }
+
+    this.walkActorTo(this.player, GAME_WIDTH - 120, LANE.top + 45, 340, () => {
+      const airlockVol = gameState.getEffectiveVolume('sfx', 0.65);
+      if (airlockVol > 0 && this.cache.audio.exists('sfx-airlock')) {
+        this.sound.play('sfx-airlock', { volume: airlockVol });
+      }
+      this.cameras.main.fadeOut(380, 0, 0, 0);
+      this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+        this.scene.start(SCENES.OUTPOST, {
+          spawnX: 175,
+          spawnY: LANE.top + 45,
+          facingLeft: false,
+          fromD5StormRewind: true,
+        });
+      });
+    });
   }
 
   // ==========================================
@@ -1244,8 +1336,6 @@ export class SurfaceScene extends RoomScene {
       ghStation.setVisible(!!gameState.d6GreenhouseBuilt);
     }
 
-    this.createGeigerBadge('GEIGER ALERT: 21.08 uGy/hr — LIMIT EVA TIME!', 0xfbbf24);
-
     if (!gameState.d6GreenhouseBuilt) {
       this.createSurfaceGuide(ghStation, 'Build Greenhouse', 0x22c55e, true);
     } else if (gameState.d6SwappedToMaisha && !gameState.d6CropsPlanted) {
@@ -1261,7 +1351,7 @@ export class SurfaceScene extends RoomScene {
           [
             {
               speaker: 'Muntasir',
-              text: "The Geiger counter is climbing fast out here! Let's hurry to the Greenhouse plot, assemble the dome quickly, and minimize our exposure!",
+              text: "Extra space radiation is still reaching the surface out here! Let's hurry to the Greenhouse spot, build the dome fast, and stay safe!",
               target: this.player,
             },
           ],

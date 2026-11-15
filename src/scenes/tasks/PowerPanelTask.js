@@ -25,14 +25,6 @@ export class PowerPanelTask extends Phaser.Scene {
     this.d4WaterPaused = false;
     this.d4SafeModeActivated = false;
     this.d4SafeModeFailed = false;
-    this.pendingAutoLightTimer = null;
-    this.pendingAutoDay2Timer = null;
-    this.pendingAutoDay3Timer = null;
-    this.pendingAutoDay4Timer = null;
-    this.autoTurnOnLight = !!data?.autoTurnOnLight;
-    this.autoSetDay2Night = !!data?.autoSetDay2Night;
-    this.autoSetDay3Night = !!data?.autoSetDay3Night;
-    this.autoSetDay4SafeMode = !!data?.autoSetDay4SafeMode;
 
     const cx = GAME_WIDTH / 2;
     const cy = GAME_HEIGHT / 2;
@@ -383,63 +375,6 @@ export class PowerPanelTask extends Phaser.Scene {
       if (this.input?.keyboard) this.input.keyboard.off('keydown-ESC', onEsc);
     });
     this.updateLoad();
-
-    if (gameState.day === 1 && this.autoTurnOnLight) {
-      this.pendingAutoLightTimer = this.time.delayedCall(260, () => {
-        const lightEntry = this.switchViews.find((v) => v.sw.id === 'light');
-        if (lightEntry) {
-          lightEntry.sw.on = true;
-          lightEntry.updateSwitchVisual(true);
-          this.updateLoad();
-          this.statusText.setText('CHECKPOINT RESTORED: LIGHTS ON — CLICK APPLY').setColor('#34d399');
-        }
-      });
-    } else if (gameState.day === 2 && this.autoSetDay2Night) {
-      this.pendingAutoDay2Timer = this.time.delayedCall(260, () => {
-        const lightEntry = this.switchViews.find((v) => v.sw.id === 'light');
-        const oxEntry = this.switchViews.find((v) => v.sw.id === 'oxygen');
-        if (lightEntry) {
-          lightEntry.sw.on = false;
-          lightEntry.updateSwitchVisual(false);
-        }
-        if (oxEntry) {
-          oxEntry.sw.on = true;
-          oxEntry.updateSwitchVisual(true);
-        }
-        this.updateLoad();
-        this.statusText.setText('CHECKPOINT RESTORED: NIGHT MODE READY — CLICK APPLY').setColor('#34d399');
-      });
-    } else if (gameState.day === 3 && this.autoSetDay3Night) {
-      this.pendingAutoDay3Timer = this.time.delayedCall(260, () => {
-        const lightEntry = this.switchViews.find((v) => v.sw.id === 'light');
-        const oxEntry = this.switchViews.find((v) => v.sw.id === 'oxygen');
-        const waterEntry = this.switchViews.find((v) => v.sw.id === 'water');
-        if (lightEntry) {
-          lightEntry.sw.on = false;
-          lightEntry.updateSwitchVisual(false);
-        }
-        if (oxEntry) {
-          oxEntry.sw.on = true;
-          oxEntry.updateSwitchVisual(true);
-        }
-        if (waterEntry) {
-          waterEntry.sw.on = true;
-          waterEntry.updateSwitchVisual(true);
-        }
-        this.updateLoad();
-        this.statusText.setText('CHECKPOINT RESTORED: LIGHTS OFF — CLICK APPLY').setColor('#34d399');
-      });
-    } else if (gameState.day === 4 && gameState.d4CommsDone && this.autoSetDay4SafeMode) {
-      this.pendingAutoDay4Timer = this.time.delayedCall(260, () => {
-        const safeEntry = this.switchViews.find((v) => v.sw.id === 'safemode');
-        if (safeEntry) {
-          safeEntry.sw.on = true;
-          safeEntry.updateSwitchVisual(true);
-        }
-        this.updateLoad();
-        this.statusText.setText('CHECKPOINT RESTORED: SAFE MODE READY — CLICK APPLY').setColor('#34d399');
-      });
-    }
   }
 
   updateLoad() {
@@ -460,10 +395,6 @@ export class PowerPanelTask extends Phaser.Scene {
     if (gameState.day === 1) {
       const lightSw = this.switches.find((s) => s.id === 'light');
       if (lightSw) {
-        if (this.pendingAutoLightTimer && this.pendingAutoLightTimer.getProgress() < 1) {
-          this.pendingAutoLightTimer.remove(false);
-          lightSw.on = true;
-        }
         if (lightSw.on) {
           if (!gameState.habLightsOn) {
             gameState.habLightsOn = true;
@@ -471,7 +402,7 @@ export class PowerPanelTask extends Phaser.Scene {
               gameState.setMeters({ power: 90 });
             } else {
               const cur = gameState.meters.power ?? 100;
-              gameState.setMeters({ power: Math.max(10, cur - 10) });
+              gameState.setMeters({ power: Math.max(0, cur - 10) });
             }
           }
           this.lightsChangeState = 'turned_on';
@@ -489,11 +420,6 @@ export class PowerPanelTask extends Phaser.Scene {
     } else if (gameState.day === 2) {
       const lightSw = this.switches.find((s) => s.id === 'light');
       const oxSw = this.switches.find((s) => s.id === 'oxygen');
-      if (this.pendingAutoDay2Timer && this.pendingAutoDay2Timer.getProgress() < 1) {
-        this.pendingAutoDay2Timer.remove(false);
-        if (lightSw) lightSw.on = false;
-        if (oxSw) oxSw.on = true;
-      }
 
       const prevLights = !!gameState.habLightsOn;
       const nextLights = lightSw ? !!lightSw.on : prevLights;
@@ -554,12 +480,6 @@ export class PowerPanelTask extends Phaser.Scene {
       const lightSw = this.switches.find((s) => s.id === 'light');
       const oxSw = this.switches.find((s) => s.id === 'oxygen');
       const waterSw = this.switches.find((s) => s.id === 'water');
-      if (this.pendingAutoDay3Timer && this.pendingAutoDay3Timer.getProgress() < 1) {
-        this.pendingAutoDay3Timer.remove(false);
-        if (lightSw) lightSw.on = false;
-        if (oxSw) oxSw.on = true;
-        if (waterSw) waterSw.on = true;
-      }
 
       const prevLights = !!gameState.habLightsOn;
       const nextLights = lightSw ? !!lightSw.on : prevLights;
@@ -595,35 +515,35 @@ export class PowerPanelTask extends Phaser.Scene {
       if (oxSw && !nextOx) {
         gameState.d3NightModeSet = false;
         this.d3OxOffWarning = true;
-      } else if (waterSw && !nextWater) {
+      }
+      if (waterSw && !nextWater) {
         gameState.d3NightModeSet = false;
         this.d3WaterOffWarning = true;
-      } else if (nextLights && gameState.d3LightsTurnedOffOnce) {
-        gameState.habLightsOn = true;
-        gameState.d3NightModeSet = false;
-        gameState.setMeters({ power: 30 });
-        this.d3LightsReenabledWarning = true;
-      } else if (!nextLights) {
-        if (gameState.d3OxIceLoaded) {
-          gameState.habLightsOn = false;
-          gameState.d3LightsTurnedOffOnce = true;
-          gameState.d3NightModeSet = true;
-          this.d2SilentDark = true;
+      }
+
+      if (!this.d3OxOffWarning && !this.d3WaterOffWarning) {
+        if (nextLights && gameState.d3LightsTurnedOffOnce) {
+          gameState.habLightsOn = true;
+          gameState.d3NightModeSet = false;
+          this.d3LightsReenabledWarning = true;
+        } else if (!nextLights) {
+          if (gameState.d3OxIceLoaded) {
+            gameState.habLightsOn = false;
+            gameState.d3LightsTurnedOffOnce = true;
+            gameState.d3NightModeSet = true;
+            this.d2SilentDark = true;
+          } else {
+            gameState.habLightsOn = false;
+            this.lightsChangeState = 'off_warning';
+          }
         } else {
-          gameState.habLightsOn = false;
-          this.lightsChangeState = 'off_warning';
+          gameState.habLightsOn = true;
+          gameState.d3NightModeSet = false;
+          if (!prevLights) this.lightsChangeState = 'turned_on';
         }
-      } else {
-        gameState.habLightsOn = true;
-        gameState.d3NightModeSet = false;
-        if (!prevLights) this.lightsChangeState = 'turned_on';
       }
     } else if (gameState.day === 4 && gameState.d4CommsDone) {
       const safeSw = this.switches.find((s) => s.id === 'safemode');
-      if (this.pendingAutoDay4Timer && this.pendingAutoDay4Timer.getProgress() < 1) {
-        this.pendingAutoDay4Timer.remove(false);
-        if (safeSw) safeSw.on = true;
-      }
       if (safeSw && safeSw.on) {
         gameState.d4SafeModeOn = true;
         gameState.d3WaterSwitchOn = true;
@@ -704,10 +624,31 @@ export class PowerPanelTask extends Phaser.Scene {
           return;
         }
 
+        if (d3OxOn) {
+          this.game.events.emit('oxygen:stop-rapid-drain');
+          if (gameState.d3OxIceLoaded) this.game.events.emit('oxygen:gradual-charge');
+          this.game.events.emit('warning:hide');
+        }
+        if (d3WaterOn) {
+          this.game.events.emit('water:stop-rapid-drain');
+          if (gameState.d3WaterIceLoaded) this.game.events.emit('water:gradual-charge');
+          this.game.events.emit('warning:hide');
+        }
+
+        if (d3OxOff && d3WaterOff) {
+          this.game.events.emit('oxygen:start-rapid-drain');
+          this.game.events.emit('water:start-rapid-drain');
+          this.game.events.emit('warning:show', {
+            text: 'Warning: Switching off BOTH Oxygen and Water saves power, but breathable air and clean water are both dropping fast!',
+            rewindEvent: 'checkpoint:rewind-d3-night',
+          });
+          return;
+        }
+
         if (d3OxOff) {
           this.game.events.emit('oxygen:start-rapid-drain');
           this.game.events.emit('warning:show', {
-            text: 'Warning: Switching off the Oxygen Maker saves power, but breathable air is depleting fast! You will suffocate without oxygen.',
+            text: 'Warning: Switching off the Oxygen Maker saves power, but breathable air is depleting fast! Keep Oxygen ON overnight.',
             rewindEvent: 'checkpoint:rewind-d3-night',
           });
           return;
@@ -716,7 +657,7 @@ export class PowerPanelTask extends Phaser.Scene {
         if (d3WaterOff) {
           this.game.events.emit('water:start-rapid-drain');
           this.game.events.emit('warning:show', {
-            text: 'Warning: Switching off the Water Station saves power, but water purification stops and the crew risks severe dehydration!',
+            text: 'Warning: Switching off the Water Station saves power, but clean drinking water is depleting fast! Keep Water ON overnight.',
             rewindEvent: 'checkpoint:rewind-d3-night',
           });
           return;
@@ -725,20 +666,10 @@ export class PowerPanelTask extends Phaser.Scene {
         if (d3LightsRe) {
           this.game.events.emit('lights:restored');
           this.game.events.emit('warning:show', {
-            text: 'Warning: Turning the lights back on dropped reserve power into the red danger zone! Keep the lights off before sleeping.',
+            text: 'Warning: Turning the lights back on wastes power needed by Oxygen and Water overnight! Keep the lights OFF before sleeping.',
             rewindEvent: 'checkpoint:rewind-d3-night',
           });
           return;
-        }
-
-        if (d3OxOn) {
-          this.game.events.emit('oxygen:stop-rapid-drain');
-          if (gameState.d3OxIceLoaded) this.game.events.emit('oxygen:gradual-charge');
-          this.game.events.emit('warning:hide');
-        }
-        if (d3WaterOn) {
-          this.game.events.emit('water:stop-rapid-drain');
-          this.game.events.emit('warning:hide');
         }
 
         if (oxTurnedOff || stillOxOff) {

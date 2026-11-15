@@ -235,20 +235,24 @@ export class WaterBuildTask extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    const allocBtn = this.makeButton(0, 40, '[ ⚡ ALLOCATE POWER FOR WATER ]', 0x059669, 0x34d399, () => {
+    const allocBtn = this.makeButton(0, 40, '[ ⚡ ALLOCATE POWER FOR WATER (-20%) ]', 0x059669, 0x34d399, () => {
       this.choiceResult = 'allocated';
       gameState.d3WaterBuilt = true;
       gameState.d3WaterSwitchOn = true;
       const cur = typeof gameState.meters?.power === 'number' ? gameState.meters.power : 60;
-      gameState.setMeters({ power: Math.max(10, cur - 20) });
+      gameState.setMeters({ power: Math.max(0, cur - 20) });
       gameState.stepId = 'd3_water_station';
       gameState.checkpointId = 'd3_water_station';
       this.closeTask();
     });
 
     const refuseBtn = this.makeButton(0, 88, '[ ✕ DO NOT ALLOCATE POWER ]', 0x991b1b, 0xf87171, () => {
-      this.choiceResult = 'refused';
-      this.closeTask();
+      this.statusText.setText('POWER NEEDED TO MELT & CLEAN ICE!').setColor('#f87171');
+      cDesc
+        .setText(
+          'Warning: Without power, the ice stays frozen solid!\nHumans can only survive ~3 days without clean drinking water.\nTap ALLOCATE POWER FOR WATER above to power the pumps!'
+        )
+        .setColor('#fecaca');
     });
 
     this.choicePanel.add([cBg, cTitle, cDesc, allocBtn, refuseBtn]);

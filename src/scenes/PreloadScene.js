@@ -56,7 +56,7 @@ export class PreloadScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.add
-      .text(cx, cy - 72, 'JUNIOR ASTRONAUT MISSION TRAINER  //  SOL Telemetry Boot', {
+      .text(cx, cy - 72, 'JUNIOR ASTRONAUT ADVENTURE', {
         fontFamily: 'monospace',
         fontSize: '15px',
         color: '#38bdf8',
@@ -87,7 +87,7 @@ export class PreloadScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     const statusText = this.add
-      .text(cx, barY - 22, 'INITIALIZING MISSION TELEMETRY...', {
+      .text(cx, barY - 22, 'LOADING...', {
         fontFamily: 'monospace',
         fontSize: '13px',
         color: '#94a3b8',
@@ -105,10 +105,8 @@ export class PreloadScene extends Phaser.Scene {
         fill.fillRoundedRect(barX + 6, barY + 5, Math.max(4, innerW - 4), 4, 2);
       }
       pctText.setText(`${pct}%`);
-      if (p < 0.35) statusText.setText('INITIALIZING MISSION TELEMETRY...');
-      else if (p < 0.7) statusText.setText('LOADING MARTIAN TERRAIN & OUTPOST...');
-      else if (p < 0.98) statusText.setText('BOOTING LIFE SUPPORT AUDIO...');
-      else statusText.setText('SYSTEMS READY');
+      if (p < 0.98) statusText.setText(`LOADING... ${pct}%`);
+      else statusText.setText('READY');
     });
 
     this.load.image('bg-surface', 'assets/backgrounds/mars-surface-1280.jpg');
@@ -133,6 +131,9 @@ export class PreloadScene extends Phaser.Scene {
     this.load.image('station-power', 'assets/sprites/power-panel.png');
     this.load.image('station-reactor', 'assets/sprites/reactor.png');
     this.load.image('station-solar', 'assets/sprites/solar-panel.png');
+    this.load.image('station-ice', 'assets/sprites/ice-pile.png');
+    this.load.image('station-greenhouse', 'assets/sprites/greenhouse.png');
+    this.load.image('station-water', 'assets/sprites/water-station.png');
 
     this.load.audio('bgm-main', 'assets/audio/bgm/main-theme.mp3');
     this.load.audio('bgm-day1', 'assets/audio/bgm/day1.mp3');
@@ -141,6 +142,7 @@ export class PreloadScene extends Phaser.Scene {
     this.load.audio('bgm-day4', 'assets/audio/bgm/day4.mp3');
     this.load.audio('sfx-airlock', 'assets/audio/sfx/airlock.wav');
     this.load.audio('sfx-footstep', 'assets/audio/sfx/footstep.wav');
+    this.load.audio('sfx-page', 'assets/audio/sfx/page-flip.ogg');
     this.load.audio('sfx-radio', 'assets/audio/sfx/radio.ogg');
     this.load.audio('sfx-crash-boom', 'assets/audio/sfx/crash-boom.mp3');
     this.load.audio('sfx-landing', 'assets/audio/sfx/airplane-landing.mp3');

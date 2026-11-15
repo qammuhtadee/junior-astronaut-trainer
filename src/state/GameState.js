@@ -118,6 +118,7 @@ export class GameState {
     this.d7CropsHarvested = false;
 
     this.snapshots = {};
+    this.playedBgmDays = new Set();
 
     // Logbook & one-time tutorial flags
     this.discoveredFacts = [];
@@ -133,6 +134,7 @@ export class GameState {
     const skip = new Set([
       'listeners',
       'snapshots',
+      'playedBgmDays',
       'audioSettings',
       'discoveredFacts',
       'hasUnreadLogbook',
@@ -154,7 +156,7 @@ export class GameState {
     const snap = this.snapshots?.[key];
     if (!snap) return false;
     for (const [k, val] of Object.entries(snap)) {
-      if (k === 'listeners' || k === 'snapshots' || k === 'audioSettings') continue;
+      if (k === 'listeners' || k === 'snapshots' || k === 'playedBgmDays' || k === 'audioSettings') continue;
       this[k] = val && typeof val === 'object' ? JSON.parse(JSON.stringify(val)) : val;
     }
     this.emit('meters', this.meters);
