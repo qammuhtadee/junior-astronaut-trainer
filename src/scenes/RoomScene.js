@@ -171,7 +171,6 @@ export class RoomScene extends Phaser.Scene {
             return;
           }
         }
-        return;
       } else if (gameState.day === 6) {
         if (this.roomId === 'outpost' && gameState.d6CropsPlanted) {
           this.game.events.emit('toast', 'Radiation outside is lethal—rest in the Bunks for tonight!');
